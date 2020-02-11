@@ -82,4 +82,6 @@ cmd_inherit(int argc,
 	    CONFIG *cfgp);
 
 
+extern COMMAND acl_commands[];
+
 #endif

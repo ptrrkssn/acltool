@@ -72,6 +72,8 @@ struct option long_options[] =
    { NULL,        0,                 NULL, 0 },
 };
 
+COMMANDS *commands = NULL;
+
 
 int
 str2style(const char *str,
@@ -223,24 +225,24 @@ cmd_help(int argc,
 	 char **argv,
 	 CONFIG *cfgp) {
   int i, j, nm;
+  COMMANDS *csp;
   COMMAND *cp;
 
   
   if (argc > 1) {
     for (i = 1; i < argc; i++) {
       nm = 0;
-      for (j = 0; cmdv[j].name; j++) {
-	if (strcmp(cmdv[j].name, argv[i]) == 0) {
-	  cp = &cmdv[j];
-	  nm = 1;
-	  break;
-	}
-	if (strncmp(cmdv[j].name, argv[i], strlen(argv[i])) == 0) {
-	  cp = &cmdv[j];
-	  ++nm;
+      cp = NULL;
+      
+      for (csp = commands; csp; csp = csp->next) {
+	for (j = 0; csp->v[j].name; j++) {
+	  if (strncmp(csp->v[j].name, argv[i], strlen(argv[i])) == 0) {
+	    cp = &csp->v[j];
+	    ++nm;
+	  }
 	}
       }
-
+      
       if (nm < 1) {
 	fprintf(stderr, "%s: No such command\n", argv[i]);
 	return -1;
@@ -249,14 +251,17 @@ cmd_help(int argc,
 	fprintf(stderr, "%s: Multiple command matches\n", argv[i]);
 	return -1;
       }
-      printf("  %-10s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+      printf("  %-12s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
     }
   } else {
     puts("Commands:");
-    for (i = 0; cmdv[i].name; i++) {
-      cp = &cmdv[i];
-      printf("  %-10s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+    for (csp = commands; csp; csp = csp->next) {
+      for (j = 0; csp->v[j].name; j++) {
+	cp = &csp->v[j];
+	printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+      }
     }
+
     puts("\nAll commands also accept the standard options\n");
     puts("\nOptions:");
     puts("  -h            Display this information");
@@ -422,33 +427,24 @@ cmd_exit(int argc,
 }
 
 
-COMMAND cmdv[] = {
-		  { "help", 	"[<command>]*",			cmd_help, 	"Display this information" },
-		  { "exit", 	"[<code>]",			cmd_exit,	"Exit (with exit code)" },
-		  { "config", 	"[<opt>[=<val>]]*",		cmd_config,	"Print/update default configuration" },
-		  { "print", 	"[<str>]*",			cmd_print,	"Print some text" },
-		  { "cd", 	"[<path>]*",			cmd_cd,		"Change working directory" },
-		  { "pwd", 	"",				cmd_pwd,	"Print working directory" },
-		  
-		  { "list",     "<path>+",			cmd_list,	"List ACL(s)" },
-		  { "set",      "<path>+",			cmd_set,	"Set ACL(s)" },
-		  { "grep",     "<path>+",			cmd_grep,	"Search ACL(s)" },
-		  { "edit",     "<path>+",			cmd_edit,	"Edit ACL(s)" },
-		  { "strip",    "<path>+",			cmd_strip,	"Strip ACL(s)" },
-		  { "sort",     "<path>+",			cmd_sort,	"Sort ACL(s)" },
-		  { "inherit",  "<path>+",			cmd_inherit,	"Propage ACL(s) inheritance" },
-		  { "check",    "<path>+",			cmd_check,	"Sanity-check ACL(s)" },
-		  { "copy",     "<src> <dst>+",			cmd_copy,	"Copy ACL(s)" },
-		  
-		  { NULL,	NULL,				NULL,		NULL },
+COMMAND basic_commands[] = {
+  { "help", 	"[<command>]*",			cmd_help, 	"Display this information" },
+  { "exit", 	"[<code>]",			cmd_exit,	"Exit (with exit code)" },
+  { "config", 	"[<opt>[=<val>]]*",		cmd_config,	"Print/update default configuration" },
+  { "print", 	"[<str>]*",			cmd_print,	"Print some text" },
+  { "cd", 	"[<path>]*",			cmd_cd,		"Change working directory" },
+  { "pwd", 	"",				cmd_pwd,	"Print working directory" },
+  { NULL,	NULL,				NULL,		NULL },
 };
+
 
 int
 run_cmd(int argc,
 	char *argv[],
-	CONFIG *cfgp) {
+	CONFIG *cfgp,
+	COMMAND *commands) {
   int ai, i, nm;
-  COMMAND *cp;
+  COMMAND *scp;
   CONFIG cfg;
   
 
@@ -462,17 +458,26 @@ run_cmd(int argc,
       free(argv[0]);
     argv[0] = s_dup("help");
   }
-  
+
   nm = 0;
-  for (i = 0; cmdv[i].name; i++) {
-    if (strcmp(cmdv[i].name, argv[0]) == 0) {
-      cp = &cmdv[i];
-      nm = 1;
-      break;
-    }
-    if (strncmp(cmdv[i].name, argv[0], strlen(argv[0])) == 0) {
-      cp = &cmdv[i];
+  scp = NULL;
+  for (i = 0; basic_commands[i].name; i++) {
+    COMMAND *cp = &basic_commands[i];
+    
+    if (strncmp(cp->name, argv[0], strlen(argv[0])) == 0) {
+      scp = cp;
       ++nm;
+    }
+  }
+  
+  if (commands) {
+    for (i = 0; commands[i].name; i++) {
+      COMMAND *cp = &commands[i];
+      
+      if (strncmp(cp->name, argv[0], strlen(argv[0])) == 0) {
+	scp = cp;
+	++nm;
+      }
     }
   }
 
@@ -491,7 +496,7 @@ run_cmd(int argc,
     argv[ai-1] = argv[0];
   }
   
-  return (*cp->handler)(argc-ai+1, argv+ai-1, &cfg);
+  return (*scp->handler)(argc-ai+1, argv+ai-1, &cfg);
 }
 
   
@@ -500,17 +505,23 @@ cmd_name_generator(const char *text,
 		   int state) {
   static int ci, len;
   const char *name;
+  COMMANDS *csp;
+  COMMAND *cp;
+
   
   if (!state) {
     ci = 0;
     len = strlen(text);
   }
 
-  while ((name = cmdv[ci++].name) != NULL) {
-    if (strncmp(name, text, len) == 0)
-      return s_dup(name);
+  for (csp = commands; csp; csp = csp->next) {
+    cp = csp->v;
+    while ((name = cp[ci++].name) != NULL) {
+      if (strncmp(name, text, len) == 0)
+	return s_dup(name);
+    }
   }
-
+  
   return NULL;
 }
 
@@ -524,6 +535,23 @@ cmd_name_completion(const char *text,
 }
 
 
+int
+commands_add(COMMAND *cv) {
+  COMMANDS **cspp, *ncsp = malloc(sizeof(*ncsp));
+
+  if (!ncsp)
+    return -1;
+
+  for (cspp = &commands; *cspp; cspp = &(*cspp)->next)
+    ;
+  
+  ncsp->v = cv;
+  ncsp->next = NULL;
+  *cspp = ncsp;
+
+  return 0;
+}
+
 
 int
 main(int argc,
@@ -536,6 +564,9 @@ main(int argc,
 
   argv0 = argv[0];
 
+  commands_add(basic_commands);
+  commands_add(acl_commands);
+  
   ai = 0;
   if (cfg_parse(&d_cfg, &ai, argc, argv) != 0)
     exit(1);
@@ -563,7 +594,7 @@ main(int argc,
       default:
 	ac = argv_create(buf, NULL, NULL, &av);
 	if (ac > 0)
-	  rc = run_cmd(ac, av, &d_cfg);
+	  rc = run_cmd(ac, av, &d_cfg, acl_commands);
 	
 	argv_destroy(av);
       }
@@ -576,6 +607,6 @@ main(int argc,
     exit(rc);
   }
   
-  rc = run_cmd(argc-ai, argv+ai, &d_cfg);
+  rc = run_cmd(argc-ai, argv+ai, &d_cfg, acl_commands);
   return rc;
 }

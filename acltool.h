@@ -46,6 +46,9 @@ typedef enum acl_style {
 			ACL_STYLE_SOLARIS = 3
 } ACL_STYLE;
 
+
+struct command;
+
 typedef struct config {
   int f_debug;
   int f_verbose;
@@ -63,6 +66,15 @@ typedef struct command {
   const char *help;
 } COMMAND;
 
+
+typedef struct commands {
+  COMMAND *v;
+  struct commands *next;
+} COMMANDS;
+
+
+extern COMMAND basic_commands[];
+extern COMMANDS *commands;
 extern char *argv0;
 
 #endif

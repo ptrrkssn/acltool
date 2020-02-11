@@ -587,3 +587,16 @@ cmd_check(int argc,
   return 1;
 }
 
+
+COMMAND acl_commands[] = {
+  { "list-access", 	"<path>+",			cmd_list,	"List ACL(s)" },
+  { "set-access",  	"<path>+",			cmd_set,	"Set ACL(s)" },
+  { "edit-access",     "<path>+",			cmd_edit,	"Edit ACL(s)" },
+  { "grep-access",     "<path>+",			cmd_grep,	"Search ACL(s)" },
+  { "strip-access",    "<path>+",			cmd_strip,	"Strip ACL(s)" },
+  { "sort-access",     "<path>+",			cmd_sort,	"Sort ACL(s)" },
+  { "inherit-access",  "<path>+",			cmd_inherit,	"Propage ACL(s) inheritance" },
+  { "check-access",    "<path>+",			cmd_check,	"Sanity-check ACL(s)" },
+  { "copy-access",     "<src> <dst>+",			cmd_copy,	"Copy ACL(s)" },
+  { NULL,		NULL,				NULL,		NULL },
+};
