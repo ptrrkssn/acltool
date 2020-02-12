@@ -127,10 +127,10 @@ cmd_exit(int argc,
 
 
 COMMAND basic_commands[] = {
-  { "exit", 	"[<code>]",			cmd_exit,	"Exit (with exit code)" },
-  { "echo", 	"[<str>]*",			cmd_echo,	"Print some text" },
-  { "cd", 	"[<path>]*",			cmd_cd,		"Change working directory" },
-  { "pwd", 	"",				cmd_pwd,	"Print working directory" },
-  { NULL,	NULL,				NULL,		NULL },
+  { "exit", 	"[<code>]",	cmd_exit,	"Exit (with exit code)" },
+  { "echo", 	"[<str>]*",	cmd_echo,	"Print some text" },
+  { "cd", 	"[<path>]*",	cmd_cd,		"Change working directory" },
+  { "pwd", 	"",		cmd_pwd,	"Print working directory" },
+  { NULL,	NULL,		NULL,		NULL },
 };
 

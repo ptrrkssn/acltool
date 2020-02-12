@@ -34,7 +34,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
 #include <unistd.h>
 #include <errno.h>
 #include <pwd.h>
@@ -56,16 +55,8 @@
 
 #include "acltool.h"
 
-
-char *version = "1.0";
-
-COMMANDS commands;
-
-char *argv0 = "acltool";
-
-CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
-
-
+#ifdef USE_GETOPT_LONG
+#include <getopt.h>
 
 #define SHORT_OPTIONS "hnv::r::d::D::S:"
 
@@ -81,45 +72,142 @@ struct option long_options[] =
    { NULL,        0,                 NULL, 0 },
 };
 
+#else
+
+#include "opts.h"
 
 int
-str2style(const char *str,
-	  ACL_STYLE *sp) {
-  if (!str || !*str)
-    return 0;
-  
-  if (strcasecmp(str, "default") == 0)
-    *sp = ACL_STYLE_DEFAULT;
-  else if (strcasecmp(str, "brief") == 0)
-    *sp = ACL_STYLE_BRIEF;
-  else if (strcasecmp(str, "csv") == 0)
-    *sp = ACL_STYLE_CSV;
-  else if (strcasecmp(str, "solaris") == 0)
-    *sp = ACL_STYLE_SOLARIS;
+set_debug(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  void *vp,
+	  void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+
+  if (vp)
+    cp->f_debug = * (int *) vp;
   else
-    return -1;
-
-  return 1;
+    cp->f_debug++;
+  
+  return 0;
 }
 
-const char *
-style2str(ACL_STYLE s) {
-  switch (s) {
-  case ACL_STYLE_DEFAULT:
-    return "Default";
-  case ACL_STYLE_BRIEF:
-    return "Brief";
-  case ACL_STYLE_CSV:
-    return "CSV";
-  case ACL_STYLE_SOLARIS:
-    return "Solaris";
+int
+set_verbose(const char *name,
+	    const char *value,
+	    unsigned int type,
+	    void *vp,
+	    void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  if (vp)
+    cp->f_verbose = * (int *) vp;
+  else
+    cp->f_verbose++;
+  
+  return 0;
+}
+
+int
+set_recurse(const char *name,
+	    const char *value,
+	    unsigned int type,
+	    void *vp,
+	    void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  if (vp) {
+    int v = * (int *) vp;
+    if (v < -1)
+      v = -1;
+    
+    cp->max_depth = v;
   }
-
-  return NULL;
+  else
+    cp->max_depth = -1;
+  
+  return 0;
 }
+
+int
+set_depth(const char *name,
+	    const char *value,
+	    unsigned int type,
+	    void *vp,
+	    void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  if (vp) {
+    int v = * (int *) vp;
+    
+    cp->max_depth += v;
+  }
+  else
+    cp->max_depth++;
+  
+  return 0;
+}
+
+int
+set_style(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  void *vp,
+	  void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+
+  
+  if (value) {
+    if (str2style(value, &cp->f_style) != 1)
+      return -1;
+  } else
+    cp->f_style++;
+  
+  return 0;
+}
+
+int
+set_no_update(const char *name,
+	      const char *value,
+	      unsigned int type,
+	      void *vp,
+	      void *xp) {
+  CONFIG *cp = (CONFIG *) xp;
+
+  cp->f_noupdate = 1;
+  return 0;
+}
+
+
+
+OPTION options[] =
+  {
+   { "debug",     'D', OPTS_TYPE_UINT, set_debug,     "Debug level" },
+   { "verbose",   'v', OPTS_TYPE_UINT, set_verbose,   "Verbosity level" },
+   { "recurse",   'r', OPTS_TYPE_INT,  set_recurse,   "" },
+   { "depth",     'd', OPTS_TYPE_INT,  set_depth,     "" },
+   { "style",     'S', OPTS_TYPE_STR,  set_style,     "" },
+   { "no-update", 'n', OPTS_TYPE_NONE, set_no_update, "" },
+   { NULL,        -1,  0,              NULL,          NULL },
+  };
+
+#endif
+
+
+char *version = "1.0";
+
+COMMANDS commands;
+
+char *argv0 = "acltool";
+
+CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
+
+
+
+
 
 	  
-
+#if 0
 int
 option_set_short(CONFIG *cfgp,
 		 int f,
@@ -213,7 +301,7 @@ option_set_long(CONFIG *cfgp,
 
   return option_set_short(cfgp, op->val, val);
 }
-
+#endif
 
 #if 0
 char *
@@ -239,9 +327,12 @@ cfg_parse(CONFIG *cfgp,
 	  int *ai,
 	  int argc,
 	  char **argv) {
-  int c, rc;
-
+  int rc;
+  
   rc = 0;
+
+#if USE_GETOPT_LONG
+  int c;
   
   optind = 1;
   optreset = 1;
@@ -255,6 +346,13 @@ cfg_parse(CONFIG *cfgp,
   
   *ai = optind;
   return rc;
+#else
+  rc = opts_parse_argv(&options[0], argc, argv, NULL);
+  if (rc < 0)
+    return rc;
+  *ai = rc;
+  return 0;
+#endif
 }
 
 
@@ -284,7 +382,11 @@ cmd_config(int argc,
       char *cp = strchr(argv[i], '=');
       if (cp)
 	*cp++ = '\0';
+#ifdef USE_GETOPT_LONG
       rc = option_set_long(cfgp, argv[i], cp);
+#else
+      rc = opts_set(options, argv[i], vp);
+#endif
       if (rc)
 	return rc;
     }

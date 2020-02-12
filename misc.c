@@ -962,3 +962,38 @@ ft_foreach(const char *path,
 }
 
 
+int
+str2style(const char *str,
+	  ACL_STYLE *sp) {
+  if (!str || !*str)
+    return 0;
+  
+  if (strcasecmp(str, "default") == 0)
+    *sp = ACL_STYLE_DEFAULT;
+  else if (strcasecmp(str, "brief") == 0)
+    *sp = ACL_STYLE_BRIEF;
+  else if (strcasecmp(str, "csv") == 0)
+    *sp = ACL_STYLE_CSV;
+  else if (strcasecmp(str, "solaris") == 0)
+    *sp = ACL_STYLE_SOLARIS;
+  else
+    return -1;
+
+  return 1;
+}
+
+const char *
+style2str(ACL_STYLE s) {
+  switch (s) {
+  case ACL_STYLE_DEFAULT:
+    return "Default";
+  case ACL_STYLE_BRIEF:
+    return "Brief";
+  case ACL_STYLE_CSV:
+    return "CSV";
+  case ACL_STYLE_SOLARIS:
+    return "Solaris";
+  }
+
+  return NULL;
+}

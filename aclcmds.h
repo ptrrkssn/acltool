@@ -32,56 +32,9 @@
  */
 
 #ifndef ACLCMDS_H
-#define ACLCMD_H 1
+#define ACLCMDS_H 1
 
-#include "acltool.h"
-
-
-extern int
-cmd_list(int argc,
-	 char **argv,
-	 CONFIG *cfgp);
-
-extern int
-cmd_copy(int argc,
-	 char **argv,
-	 CONFIG *cfgp);
-
-extern int
-cmd_strip(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_set(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_grep(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_sort(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_edit(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_check(int argc,
-	  char **argv,
-	  CONFIG *cfgp);
-
-extern int
-cmd_inherit(int argc,
-	    char **argv,
-	    CONFIG *cfgp);
-
+#include "commands.h"
 
 extern COMMAND acl_commands[];
 

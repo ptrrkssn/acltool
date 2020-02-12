@@ -39,6 +39,9 @@
 #include <sys/acl.h>
 #include <sys/stat.h>
 
+#include "acltool.h"
+
+
 extern char *
 s_ndup(const char *s,
        size_t len);
@@ -130,5 +133,13 @@ s_nmatch(const char *a,
 
 extern int
 s_trim(char *s);
+
+extern int
+str2style(const char *str,
+	  ACL_STYLE *sp);
+
+
+extern const char *
+style2str(ACL_STYLE s);
 
 #endif

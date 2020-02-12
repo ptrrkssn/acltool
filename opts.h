@@ -1,5 +1,5 @@
 /*
- * acltool.h
+ * opts.h - Options parsing
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,35 +31,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_H
-#define ACLTOOL_H 1
+#ifndef OPTS_H
+#define OPTS_H 1
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/acl.h>
+#define OPTS_TYPE_NONE 0x0000
+#define OPTS_TYPE_UINT 0x0001
+#define OPTS_TYPE_INT  0x0002
+#define OPTS_TYPE_STR  0x0004
 
-
-
-typedef enum acl_style {
-			ACL_STYLE_DEFAULT = 0,
-			ACL_STYLE_BRIEF   = 1,
-			ACL_STYLE_CSV     = 2,
-			ACL_STYLE_SOLARIS = 3
-} ACL_STYLE;
-
-struct command;
-
-typedef struct config {
-  int f_debug;
-  int f_verbose;
-  int f_recurse;
-  int f_noupdate;
-  ACL_STYLE f_style;
-  
-  int max_depth;
-} CONFIG;
+#define OPTS_TYPE_MASK 0x00ff
 
 
-extern char *argv0;
+typedef struct option {
+  const char *name;
+  char flag;
+  unsigned int type;
+  int (*handler)(const char *name, const char *vs, unsigned int type, void *vp, void *xp);
+  const char *help;
+} OPTION;
 
+
+extern int
+opts_parse_argv(OPTION *opts,
+		int argc,
+		char **argv,
+		void *xp);
+
+extern int
+opts_set2(OPTION *opts,
+	  const char *name,
+	  const char *value,
+	  void *xp);
+
+extern int
+opts_set(OPTION *opts,
+	 const char *varval,
+	 void *xp);
 #endif
