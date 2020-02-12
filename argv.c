@@ -38,7 +38,7 @@
 
 #include "misc.h"
 #include "buffer.h"
-
+#include "strings.h"
 #include "argv.h"
 
 

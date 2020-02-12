@@ -34,12 +34,16 @@
 #ifndef OPTS_H
 #define OPTS_H 1
 
+#include <stdio.h>
+
 #define OPTS_TYPE_NONE 0x0000
 #define OPTS_TYPE_UINT 0x0001
 #define OPTS_TYPE_INT  0x0002
 #define OPTS_TYPE_STR  0x0004
 
 #define OPTS_TYPE_MASK 0x00ff
+
+#define OPTS_TYPE_OPT  0x0100
 
 
 typedef struct option {
@@ -50,6 +54,9 @@ typedef struct option {
   const char *help;
 } OPTION;
 
+extern int
+opts_print(OPTION *opts,
+	   FILE *fp);
 
 extern int
 opts_parse_argv(OPTION *opts,

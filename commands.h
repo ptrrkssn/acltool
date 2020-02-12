@@ -61,6 +61,6 @@ extern int
 cmd_run(COMMANDS *cp, int argc, char **argv, void *vp);
 
 extern int
-cmd_help(COMMANDS *cp, const char *name);
+_cmd_help(COMMANDS *cp, const char *name);
 
 #endif

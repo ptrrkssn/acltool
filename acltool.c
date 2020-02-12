@@ -52,29 +52,22 @@
 #include "commands.h"
 #include "aclcmds.h"
 #include "basic.h"
+#include "strings.h"
 
 #include "acltool.h"
 
-#ifdef USE_GETOPT_LONG
-#include <getopt.h>
-
-#define SHORT_OPTIONS "hnv::r::d::D::S:"
-
-struct option long_options[] =
-  {
-   { "help",      no_argument,       NULL, 'h' },
-   { "no-update", no_argument,       NULL, 'n' },
-   { "style",     required_argument, NULL, 'S' },
-   { "verbose",   optional_argument, NULL, 'v' },
-   { "recurse",   optional_argument, NULL, 'r' },
-   { "depth",     optional_argument, NULL, 'd' },
-   { "debug",     optional_argument, NULL, 'D' },
-   { NULL,        0,                 NULL, 0 },
-};
-
-#else
-
 #include "opts.h"
+
+
+char *version = "1.0";
+
+COMMANDS commands;
+
+char *argv0 = "acltool";
+
+CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
+
+
 
 int
 set_debug(const char *name,
@@ -88,7 +81,7 @@ set_debug(const char *name,
     cp->f_debug = * (int *) vp;
   else
     cp->f_debug++;
-  
+
   return 0;
 }
 
@@ -115,9 +108,11 @@ set_recurse(const char *name,
 	    void *vp,
 	    void *xp) {
   CONFIG *cp = (CONFIG *) xp;
+
   
   if (vp) {
     int v = * (int *) vp;
+    
     if (v < -1)
       v = -1;
     
@@ -178,130 +173,39 @@ set_no_update(const char *name,
   return 0;
 }
 
+extern OPTION options[];
+
+int
+show_help(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  void *vp,
+	  void *xp) {
+  printf("Usage:\n  %s [<options>] [<command>]\n\n", argv0);
+  
+  opts_print(&options[0], stdout);
+
+  puts("\nUse 'help' to get more information about the available commands");
+  return 0;
+}
+
+
 
 
 OPTION options[] =
   {
-   { "debug",     'D', OPTS_TYPE_UINT, set_debug,     "Debug level" },
-   { "verbose",   'v', OPTS_TYPE_UINT, set_verbose,   "Verbosity level" },
-   { "recurse",   'r', OPTS_TYPE_INT,  set_recurse,   "" },
-   { "depth",     'd', OPTS_TYPE_INT,  set_depth,     "" },
-   { "style",     'S', OPTS_TYPE_STR,  set_style,     "" },
-   { "no-update", 'n', OPTS_TYPE_NONE, set_no_update, "" },
-   { NULL,        -1,  0,              NULL,          NULL },
+   { "help",      'h', OPTS_TYPE_NONE,               show_help,     "Display usage" },
+   { "debug",     'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     "Debug level" },
+   { "verbose",   'v', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_verbose,   "Verbosity level" },
+   { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   "Enable recursion" },
+   { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     "Increase/decrease max depth" },
+   { "style",     'S', OPTS_TYPE_STR,                set_style,     "Select ACL print style" },
+   { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, "Disable modification" },
+   { NULL,        -1,  0,                            NULL,          NULL },
   };
 
-#endif
 
 
-char *version = "1.0";
-
-COMMANDS commands;
-
-char *argv0 = "acltool";
-
-CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
-
-
-
-
-
-	  
-#if 0
-int
-option_set_short(CONFIG *cfgp,
-		 int f,
-		 const char *val) {
-  switch (f) {
-  case 'h':
-    break;
-    
-  case 'n':
-    cfgp->f_noupdate = 1;
-    break;
-
-  case 'd':
-    if (val) {
-      int d;
-      
-      if (sscanf(val, "%d", &d) != 1) {
-	fprintf(stderr, "%s: Error: %s: Invalid depth\n", argv0, val);
-	return -1;
-      }
-      cfgp->max_depth += d;
-      if (cfgp->max_depth < -1)
-	cfgp->max_depth = -1;
-    } else
-      cfgp->max_depth++;
-    break;
-
-  case 'D':
-    if (val) {
-      if (sscanf(val, "%d", &cfgp->f_debug) != 1) {
-	fprintf(stderr, "%s: Error: %s: Invalid debug level\n", argv0, val);
-	return -1;
-      }
-    } else
-      cfgp->f_debug++;
-    break;
-    
-  case 'S':
-    if (val) {
-      if (sscanf(val, "%d", &cfgp->f_style) != 1 && str2style(val, &cfgp->f_style) != 1) {
-	fprintf(stderr, "%s: Error: %s: Invalid ACL style\n", argv0, val);
-	return -1;
-      }
-    } else
-      cfgp->f_style++;
-    break;
-    
-  case 'v':
-    if (val) {
-      if (sscanf(val, "%d", &cfgp->f_verbose) != 1) {
-	fprintf(stderr, "%s: Error: %s: Invalid verbose level\n", argv0, val);
-	return -1;
-      }
-    } else
-      cfgp->f_verbose++;
-    break;
-    
-  case 'r':
-    if (val) {
-      if (sscanf(val, "%d", &cfgp->max_depth) != 1 || cfgp->max_depth < -1) {
-	fprintf(stderr, "%s: Error: %s: Invalid max depth\n", argv0, val);
-	return -1;
-      }
-    } else
-      cfgp->max_depth = -1;
-    break;
-    
-  default:
-    return -1;
-  }
-
-  return 0;
-}
-
-int
-option_set_long(CONFIG *cfgp,
-		const char *name,
-		const char *val) {
-  int i;
-  struct option *op = NULL;
-  
-  for (i = 0; !op && long_options[i].name; i++) {
-    if (strcmp(long_options[i].name, name) == 0) {
-      if (op)
-	return -1;
-      op = &long_options[i];
-    }
-  }
-  if (!op)
-    return -1;
-
-  return option_set_short(cfgp, op->val, val);
-}
-#endif
 
 #if 0
 char *
@@ -328,33 +232,31 @@ cfg_parse(CONFIG *cfgp,
 	  int argc,
 	  char **argv) {
   int rc;
-  
-  rc = 0;
 
-#if USE_GETOPT_LONG
-  int c;
   
-  optind = 1;
-  optreset = 1;
-  while (rc == 0 && (c = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
-    if (c == 'h' || c == '?') {
-      cmd_help(&commands, argv[optind-2]);
-      return -1;
-    } else
-      rc = option_set_short(cfgp, c, optarg);
-  }
-  
-  *ai = optind;
-  return rc;
-#else
-  rc = opts_parse_argv(&options[0], argc, argv, NULL);
+  rc = opts_parse_argv(&options[0], argc, argv, cfgp);
   if (rc < 0)
     return rc;
+  
   *ai = rc;
   return 0;
-#endif
 }
 
+
+void
+print_version(void) {
+  printf("[ACLTOOL, version %s]\n", version);
+}
+
+int
+cmd_version(int argc,
+	    char **argv,
+	    void *vp) {
+  print_version();
+  puts("Author: Peter Eriksson <pen@lysator.liu.se>");
+  puts("Built:  " __DATE__ " " __TIME__);
+  return 0;
+}
 
 int
 cmd_config(int argc,
@@ -379,14 +281,7 @@ cmd_config(int argc,
 
     
     for (i = 1; i < argc; i++) {
-      char *cp = strchr(argv[i], '=');
-      if (cp)
-	*cp++ = '\0';
-#ifdef USE_GETOPT_LONG
-      rc = option_set_long(cfgp, argv[i], cp);
-#else
       rc = opts_set(options, argv[i], vp);
-#endif
       if (rc)
 	return rc;
     }
@@ -397,98 +292,49 @@ cmd_config(int argc,
 }
 
 
-
-#if 0
 int
-cmd_print(int argc,
-	  char **argv,
-	  void *vp) {
-  int i;
-
-  
-  for (i = 1; i < argc; i++) {
-    if (i > 1)
-      putchar(' ');
-    fputs(argv[i], stdout);
-  }
-  putchar('\n');
-  return 0;
-}
-
-
-int
-cmd_pwd(int argc,
-	char **argv,
-	void *vp) {
-  char buf[2048];
-
-  if (getcwd(buf, sizeof(buf)))
-    puts(buf);
-
-  return 0;
-}
-
-int
-cmd_cd(int argc,
-       char **argv,
-       void *vp) {
-  int i, rc;
-  
-
-  if (argc == 1) {
-    char *homedir = getenv("HOME");
-
-    if (!homedir) {
-      fprintf(stderr, "%s: Error: Unable to read HOME environment\n",
-	      argv0);
-      return 1;
-    }
-    
-    rc = chdir(homedir);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Changing directory: %s\n",
-	      argv[0], homedir, strerror(errno));
-      return 1;
-    }
-
-    return 0;
-  }
-
-  for (i = 1; i < argc; i++) {
-    rc = chdir(argv[i]);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Changing directory: %s\n",
-	      argv[0], argv[i], strerror(errno));
-      return 1;
-    }
-  }
-  
-  return 0;
-}
-
-
-int
-cmd_exit(int argc,
+cmd_help(int argc,
 	 char **argv,
 	 void *vp) {
-  int ec = 0;
+  int i, rc;
 
   
-  if (argc > 1) {
-    if (sscanf(argv[1], "%d", &ec) != 1) {
-      fprintf(stderr, "%s: Error: %s: Invalid exit code\n", argv[0], argv[1]);
-      return -1;
-    }
-  }
+  if (argc == 1) {
+    rc =_cmd_help(&commands, NULL);
 
-  exit(ec);
+    putchar('\n');
+    opts_print(&options[0], stdout);
+    
+    puts("\nDetails:");
+    puts("  All options & commands may be abbreviated as long as they are unique.");
+    puts("  For option & command names consisting of multiple 'parts' (list-access)");
+    puts("  the name may be abbreviated using characters from each part, for example:");
+    puts("    -n / -no / --nu     = --no-update");
+    puts("    lac / list / list-a = list-access");
+    puts("    edac / edit / ed-ac = edit-access");
+    putchar('\n');
+    puts("  If invoked without a command the tool will enter an interactive mode.");
+    puts("  All commands take the same options and they can also be used in the interactive mode.");
+    putchar('\n');
+    puts("  ACL styles supported: default, csv, brief, verbose, solaris, primos");
+    putchar('\n');
+    puts("  You may access environment variables using ${NAME}.");
+    
+    return rc;
+  }
+  
+  for (i = 1; i < argc; i++)
+    rc = _cmd_help(&commands, argv[i]);
+  
+  return rc;
 }
-#endif
 
 
 COMMAND acltool_commands[] = {
-  { "config", 	"[<opt>[=<val>]]*",		cmd_config,	"Print/update default configuration" },
-  { NULL,	NULL,				NULL,		NULL },
+  { "version",  "",                	cmd_version,    "Display program version" },
+  { "config", 	"[<opt>[=<val>]]*",	cmd_config,	"Print/update default configuration" },
+  { "help",     "[<command>]*",         cmd_help,       "Display usage information" },
+  { NULL,	NULL,			NULL,		NULL },
 };
 
 
@@ -528,9 +374,10 @@ cmd_name_completion(const char *text,
 int
 run_cmd(int argc,
 	char **argv,
-	CONFIG *cp) {
+	CONFIG *cp,
+	void (*freef)(void *p)) {
   CONFIG cfg;
-  int ai, rc;
+  int ai, rc, i;
   
   
   cfg = *cp;
@@ -538,14 +385,24 @@ run_cmd(int argc,
   ai = 0;
   if (cfg_parse(&cfg, &ai, argc, argv) != 0)
     return -1;
-  
-  rc = cmd_run(&commands, argc-ai+1, argv+ai-1, (void *) &cfg);
-  
-  if (ai > 1) {
-    free(argv[ai-1]);
-    argv[ai-1] = argv[0];
-  }
 
+  if (ai != 1) {
+    int d;
+
+    i = 1;
+    d = ai - 1;
+    
+    while (ai < argc) {
+      if (freef)
+	freef(argv[i]);
+      argv[i++] = argv[ai++];
+    }
+    argv[ai] = NULL;
+    argc -= d;
+  }
+  
+  rc = cmd_run(&commands, argc, argv, (void *) &cfg);
+  
   return rc;
 }
 
@@ -593,7 +450,7 @@ main(int argc,
       default:
 	ac = argv_create(buf, NULL, NULL, &av);
 	if (ac > 0)
-	  rc = run_cmd(ac, av, &d_cfg);
+	  rc = run_cmd(ac, av, &d_cfg, free);
 	
 	argv_destroy(av);
       }
@@ -606,6 +463,6 @@ main(int argc,
     exit(rc);
   }
   
-  rc = run_cmd(argc-ai, argv+ai, &d_cfg);
+  rc = run_cmd(argc-ai, argv+ai, &d_cfg, NULL);
   return rc;
 }

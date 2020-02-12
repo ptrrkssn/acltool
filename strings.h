@@ -1,5 +1,5 @@
 /*
- * misc.h
+ * strings.h
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,91 +31,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MISC_H
-#define MISC_H 1
+#ifndef STRINGS_H
+#define STRINGS_H 1
 
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/acl.h>
-#include <sys/stat.h>
 
-#include "acltool.h"
-
-
-/*
- * Calculate the difference between two struct timespec, returns elapsed time i microseconds.
- * Also returns the elapsed time and a unit as a string.
- */
-extern long
-ts_delta(struct timespec *x,
-	 const struct timespec *y,
-	 long *res,
-	 char **unit);
-
-
-/* 
- * Compare two ACL Entries
- */
-extern int
-cmp_acl_entry(const void *va,
-	      const void *vb);
-
-/* 
- * Compare two ACL Entries - ignore uids & gids
- */
-extern int
-cmp_acl_entry_sorted(const void *va,
-		     const void *vb);
-
-extern int
-sort_acl(acl_t a,
-	 acl_t *sa);
-
-extern int
-is_unsorted_acl(acl_t a);
-
-extern int
-merge_permset(acl_permset_t d,
-	      acl_permset_t s);
-
-extern int
-merge_flagset(acl_flagset_t d,
-	      acl_flagset_t s);
-
-extern int
-merge_acl(acl_t *a);
 
 extern char *
-permset2str(acl_permset_t psp, char *res);
+s_ndup(const char *s,
+       size_t len);
 
 extern char *
-flagset2str(acl_flagset_t fsp,
-	    char *res);
-
-extern const char *
-aet2str(const acl_entry_type_t aet);
+s_dup(const char *s);
 
 extern char *
-ace2str(acl_entry_t ae,
-	char *rbuf,
-	size_t rsize);
+s_cat(const char *s,
+      ...);
 
 extern int
-ft_foreach(const char *path,
-	   int (*walker)(const char *path,
-			 const struct stat *stat,
-			 size_t base,
-			 size_t level,
-			 void *vp),
-	   void *vp,
-	   size_t maxlevel);
+s_match(const char *a,
+	const char *b);
 
 extern int
-str2style(const char *str,
-	  ACL_STYLE *sp);
+s_nmatch(const char *a,
+	 const char *b,
+	 size_t len);
 
-
-extern const char *
-style2str(ACL_STYLE s);
+extern int
+s_trim(char *s);
 
 #endif

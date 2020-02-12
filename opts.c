@@ -39,8 +39,26 @@
 #include <errno.h>
 
 #include "misc.h"
+#include "strings.h"
 #include "opts.h"
 
+
+int
+opts_print(OPTION *opts,
+	   FILE *fp) {
+  int i;
+
+
+  fprintf(fp, "Options:\n");
+  for (i = 0; opts[i].name; i++)
+    fprintf(fp, "  -%c / --%-10s\t%s\t%s\n",
+	    opts[i].flag,
+	    opts[i].name,
+	    "-",
+	    opts[i].help);
+  
+  return 0;
+}
 
 int
 opts_parse_argv(OPTION *opts,
@@ -99,23 +117,38 @@ opts_parse_argv(OPTION *opts,
 	break;
 
       case OPTS_TYPE_INT:
-	if (value && sscanf(value, "%d", &d) != 1) {
-	  fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
+	if (value) {
+	  if (sscanf(value, "%d", &d) != 1) {
+	    fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
+	    return -1;
+	  }
+	  vp = (void *) &d;
+	} else if (!(op->type & OPTS_TYPE_OPT)) {
+	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
 	  return -1;
 	}
-	vp = (void *) &d;
 	break;
 	
       case OPTS_TYPE_UINT:
-	if (value && (sscanf(value, "%d", &d) != 1 || d < 0)) {
-	  fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
+	if (value) {
+	  if (sscanf(value, "%d", &d) != 1 || d < 0) {
+	    fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
+	    return -1;
+	  }
+	  vp = (void *) &d;
+	} else if (!(op->type & OPTS_TYPE_OPT)) {
+	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
 	  return -1;
 	}
-	vp = (void *) &d;
 	break;
 
       case OPTS_TYPE_STR:
+	if (!value && !(op->type & OPTS_TYPE_OPT)) {
+	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
+	  return -1;
+	}
 	vp = (void *) value;
+	break;
       }
       
       rc = op->handler(op->name, value, op->type, vp, xp);
@@ -154,25 +187,37 @@ opts_parse_argv(OPTION *opts,
 	case OPTS_TYPE_INT:
 	  if (isdigit(argv[i][j+1]) || (argv[i][j+1] == '-' && isdigit(argv[i][j+2])))
 	    value = argv[i]+j+1;
-	  else if (isdigit(argv[i+1][0]) || (argv[i+1][0] == '-' && isdigit(argv[i+1][1])))
+	  else if (argv[i+1] && (isdigit(argv[i+1][0]) || (argv[i+1][0] == '-' && isdigit(argv[i+1][1]))))
 	    value = argv[++i];
-	  if (value && sscanf(value, "%d", &d) != 1) {
-	    fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
+	  
+	  if (value) {
+	    if (sscanf(value, "%d", &d) != 1) {
+	      fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
+	      return -1;
+	    }
+	    vp = (void *) &d;
+	  } else if (!(op->type & OPTS_TYPE_OPT)) {
+	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
 	    return -1;
 	  }
-	  vp = (void *) &d;
 	  break;
 	  
 	case OPTS_TYPE_UINT:
 	  if (isdigit(argv[i][j+1]))
 	    value = argv[i]+j+1;
-	  else if (isdigit(argv[i+1][0]))
+	  else if (argv[i+1] && isdigit(argv[i+1][0]))
 	    value = argv[++i];
-	  if (value && (sscanf(value, "%d", &d) != 1 || d < 0)) {
-	    fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
+	  
+	  if (value) {
+	    if (sscanf(value, "%d", &d) != 1 || d < 0) {
+	      fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
+	      return -1;
+	    }
+	    vp = (void *) &d;
+	  } else if (!(op->type & OPTS_TYPE_OPT)) {
+	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
 	    return -1;
 	  }
-	  vp = (void *) &d;
 	  break;
 
 	case OPTS_TYPE_STR:
@@ -180,6 +225,10 @@ opts_parse_argv(OPTION *opts,
 	    value = argv[i]+j+1;
 	  else if (argv[i+1])
 	    value = argv[++i];
+	  if (!value && !(op->type & OPTS_TYPE_OPT)) {
+	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
+	    return -1;
+	  }
 	  vp = (void *) value;
 	  break;
 	  
@@ -244,19 +293,23 @@ opts_set2(OPTION *opts,
     break;
     
   case OPTS_TYPE_INT:
-    if (value && sscanf(value, "%d", &d) != 1) {
-      errno = EINVAL;
-      return -1;
+    if (value) {
+      if (sscanf(value, "%d", &d) != 1) {
+	errno = EINVAL;
+	return -1;
+      }
+      vp = (void *) &d;
     }
-    vp = (void *) &d;
     break;
     
   case OPTS_TYPE_UINT:
-    if (value && (sscanf(value, "%d", &d) != 1 || d < 0)) {
-      errno = EINVAL;
-      return -1;
+    if (value) {
+      if (sscanf(value, "%d", &d) != 1 || d < 0) {
+	errno = EINVAL;
+	return -1;
+      }
+      vp = (void *) &d;
     }
-    vp = (void *) &d;
     break;
     
   case OPTS_TYPE_STR:

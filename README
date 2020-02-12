@@ -16,3 +16,36 @@ OPERATING SYSTEMS SUPPORTED
 DESCRIPTION
 
 To be written...
+
+CANONICAL SORT ORDER
+
+There are two models, Windows and Posix:
+
+  Windows systems wants ACLS to be sorted in a "canonical" order. This is what Microsoft write about it:
+
+  The preferred order of ACEs in a DACL is called the "canonical" order. For Windows 2000 and Windows
+  Server 2003, the canonical order is the following:
+ 
+    - All explicit ACEs are placed in a group before any inherited ACEs.
+    - Within the group of explicit ACEs, access-denied ACEs are placed before access-allowed ACEs.
+    - Within the inherited group, ACEs that are inherited from the child object's parent come first,
+      and then ACEs inherited from the grandparent, and so on up the tree of objects.
+    - After that, access-denied ACEs are placed before access-allowed ACEs.
+
+
+  POSIX (from the aclsort() manual page in some Unixes):
+
+  A call to aclsort will result in the contents of the buffer being sorted in the following order:
+
+   1. A user entry for the object owner
+   2. Additional user entries
+   3. A group entry for the object owning group
+   4. Additional group entries
+   5. A class entry for the file group class
+   6. An entry for other
+   7. Default user entry for the object owner
+   8. Default additional user entries
+   9. Default group entry for the object owning group
+  10. Default additional group entries
+  11. Default class entry
+  12. Default entry for other

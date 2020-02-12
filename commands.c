@@ -37,6 +37,7 @@
 #include <errno.h>
 
 #include "misc.h"
+#include "strings.h"
 #include "commands.h"
 
 
@@ -65,11 +66,13 @@ cmd_register(COMMANDS *cp,
 
 
 int
-cmd_help(COMMANDS *cmds,
-	 const char *name) {
+_cmd_help(COMMANDS *cmds,
+	  const char *name) {
   int i, nm;
   COMMAND *cp;
 
+  
+  puts("Command(s):");
   
   if (name) {
     cp = NULL;
@@ -78,6 +81,7 @@ cmd_help(COMMANDS *cmds,
     for (i = 0; i < cmds->cc; i++) {
       if (s_match(name, cmds->cv[i]->name)) {
 	cp = cmds->cv[i];
+	printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
 	++nm;
       }
     }
@@ -86,28 +90,13 @@ cmd_help(COMMANDS *cmds,
       fprintf(stderr, "%s: No such command\n", name);
       return -1;
     }
-    if (nm > 1) {
-      fprintf(stderr, "%s: Multiple command matches\n", name);
-      return -1;
-    }
-    printf("  %-12s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
     
   } else {
     
-    puts("Commands:");
     for (i = 0; i < cmds->cc; i++) {
       cp = cmds->cv[i];
       printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
     }
-    
-    puts("All commands may be abbreviated and accept standard options:\n");
-    puts("  -h            Display this information"); 
-    puts("  -n            No-update mode");
-    puts("  -r[<max>]     Recurse");
-    puts("  -d[<n>]       Increase/decrease max recurse level");
-    puts("  -v[<level>]   Increase/set verbosity level");
-    puts("  -S<style>     ACL print style/format [default, brief, csv, solaris]");
-    puts("  -D<level>     Increase debug level");
   }
   
   return 0;
@@ -123,10 +112,13 @@ cmd_run(COMMANDS *cmds,
   COMMAND *scp;
 
 
+  if (!argv[0])
+    return 0;
+  
   if (strcmp(argv[0], "?") == 0)
-    return cmd_help(cmds, argv[1]);
+    return _cmd_help(cmds, argv[1]);
   else if (argv[1] && strcmp(argv[1], "?") == 0)
-    return cmd_help(cmds, argv[0]);
+    return _cmd_help(cmds, argv[0]);
   
   nm = 0;
   scp = NULL;
@@ -139,7 +131,7 @@ cmd_run(COMMANDS *cmds,
     }
   }
   
-  if (nm == 0) {
+  if (nm < 1) {
     fprintf(stderr, "Error: %s: No such command\n", argv[0]);
     return -1;
   }

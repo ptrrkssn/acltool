@@ -158,14 +158,31 @@ print_acl(FILE *fp,
     break;
     
   case ACL_STYLE_CSV:
-    /* One-liner */
+    /* One-liner, CSV-style */
 
-    fprintf(fp, "%s", path);
+    pp = NULL;
+    gp = NULL;
+    if (sp) {
+      pp = getpwuid(sp->st_uid);
+      gp = getgrgid(sp->st_gid);
+    }
+
+    fprintf(fp, "%s;", path);
     for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-      putc(';', fp);
+      if (i)
+	putc(',', fp);
       ace2str(ae, acebuf, sizeof(acebuf));
       fprintf(fp, "%s", acebuf);
     }
+    if (pp)
+      fprintf(fp, ";%s", pp->pw_name);
+    else
+      fprintf(fp, ";%d", sp->st_uid);
+    if (gp)
+      fprintf(fp, ";%s", gp->gr_name);
+    else
+      fprintf(fp, ";%d", sp->st_gid);
+    
     putc('\n', fp);
     break;
 
@@ -184,6 +201,43 @@ print_acl(FILE *fp,
     putc('\n', fp);
     break;
 
+  case ACL_STYLE_VERBOSE:
+    pp = NULL;
+    gp = NULL;
+    if (sp) {
+      pp = getpwuid(sp->st_uid);
+      gp = getgrgid(sp->st_gid);
+    }
+    
+    if (w_c)
+      putc('\n', fp);
+    
+    fprintf(fp, "# file: %s\n", path);
+    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+      char *cp;
+      int len;
+      
+      ace2str(ae, acebuf, sizeof(acebuf));
+
+      cp = strchr(acebuf, ':');
+      len = cp - acebuf;
+      fprintf(fp, "%*s%s", (18-len), "", acebuf);
+      if (strncmp(acebuf, "owner@", len) == 0) {
+	if (pp)
+	  fprintf(fp, "\t# %s", pp->pw_name);
+	else
+	  fprintf(fp, "\t# %d", sp->st_uid);
+      }
+      if (strncmp(acebuf, "group@", len) == 0) {
+	if (gp)
+	  fprintf(fp, "\t# %s", gp->gr_name);
+	else
+	  fprintf(fp, "\t# %d", sp->st_gid);
+      }
+      putc('\n', fp);
+    }
+    break;
+    
   case ACL_STYLE_SOLARIS:
     pp = NULL;
     gp = NULL;
@@ -228,6 +282,51 @@ print_acl(FILE *fp,
 
     fputs(as, fp);
     acl_free(as);
+    break;
+
+  case ACL_STYLE_PRIMOS:
+    pp = NULL;
+    gp = NULL;
+    if (sp) {
+      pp = getpwuid(sp->st_uid);
+      gp = getgrgid(sp->st_gid);
+    }
+    
+    if (w_c)
+      putc('\n', fp);
+    
+    printf("ACL protecting \"%s\":\n", path);
+    
+    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+      char *perms, *flags, *type;
+      
+      ace2str(ae, acebuf, sizeof(acebuf));
+
+      perms = strchr(acebuf, ':');
+      *perms++ = '\0';
+      
+      flags = strchr(perms, ':');
+      *flags++ = '\0';
+      
+      type  = strchr(flags, ':');
+      *type++ = '\0';
+
+      fprintf(fp, "\t%-15s\t%-15s\t%-15s\t%-6s", acebuf, perms, flags, type);
+      if (strcmp(acebuf, "owner@") == 0) {
+	if (pp)
+	  fprintf(fp, "\t# %s", pp->pw_name);
+	else
+	  fprintf(fp, "\t# %d", sp->st_uid);
+      }
+      if (strcmp(acebuf, "group@") == 0) {
+	if (gp)
+	  fprintf(fp, "\t# %s", gp->gr_name);
+	else
+	  fprintf(fp, "\t# %d", sp->st_gid);
+      }
+      putc('\n', fp);
+    }
+    break;
     
   default:
     return -1;
@@ -245,7 +344,8 @@ walker_strip(const char *path,
 	     void *vp) {
   int rc;
   acl_t ap, na;
-
+  int tf;
+  
   
   if (S_ISLNK(sp->st_mode))
     ap = acl_get_link_np(path, ACL_TYPE_NFS4);
@@ -255,6 +355,17 @@ walker_strip(const char *path,
   if (!ap) {
     fprintf(stderr, "%s: Error: %s: Getting ACL\n", argv0, path);
     return 1;
+  }
+
+  tf = 0;
+  if (acl_is_trivial_np(ap, &tf) < 0) {
+    acl_free(ap);
+    return -1;
+  }
+
+  if (tf) {
+    acl_free(ap);
+    return 0;
   }
   
   na = acl_strip_np(ap, 0);
@@ -267,22 +378,73 @@ walker_strip(const char *path,
     else
       rc = acl_set_file(path, ACL_TYPE_NFS4, na);
   }
+  
   acl_free(na);
   if (rc < 0) {
     fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
     return 1;
   }
 
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Stripped%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
   return 0;
 }
 
 
 static int
-walker_set(const char *path,
-	   const struct stat *sp,
-	   size_t base,
-	   size_t level,
-	   void *vp) {
+walker_sort(const char *path,
+	    const struct stat *sp,
+	    size_t base,
+	    size_t level,
+	    void *vp) {
+  int rc;
+  acl_t ap, na;
+
+  
+  if (S_ISLNK(sp->st_mode))
+    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
+  else
+    ap = acl_get_file(path, ACL_TYPE_NFS4);
+  
+  if (!ap) {
+    fprintf(stderr, "%s: Error: %s: Getting ACL\n", argv0, path);
+    return 1;
+  }
+
+  rc = sort_acl(ap, &na);
+  acl_free(ap);
+
+  if (rc < 0)
+    return rc;
+
+  if (rc == 1) {
+    rc = 0;
+    if (!w_cfgp->f_noupdate) {
+      if (S_ISLNK(sp->st_mode))
+	rc = acl_set_link_np(path, ACL_TYPE_NFS4, na);
+      else
+	rc = acl_set_file(path, ACL_TYPE_NFS4, na);
+    }
+    acl_free(na);
+    if (rc < 0) {
+      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+      return 1;
+    }
+
+    if (w_cfgp->f_verbose)
+      printf("%s: ACL Sorted%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  }
+
+  return 0;
+}
+
+static int
+walker_copy(const char *path,
+	    const struct stat *sp,
+	    size_t base,
+	    size_t level,
+	    void *vp) {
   int rc;
   acl_t ap = (acl_t) vp;
 
@@ -298,6 +460,9 @@ walker_set(const char *path,
     }
   }
 
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Copied%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
   return 0;
 }
 
@@ -394,12 +559,19 @@ aclcmd_copy(int argc,
   --argc;
   ++argv;
 
-
-  rc = _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_set, (void *) ap);
+  rc = _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_copy, (void *) ap);
   
   acl_free(ap);
   return rc;
 }
+
+int
+aclcmd_sort(int argc,
+	    char **argv,
+	    void *vp) {	       
+  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_sort, NULL);
+}
+
 
 int
 aclcmd_strip(int argc,
@@ -433,14 +605,6 @@ aclcmd_edit(int argc,
 }
 
 int
-aclcmd_sort(int argc,
-	    char **argv,
-	    void *vp) {	       
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
-}
-
-int
 aclcmd_inherit(int argc,
 	       char **argv,
 	       void *vp) {	       
@@ -459,13 +623,15 @@ aclcmd_check(int argc,
 
 COMMAND acl_commands[] = {
   { "list-access", 	"<path>+",	aclcmd_list,	"List ACL(s)" },
+  { "strip-access",     "<path>+",	aclcmd_strip,	"Strip ACL(s)" },
+  { "sort-access",      "<path>+",	aclcmd_sort,	"Sort ACL(s)" },
+  { "copy-access",      "<src> <dst>+",	aclcmd_copy,	"Copy ACL(s)" },
+#if 0
+  { "inherit-access",   "<path>+",	aclcmd_inherit,	"Propage ACL(s) inheritance" },
   { "set-access",  	"<path>+",	aclcmd_set,	"Set ACL(s)" },
   { "edit-access",      "<path>+",	aclcmd_edit,	"Edit ACL(s)" },
   { "grep-access",      "<path>+",	aclcmd_grep,	"Search ACL(s)" },
-  { "strip-access",     "<path>+",	aclcmd_strip,	"Strip ACL(s)" },
-  { "sort-access",      "<path>+",	aclcmd_sort,	"Sort ACL(s)" },
-  { "inherit-access",   "<path>+",	aclcmd_inherit,	"Propage ACL(s) inheritance" },
   { "check-access",     "<path>+",	aclcmd_check,	"Sanity-check ACL(s)" },
-  { "copy-access",      "<src> <dst>+",	aclcmd_copy,	"Copy ACL(s)" },
+#endif
   { NULL,		NULL,		NULL,		NULL },
 };

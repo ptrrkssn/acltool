@@ -43,184 +43,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#include "strings.h"
 #include "misc.h"
 
 #define NEW(vp) ((vp) = malloc(sizeof(*(vp))))
-
-
-char *
-s_ndup(const char *s,
-       size_t len)
-{
-  char *rs;
-  
-  
-  if (!s)
-    return NULL;
-  
-  rs = malloc(len+1);
-  if (!rs)
-    return NULL;
-  
-  strncpy(rs, s, len);
-  rs[len] = '\0';
-  
-  return rs;
-}
-
-char *
-s_dup(const char *s)
-{
-  if (!s)
-    return NULL;
-  
-  return strdup(s);
-}
-
-char *
-s_cat(const char *s,
-      ...) {
-  char *res, *cp;
-  size_t len;
-  va_list ap;
-  
-  
-  va_start(ap, s);
-  len = strlen(s);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    len += strlen(cp);
-  va_end(ap);
-
-  res = malloc(len+1);
-  if (!res)
-    return NULL;
-  
-  strcpy(res, s);
-  va_start(ap, s);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    strcat(res, cp);
-  va_end(ap);
-
-  return res;
-}
-
-
-int
-s_trim(char *s) {
-  char *cp, *dp;
-
-  for (cp = s; *cp && isspace(*cp); ++cp)
-    ;
-  dp = s;
-  if (cp > s) {
-    while (*cp)
-      *dp++ = *cp++;
-  } else
-    while (*dp)
-      ++dp;
-
-  while (dp > s && isspace(dp[-1]))
-    --dp;
-  *dp = '\0';
-  return dp-s;
-}
-
-
-/*
- * "lac" vs "list-access" = OK
- * "list" vs "list-access" = OK
- */
-int
-s_match(const char *a,
-	const char *b) {
-  int ai, bi, mlen;
-  
-
-  ai = bi = 0;
-  while (a[ai]) {
-    /* For each segment */
-    mlen = 0;
-    
-    while (a[ai] && a[ai] == b[bi]) {
-      ++ai;
-      ++bi;
-      ++mlen;
-    }
-    
-    /* At end of 'a' - signal MATCH */
-    if (!a[ai])
-      return 1;
-
-    /* Segment doesn't match at all -> signal FAIL */
-    if (mlen == 0)
-      return 0;
-
-    if (a[ai] == '-' || b[bi] != '-') {
-      if (a[ai] == '-')
-	++ai;
-      
-      while (b[bi] && b[bi] != '-')
-	++bi;
-      
-      if (!b[bi])
-	return a[ai]-b[bi] ? 0 : 1;
-    }
-    
-    ++bi;
-  }
-  
-  return 0;
-}
-
-/*
- * "lac" vs "list-access" = OK
- * "list" vs "list-access" = OK
- */
-int
-s_nmatch(const char *a,
-	 const char *b,
-	 size_t len) {
-  int ai, bi, mlen;
-  
-
-  ai = bi = 0;
-  while (len > 0 && a[ai]) {
-    /* For each segment */
-    mlen = 0;
-    
-    while (a[ai] && a[ai] == b[bi]) {
-      ++ai;
-      ++bi;
-      ++mlen;
-      --len;
-    }
-    
-    /* At end of 'a' - signal MATCH */
-    if (!a[ai])
-      return 1;
-
-    /* Segment doesn't match at all -> signal FAIL */
-    if (mlen == 0)
-      return 0;
-
-    if (a[ai] == '-' || b[bi] != '-') {
-      if (a[ai] == '-') {
-	++ai;
-	--len;
-      }
-      
-      while (b[bi] && b[bi] != '-')
-	++bi;
-      
-      if (!b[bi])
-	return a[ai]-b[bi] ? 0 : 1;
-    }
-    
-    ++bi;
-  }
-  
-  return ai ? 1 : 0;
-}
 
 /*
  * Calculate the difference between two struct timespec, returns elapsed time i microseconds.
@@ -359,7 +185,22 @@ cmp_acl_entry(const void *va,
 }
 
 
-/* Compare two ACL Entries - ignore uids & gids */
+/* 
+ * Compare two ACL Entries - ignore uids & gids
+ *
+ * CANONICAL SORT ORDER
+ *
+ * Windows systems wants ACLS to be sorted in a "canonical" order. This is what Microsoft write about it:
+ *
+ * The preferred order of ACEs in a DACL is called the "canonical" order. For Windows 2000 and Windows
+ * Server 2003, the canonical order is the following:
+ * 
+ *    All explicit ACEs are placed in a group before any inherited ACEs.
+ *    Within the group of explicit ACEs, access-denied ACEs are placed before access-allowed ACEs.
+ *    Within the inherited group, ACEs that are inherited from the child object's parent come first,
+ *    and then ACEs inherited from the grandparent, and so on up the tree of objects. After that,
+ *    access-denied ACEs are placed before access-allowed ACEs.
+ */
 int
 cmp_acl_entry_sorted(const void *va,
 		     const void *vb) {
@@ -690,6 +531,7 @@ aet2str(const acl_entry_type_t aet) {
 }
 
 
+
 char *
 ace2str(acl_entry_t ae,
 	char *rbuf,
@@ -972,10 +814,14 @@ str2style(const char *str,
     *sp = ACL_STYLE_DEFAULT;
   else if (strcasecmp(str, "brief") == 0)
     *sp = ACL_STYLE_BRIEF;
+  else if (strcasecmp(str, "verbose") == 0)
+    *sp = ACL_STYLE_VERBOSE;
   else if (strcasecmp(str, "csv") == 0)
     *sp = ACL_STYLE_CSV;
   else if (strcasecmp(str, "solaris") == 0)
     *sp = ACL_STYLE_SOLARIS;
+  else if (strcasecmp(str, "primos") == 0)
+    *sp = ACL_STYLE_PRIMOS;
   else
     return -1;
 
@@ -989,10 +835,14 @@ style2str(ACL_STYLE s) {
     return "Default";
   case ACL_STYLE_BRIEF:
     return "Brief";
+  case ACL_STYLE_VERBOSE:
+    return "Verbose";
   case ACL_STYLE_CSV:
     return "CSV";
   case ACL_STYLE_SOLARIS:
     return "Solaris";
+  case ACL_STYLE_PRIMOS:
+    return "PRIMOS";
   }
 
   return NULL;
