@@ -853,7 +853,9 @@ ace2str_icacls(acl_entry_t ae,
   acl_tag_t at;
   acl_permset_t aps;
   acl_flagset_t afs;
+#if 0
   acl_entry_type_t aet;
+#endif
   void *qp = NULL;
   struct passwd *pp = NULL;
   struct group *gp = NULL;
@@ -949,11 +951,12 @@ ace2str_icacls(acl_entry_t ae,
 
 
 #if 0
+  /* XXX: How to show DENY ACEs? */
+  
   acl_get_entry_type_np(ae, &aet);
   
   switch (aet) {
   case ACL_ENTRY_TYPE_ALLOW:
-    rc = snprintf(rbuf, rsize, "ALLOWED/");
     break;
   case ACL_ENTRY_TYPE_DENY:
     rc = snprintf(rbuf, rsize, "DENIED/");
