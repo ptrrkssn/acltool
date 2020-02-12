@@ -45,8 +45,10 @@ typedef enum acl_style {
 			ACL_STYLE_BRIEF   = 1,
 			ACL_STYLE_VERBOSE = 2,
 			ACL_STYLE_CSV     = 3,
-			ACL_STYLE_SOLARIS = 4,
-			ACL_STYLE_PRIMOS  = 5,
+			ACL_STYLE_SAMBA   = 4,
+			ACL_STYLE_ICACLS  = 5,
+			ACL_STYLE_SOLARIS = 6,
+			ACL_STYLE_PRIMOS  = 7,
 } ACL_STYLE;
 
 struct command;

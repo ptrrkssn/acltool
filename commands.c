@@ -72,7 +72,7 @@ _cmd_help(COMMANDS *cmds,
   COMMAND *cp;
 
   
-  puts("Command(s):");
+  puts("COMMANDS:");
   
   if (name) {
     cp = NULL;

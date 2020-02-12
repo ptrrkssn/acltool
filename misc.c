@@ -349,6 +349,31 @@ static struct perm2c {
 	   { 0, 0 }
 };
 
+
+
+static struct perm2c_windows {
+  int p;
+  char *c;
+  char *s;
+} p2c_windows[] = {
+	   { ACL_READ_DATA,   "R", "read_data" },
+	   { ACL_WRITE_DATA,  "W", "write_data" },
+	   { ACL_EXECUTE,     "X", "execute" },
+	   { ACL_DELETE,      "D", "delete" },
+	   { ACL_WRITE_ACL,   "P", "write_acl" },
+	   { ACL_WRITE_OWNER, "O", "write_owner" },
+
+	   { ACL_READ_ATTRIBUTES,   "RA", "read_attributes" },
+	   { ACL_WRITE_ATTRIBUTES,  "WA", "write_attributes" },
+	   { ACL_DELETE_CHILD,      "DC", "delete_child" },
+	   { ACL_APPEND_DATA,       "AD", "append_data" },
+	   { ACL_READ_NAMED_ATTRS,  "REA", "read_xattrs" },
+	   { ACL_WRITE_NAMED_ATTRS, "WEA", "write_xattrs" },
+	   { ACL_SYNCHRONIZE,       "S",   "synchronize" },
+	   { ACL_READ_ACL, "AS", "read_acl" }, 
+	   { 0, 0, 0 }
+};
+
 static struct flag2c {
   int f;
   char c;
@@ -361,6 +386,22 @@ static struct flag2c {
 	   { ACL_ENTRY_FAILED_ACCESS, 'F' },
 	   { ACL_ENTRY_INHERITED, 'I' },
 	   { 0, 0 }
+};
+
+static struct flag2str_windows {
+  int f;
+  char *s;
+} f2c_windows[] = {
+	   { ACL_ENTRY_FILE_INHERIT,         "OI" },
+	   { ACL_ENTRY_DIRECTORY_INHERIT,    "CI" },
+	   { ACL_ENTRY_INHERITED,            "I" },
+	   { ACL_ENTRY_NO_PROPAGATE_INHERIT, "NP" },
+	   { ACL_ENTRY_INHERIT_ONLY,         "IO" },
+#if 0
+	   { ACL_ENTRY_SUCCESSFUL_ACCESS, 'S' },
+	   { ACL_ENTRY_FAILED_ACCESS, 'F' },
+#endif
+	   { 0, NULL }
 };
 
 
@@ -491,6 +532,55 @@ permset2str(acl_permset_t psp, char *res) {
 }
 
 char *
+permset2str_samba(acl_permset_t psp,
+		  char *res) {
+  static char buf[64];
+  int i, a, n;
+
+  
+  if (!res)
+    res = buf;
+
+  res[0] = '\0';
+  n = 0;
+  for (i = 0; p2c_windows[i].c; i++) {
+    a = acl_get_perm_np(psp, p2c_windows[i].p);
+    if (a) {
+      if (n++)
+	strcat(res, "|");
+      strcat(res, p2c_windows[i].c);
+    }
+  }
+  return res;
+}
+
+
+char *
+permset2str_icacls(acl_permset_t psp,
+		   char *res) {
+  static char buf[64];
+  int i, a, n;
+
+  
+  if (!res)
+    res = buf;
+
+  res[0] = '\0';
+  n = 0;
+  strcat(res, "(");
+  for (i = 0; p2c_windows[i].c; i++) {
+    a = acl_get_perm_np(psp, p2c_windows[i].p);
+    if (a) {
+      if (n++)
+	strcat(res, ",");
+      strcat(res, p2c_windows[i].c);
+    }
+  }
+  strcat(res, ")");
+  return res;
+}
+
+char *
 flagset2str(acl_flagset_t fsp, char *res) {
   static char buf[64];
   int i, a;
@@ -504,6 +594,56 @@ flagset2str(acl_flagset_t fsp, char *res) {
     res[i] = a ? f2c[i].c : '-';
   }
   res[i] = '\0';
+  return res;
+}
+
+char *
+flagset2str_samba(acl_flagset_t fsp,
+		  char *res) {
+  static char buf[64];
+  int i, a, n;
+
+  
+  if (!res)
+    res = buf;
+
+  res[0] = '\0';
+
+  n = 0;
+  for (i = 0; f2c_windows[i].s; i++) {
+    a = acl_get_flag_np(fsp, f2c_windows[i].f);
+    if (a) {
+      if (n++)
+	strcat(res, "|");
+      strcat(res, f2c_windows[i].s);
+    }
+  }
+
+  return res;
+}
+
+char *
+flagset2str_icacls(acl_flagset_t fsp,
+		   char *res) {
+  static char buf[64];
+  int i, a, n;
+
+  
+  if (!res)
+    res = buf;
+
+  res[0] = '\0';
+
+  n = 0;
+  for (i = 0; f2c_windows[i].s; i++) {
+    a = acl_get_flag_np(fsp, f2c_windows[i].f);
+    if (a) {
+      strcat(res, "(");
+      strcat(res, f2c_windows[i].s);
+      strcat(res, ")");
+    }
+  }
+
   return res;
 }
 
@@ -528,6 +668,323 @@ aet2str(const acl_entry_type_t aet) {
   }
 
   return NULL;
+}
+
+
+
+char *
+ace2str_samba(acl_entry_t ae,
+	      char *rbuf,
+	      size_t rsize,
+	      const struct stat *sp) {
+  static char buf[256];
+  char *res;
+  acl_tag_t at;
+  acl_permset_t aps;
+  acl_flagset_t afs;
+  acl_entry_type_t aet;
+  void *qp = NULL;
+  struct passwd *pp = NULL;
+  struct group *gp = NULL;
+  int rc;
+  
+
+  if (!rbuf) {
+    rbuf = buf;
+    rsize = sizeof(buf);
+  }
+
+  res = rbuf;
+  
+  if (acl_get_tag_type(ae, &at) < 0)
+    return NULL;
+
+  switch (at) {
+  case ACL_USER:
+    qp = acl_get_qualifier(ae);
+    if (!qp)
+      return NULL;
+
+    pp = getpwuid(*(uid_t *) qp);
+    if (pp)
+      rc = snprintf(res, rsize, "ACL:%s:", pp->pw_name);
+    else
+      rc = snprintf(res, rsize, "ACL:%u:", * (uid_t *) qp);
+    break;
+    
+  case ACL_GROUP:
+    qp = acl_get_qualifier(ae);
+    if (!qp)
+      return NULL;
+
+    gp = getgrgid(*(gid_t *) qp);
+    if (gp) {
+      if (getpwnam(gp->gr_name))
+	rc = snprintf(res, rsize, "ACL:GROUP=%s:", gp->gr_name);
+      else
+	rc = snprintf(res, rsize, "ACL:%s:", gp->gr_name);
+    } else
+      rc = snprintf(res, rsize, "ACL:GID=%u:", * (gid_t *) qp);
+    break;
+    
+  case ACL_USER_OBJ:
+    pp = getpwuid(sp->st_uid);
+    if (pp)
+      rc = snprintf(res, rsize, "ACL:%s:", pp->pw_name);
+    else
+      rc = snprintf(res, rsize, "ACL:%u:", sp->st_uid);
+    break;
+    
+  case ACL_GROUP_OBJ:
+    gp = getgrgid(sp->st_gid);
+    if (gp) {
+      if (getpwnam(gp->gr_name))
+	rc = snprintf(res, rsize, "ACL:GROUP=%s:", gp->gr_name);
+      else
+	rc = snprintf(res, rsize, "ACL:%s:", gp->gr_name);
+    } else
+      rc = snprintf(res, rsize, "ACL:GID=%u:", sp->st_gid);
+    break;
+
+#if 0
+  case ACL_MASK:
+    rc = snprintf(res, rsize, "ACL:%s:", "mask@");
+    break;
+#endif
+
+  case ACL_OTHER:
+    rc = snprintf(res, rsize, "ACL:%s:", "Everyone");
+    break;
+
+  case ACL_EVERYONE:
+    rc = snprintf(res, rsize, "ACL:%s:", "Everyone");
+    break;
+
+  default:
+    errno = EINVAL;
+    return NULL;
+  }
+  
+  if (rc < 0)
+    return NULL;
+  
+  if (rc > rsize-1) {
+    errno = ENOMEM;
+    return NULL;
+  }
+  
+  rbuf += rc;
+  rsize -= rc;
+
+  
+  acl_get_entry_type_np(ae, &aet);
+  
+  switch (aet) {
+  case ACL_ENTRY_TYPE_ALLOW:
+    rc = snprintf(rbuf, rsize, "ALLOWED/");
+    break;
+  case ACL_ENTRY_TYPE_DENY:
+    rc = snprintf(rbuf, rsize, "ALLOWED/");
+    break;
+  case ACL_ENTRY_TYPE_AUDIT:
+    rc = snprintf(rbuf, rsize, "AUDIT/");
+    break;
+  case ACL_ENTRY_TYPE_ALARM:
+    rc = snprintf(rbuf, rsize, "ALARM/");
+    break;
+  }
+
+  rbuf += rc;
+  rsize -= rc;
+  
+
+  if (acl_get_flagset_np(ae, &afs) < 0)
+    return NULL;
+  
+  flagset2str_samba(afs, rbuf);
+  rc = strlen(rbuf);
+  rbuf += rc;
+  rsize -= rc;
+
+#if 0
+  rbuf[0] = '(';
+  ++rbuf;
+  --rsize;
+  
+  flagset2str(afs, rbuf);
+  rc = strlen(rbuf);
+  rbuf += rc;
+  rsize -= rc;
+
+  rbuf[0] = ')';
+  ++rbuf;
+  --rsize;
+#endif
+  
+  rbuf[0] = '/';
+  ++rbuf;
+  --rsize;
+
+  if (acl_get_permset(ae, &aps) < 0)
+    return NULL;
+  
+  permset2str_samba(aps, rbuf);
+  rc = strlen(rbuf);
+  rbuf += rc;
+  rsize -= rc;
+
+  rbuf[0] = '\t';
+  ++rbuf;
+  --rsize;
+  
+  permset2str(aps, rbuf);
+  
+  return res;
+}
+
+
+char *
+ace2str_icacls(acl_entry_t ae,
+	      char *rbuf,
+	      size_t rsize,
+	      const struct stat *sp) {
+  static char buf[256];
+  char *res;
+  acl_tag_t at;
+  acl_permset_t aps;
+  acl_flagset_t afs;
+  acl_entry_type_t aet;
+  void *qp = NULL;
+  struct passwd *pp = NULL;
+  struct group *gp = NULL;
+  int rc;
+  
+
+  if (!rbuf) {
+    rbuf = buf;
+    rsize = sizeof(buf);
+  }
+
+  res = rbuf;
+  
+  if (acl_get_tag_type(ae, &at) < 0)
+    return NULL;
+
+  switch (at) {
+  case ACL_USER:
+    qp = acl_get_qualifier(ae);
+    if (!qp)
+      return NULL;
+
+    pp = getpwuid(*(uid_t *) qp);
+    if (pp)
+      rc = snprintf(res, rsize, "%s:", pp->pw_name);
+    else
+      rc = snprintf(res, rsize, "%u:", * (uid_t *) qp);
+    break;
+    
+  case ACL_GROUP:
+    qp = acl_get_qualifier(ae);
+    if (!qp)
+      return NULL;
+
+    gp = getgrgid(*(gid_t *) qp);
+    if (gp) {
+      if (getpwnam(gp->gr_name))
+	rc = snprintf(res, rsize, "GROUP=%s:", gp->gr_name);
+      else
+	rc = snprintf(res, rsize, "%s:", gp->gr_name);
+    } else
+      rc = snprintf(res, rsize, "GID=%u:", * (gid_t *) qp);
+    break;
+    
+  case ACL_USER_OBJ:
+    pp = getpwuid(sp->st_uid);
+    if (pp)
+      rc = snprintf(res, rsize, "%s:", pp->pw_name);
+    else
+      rc = snprintf(res, rsize, "%u:", sp->st_uid);
+    break;
+    
+  case ACL_GROUP_OBJ:
+    gp = getgrgid(sp->st_gid);
+    if (gp) {
+      if (getpwnam(gp->gr_name))
+	rc = snprintf(res, rsize, "GROUP=%s:", gp->gr_name);
+      else
+	rc = snprintf(res, rsize, "%s:", gp->gr_name);
+    } else
+      rc = snprintf(res, rsize, "GID=%u:", sp->st_gid);
+    break;
+
+#if 0
+  case ACL_MASK:
+    rc = snprintf(res, rsize, "%s:", "mask@");
+    break;
+#endif
+
+  case ACL_OTHER:
+    rc = snprintf(res, rsize, "%s:", "Everyone");
+    break;
+
+  case ACL_EVERYONE:
+    rc = snprintf(res, rsize, "%s:", "Everyone");
+    break;
+
+  default:
+    errno = EINVAL;
+    return NULL;
+  }
+  
+  if (rc < 0)
+    return NULL;
+  
+  if (rc > rsize-1) {
+    errno = ENOMEM;
+    return NULL;
+  }
+  
+  rbuf += rc;
+  rsize -= rc;
+
+
+#if 0
+  acl_get_entry_type_np(ae, &aet);
+  
+  switch (aet) {
+  case ACL_ENTRY_TYPE_ALLOW:
+    rc = snprintf(rbuf, rsize, "ALLOWED/");
+    break;
+  case ACL_ENTRY_TYPE_DENY:
+    rc = snprintf(rbuf, rsize, "DENIED/");
+    break;
+  case ACL_ENTRY_TYPE_AUDIT:
+    rc = snprintf(rbuf, rsize, "AUDIT/");
+    break;
+  case ACL_ENTRY_TYPE_ALARM:
+    rc = snprintf(rbuf, rsize, "ALARM/");
+    break;
+  }
+
+  rbuf += rc;
+  rsize -= rc;
+#endif
+
+  if (acl_get_flagset_np(ae, &afs) < 0)
+    return NULL;
+  
+  flagset2str_icacls(afs, rbuf);
+  rc = strlen(rbuf);
+  rbuf += rc;
+  rsize -= rc;
+
+  
+  if (acl_get_permset(ae, &aps) < 0)
+    return NULL;
+  
+  permset2str_icacls(aps, rbuf);
+
+  return res;
 }
 
 
@@ -818,6 +1275,10 @@ str2style(const char *str,
     *sp = ACL_STYLE_VERBOSE;
   else if (strcasecmp(str, "csv") == 0)
     *sp = ACL_STYLE_CSV;
+  else if (strcasecmp(str, "samba") == 0)
+    *sp = ACL_STYLE_SAMBA;
+  else if (strcasecmp(str, "icacls") == 0)
+    *sp = ACL_STYLE_ICACLS;
   else if (strcasecmp(str, "solaris") == 0)
     *sp = ACL_STYLE_SOLARIS;
   else if (strcasecmp(str, "primos") == 0)
@@ -839,6 +1300,10 @@ style2str(ACL_STYLE s) {
     return "Verbose";
   case ACL_STYLE_CSV:
     return "CSV";
+  case ACL_STYLE_SAMBA:
+    return "Samba";
+  case ACL_STYLE_ICACLS:
+    return "ICACLS";
   case ACL_STYLE_SOLARIS:
     return "Solaris";
   case ACL_STYLE_PRIMOS:

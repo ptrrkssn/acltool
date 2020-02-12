@@ -49,7 +49,7 @@ opts_print(OPTION *opts,
   int i;
 
 
-  fprintf(fp, "Options:\n");
+  fprintf(fp, "OPTIONS:\n");
   for (i = 0; opts[i].name; i++)
     fprintf(fp, "  -%c / --%-10s\t%s\t%s\n",
 	    opts[i].flag,
@@ -151,7 +151,7 @@ opts_parse_argv(OPTION *opts,
 	break;
       }
       
-      rc = op->handler(op->name, value, op->type, vp, xp);
+      rc = op->handler(op->name, value, op->type, vp, xp, argv[0]);
       if (rc)
 	return rc;
     } else {
@@ -238,7 +238,7 @@ opts_parse_argv(OPTION *opts,
 	  return -1;
 	}
 	
-	rc = op->handler(op->name, value, op->type, vp, xp);
+	rc = op->handler(op->name, value, op->type, vp, xp, argv[0]);
 	if (rc)
 	  return rc;
 
@@ -260,7 +260,8 @@ int
 opts_set2(OPTION *opts,
 	  const char *name,
 	  const char *value,
-	  void *xp) {
+	  void *xp,
+	  const char *a0) {
   int nm, k, d;
   OPTION *op;
   void *vp;
@@ -316,14 +317,15 @@ opts_set2(OPTION *opts,
     vp = (void *) value;
   }
   
-  return op->handler(op->name, value, op->type, vp, xp);
+  return op->handler(op->name, value, op->type, vp, xp, a0);
 }
 
 
 int
 opts_set(OPTION *opts,
 	 const char *varval,
-	 void *xp) {
+	 void *xp,
+	 const char *a0) {
   char *name;
   char *value;
   int rc;
@@ -334,7 +336,7 @@ opts_set(OPTION *opts,
   if (value)
     *value++ = '\0';
 
-  rc = opts_set2(opts, name, value, xp);
+  rc = opts_set2(opts, name, value, xp, a0);
   free(name);
 
   return rc;
@@ -348,10 +350,11 @@ test_handler(const char *name,
 	     const char *vs,
 	     unsigned int type,
 	     void *vp,
-	     void *xp) {
+	     void *xp,
+	     const char *a0) {
   FILE *fp = (FILE *) xp;
   
-  fprintf(fp, "Setting %s to %s\n", name, vs ? vs : "<NULL>");
+  fprintf(fp, "%s: Setting %s to %s\n", a0, name, vs ? vs : "<NULL>");
   if ((type & OPTS_TYPE_MASK) == OPTS_TYPE_INT)
     printf("int=%d\n", * (int *) vp);
 	    

@@ -50,7 +50,7 @@ typedef struct option {
   const char *name;
   char flag;
   unsigned int type;
-  int (*handler)(const char *name, const char *vs, unsigned int type, void *vp, void *xp);
+  int (*handler)(const char *name, const char *vs, unsigned int type, void *vp, void *xp, const char *argv0);
   const char *help;
 } OPTION;
 
@@ -68,10 +68,12 @@ extern int
 opts_set2(OPTION *opts,
 	  const char *name,
 	  const char *value,
-	  void *xp);
+	  void *xp,
+	  const char *argv0);
 
 extern int
 opts_set(OPTION *opts,
 	 const char *varval,
-	 void *xp);
+	 void *xp,
+	 const char *argv0);
 #endif

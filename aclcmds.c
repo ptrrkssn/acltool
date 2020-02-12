@@ -109,7 +109,7 @@ print_acl(FILE *fp,
 	  const struct stat *sp,
 	  CONFIG *cfgp) {
   acl_entry_t ae;
-  int i, is_trivial, d;
+  int i, is_trivial, d, len;
   char *as, *cp;
   char acebuf[2048], ubuf[64], gbuf[64], tbuf[80], *us, *gs;
   struct passwd *pp = NULL;
@@ -328,6 +328,65 @@ print_acl(FILE *fp,
     }
     break;
     
+  case ACL_STYLE_SAMBA:
+    pp = NULL;
+    gp = NULL;
+    if (sp) {
+      pp = getpwuid(sp->st_uid);
+      gp = getgrgid(sp->st_gid);
+    }
+    
+    if (w_c)
+      putc('\n', fp);
+
+    fprintf(fp, "FILENAME:%s\n", path);
+    fprintf(fp, "REVISION:1\n");
+    fprintf(fp, "CONTROL:SR|DP\n");
+
+    if (pp)
+      fprintf(fp, "OWNER:%s\n", pp->pw_name);
+    else
+      fprintf(fp, "OWNER:%d\n", sp->st_uid);
+
+    if (gp)
+      fprintf(fp, "GROUP:%s\n", gp->gr_name);
+    else
+      fprintf(fp, "GROUP:%d\n", sp->st_gid);
+
+    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+      char *cp;
+      ace2str_samba(ae, acebuf, sizeof(acebuf), sp);
+
+      cp = strrchr(acebuf, '\t');
+      if (*cp) {
+	*cp++ = '\0';
+	fprintf(fp, "%-50s\t# %s\n", acebuf, cp);
+      } else
+	fprintf(fp, "%s\n", acebuf);
+    }
+    break;
+    
+  case ACL_STYLE_ICACLS:
+    pp = NULL;
+    gp = NULL;
+    if (sp) {
+      pp = getpwuid(sp->st_uid);
+      gp = getgrgid(sp->st_gid);
+    }
+    
+    if (w_c)
+      putc('\n', fp);
+
+    len = strlen(path);
+
+    fprintf(fp, "%s", path);
+
+    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+      ace2str_icacls(ae, acebuf, sizeof(acebuf), sp);
+      fprintf(fp, "%*s %s\n", i ? len : 0, "", acebuf);
+    }
+    break;
+    
   default:
     return -1;
   }
@@ -512,6 +571,7 @@ _aclcmd_foreach(int argc,
   
 
   w_cfgp = cfgp;
+  w_c = 0;
   
   for (i = 1; rc == 0 && i < argc; i++) {
     rc = ft_foreach(argv[i], handler, vp,

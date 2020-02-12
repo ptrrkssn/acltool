@@ -74,7 +74,8 @@ set_debug(const char *name,
 	  const char *value,
 	  unsigned int type,
 	  void *vp,
-	  void *xp) {
+	  void *xp,
+	  const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
 
   if (vp)
@@ -90,7 +91,8 @@ set_verbose(const char *name,
 	    const char *value,
 	    unsigned int type,
 	    void *vp,
-	    void *xp) {
+	    void *xp,
+	    const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
   
   if (vp)
@@ -106,7 +108,8 @@ set_recurse(const char *name,
 	    const char *value,
 	    unsigned int type,
 	    void *vp,
-	    void *xp) {
+	    void *xp,
+	    const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
 
   
@@ -126,10 +129,11 @@ set_recurse(const char *name,
 
 int
 set_depth(const char *name,
-	    const char *value,
-	    unsigned int type,
-	    void *vp,
-	    void *xp) {
+	  const char *value,
+	  unsigned int type,
+	  void *vp,
+	  void *xp,
+	  const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
   
   if (vp) {
@@ -148,7 +152,8 @@ set_style(const char *name,
 	  const char *value,
 	  unsigned int type,
 	  void *vp,
-	  void *xp) {
+	  void *xp,
+	  const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
 
   
@@ -166,7 +171,8 @@ set_no_update(const char *name,
 	      const char *value,
 	      unsigned int type,
 	      void *vp,
-	      void *xp) {
+	      void *xp,
+	      const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
 
   cp->f_noupdate = 1;
@@ -180,13 +186,14 @@ show_help(const char *name,
 	  const char *value,
 	  unsigned int type,
 	  void *vp,
-	  void *xp) {
-  printf("Usage:\n  %s [<options>] [<command>]\n\n", argv0);
+	  void *xp,
+	  const char *a0) {
+  printf("USAGE:\n  %s [<options>] [<command>]\n\n", a0);
   
   opts_print(&options[0], stdout);
 
   puts("\nUse 'help' to get more information about the available commands");
-  return 0;
+  return -1;
 }
 
 
@@ -281,7 +288,7 @@ cmd_config(int argc,
 
     
     for (i = 1; i < argc; i++) {
-      rc = opts_set(options, argv[i], vp);
+      rc = opts_set(options, argv[i], vp, argv[0]);
       if (rc)
 	return rc;
     }
@@ -316,16 +323,14 @@ cmd_help(int argc,
     puts("  If invoked without a command the tool will enter an interactive mode.");
     puts("  All commands take the same options and they can also be used in the interactive mode.");
     putchar('\n');
-    puts("  ACL styles supported: default, csv, brief, verbose, solaris, primos");
+    puts("  ACL styles supported: default, csv, brief, verbose, samba, icacls, solaris, primos");
     putchar('\n');
     puts("  You may access environment variables using ${NAME}.");
-    
-    return rc;
+  } else {
+    for (i = 1; i < argc; i++)
+      rc = _cmd_help(&commands, argv[i]);
   }
-  
-  for (i = 1; i < argc; i++)
-    rc = _cmd_help(&commands, argv[i]);
-  
+
   return rc;
 }
 
@@ -449,14 +454,15 @@ main(int argc,
 
       default:
 	ac = argv_create(buf, NULL, NULL, &av);
-	if (ac > 0)
+	if (ac > 0) {
 	  rc = run_cmd(ac, av, &d_cfg, free);
+	}
 	
 	argv_destroy(av);
       }
       
       free(buf);
-      if (rc)
+      if (rc > 0)
 	fprintf(stderr, "ERR");
     }
 

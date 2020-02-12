@@ -100,6 +100,18 @@ ace2str(acl_entry_t ae,
 	char *rbuf,
 	size_t rsize);
 
+extern char *
+ace2str_samba(acl_entry_t ae,
+	      char *rbuf,
+	      size_t rsize,
+	      const struct stat *sp);
+
+extern char *
+ace2str_icacls(acl_entry_t ae,
+	       char *rbuf,
+	       size_t rsize,
+	       const struct stat *sp);
+
 extern int
 ft_foreach(const char *path,
 	   int (*walker)(const char *path,
