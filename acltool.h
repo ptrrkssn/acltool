@@ -53,28 +53,13 @@ typedef struct config {
   int f_debug;
   int f_verbose;
   int f_recurse;
-  int f_nodepth;
   int f_noupdate;
   ACL_STYLE f_style;
+  
+  int max_depth;
 } CONFIG;
 
 
-typedef struct command {
-  const char *name;
-  const char *args;
-  int (*handler)(int argc, char **argv, CONFIG *cfgp);
-  const char *help;
-} COMMAND;
-
-
-typedef struct commands {
-  COMMAND *v;
-  struct commands *next;
-} COMMANDS;
-
-
-extern COMMAND basic_commands[];
-extern COMMANDS *commands;
 extern char *argv0;
 
 #endif

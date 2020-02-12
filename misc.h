@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/acl.h>
+#include <sys/stat.h>
 
 extern char *
 s_ndup(const char *s,
@@ -107,5 +108,27 @@ extern char *
 ace2str(acl_entry_t ae,
 	char *rbuf,
 	size_t rsize);
+
+extern int
+ft_foreach(const char *path,
+	   int (*walker)(const char *path,
+			 const struct stat *stat,
+			 size_t base,
+			 size_t level,
+			 void *vp),
+	   void *vp,
+	   size_t maxlevel);
+
+extern int
+s_match(const char *a,
+	const char *b);
+
+extern int
+s_nmatch(const char *a,
+	 const char *b,
+	 size_t len);
+
+extern int
+s_trim(char *s);
 
 #endif

@@ -52,27 +52,27 @@
 #include "argv.h"
 #include "misc.h"
 #include "commands.h"
+#include "aclcmds.h"
 
 #include "acltool.h"
 
+COMMANDS commands;
 
 
 
-#define SHORT_OPTIONS "hndvrS:D:"
+#define SHORT_OPTIONS "hnv::r::d::D::S:"
 
 struct option long_options[] =
   {
    { "help",      no_argument,       NULL, 'h' },
-   { "debug",     optional_argument, NULL, 'D' },
-   { "verbose",   optional_argument, NULL, 'v' },
-   { "recurse",   optional_argument, NULL, 'r' },
-   { "no-depth",  no_argument,       NULL, 'd' },
    { "no-update", no_argument,       NULL, 'n' },
    { "style",     required_argument, NULL, 'S' },
+   { "verbose",   optional_argument, NULL, 'v' },
+   { "recurse",   optional_argument, NULL, 'r' },
+   { "depth",     optional_argument, NULL, 'd' },
+   { "debug",     optional_argument, NULL, 'D' },
    { NULL,        0,                 NULL, 0 },
 };
-
-COMMANDS *commands = NULL;
 
 
 int
@@ -126,7 +126,18 @@ option_set_short(CONFIG *cfgp,
     break;
 
   case 'd':
-    cfgp->f_nodepth = 1;
+    if (val) {
+      int d;
+      
+      if (sscanf(val, "%d", &d) != 1) {
+	fprintf(stderr, "%s: Error: %s: Invalid depth\n", argv0, val);
+	return -1;
+      }
+      cfgp->max_depth += d;
+      if (cfgp->max_depth < -1)
+	cfgp->max_depth = -1;
+    } else
+      cfgp->max_depth++;
     break;
 
   case 'D':
@@ -161,12 +172,12 @@ option_set_short(CONFIG *cfgp,
     
   case 'r':
     if (val) {
-      if (sscanf(val, "%d", &cfgp->f_recurse) != 1) {
-	fprintf(stderr, "%s: Error: %s: Invalid recurse level\n", argv0, val);
+      if (sscanf(val, "%d", &cfgp->max_depth) != 1 || cfgp->max_depth < -1) {
+	fprintf(stderr, "%s: Error: %s: Invalid max depth\n", argv0, val);
 	return -1;
       }
     } else
-      cfgp->f_recurse++;
+      cfgp->max_depth = -1;
     break;
     
   default:
@@ -220,62 +231,6 @@ my_var_handler(const char *esc,
 }
 
 
-int
-cmd_help(int argc,
-	 char **argv,
-	 CONFIG *cfgp) {
-  int i, j, nm;
-  COMMANDS *csp;
-  COMMAND *cp;
-
-  
-  if (argc > 1) {
-    for (i = 1; i < argc; i++) {
-      nm = 0;
-      cp = NULL;
-      
-      for (csp = commands; csp; csp = csp->next) {
-	for (j = 0; csp->v[j].name; j++) {
-	  if (strncmp(csp->v[j].name, argv[i], strlen(argv[i])) == 0) {
-	    cp = &csp->v[j];
-	    ++nm;
-	  }
-	}
-      }
-      
-      if (nm < 1) {
-	fprintf(stderr, "%s: No such command\n", argv[i]);
-	return -1;
-      }
-      if (nm > 1) {
-	fprintf(stderr, "%s: Multiple command matches\n", argv[i]);
-	return -1;
-      }
-      printf("  %-12s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
-    }
-  } else {
-    puts("Commands:");
-    for (csp = commands; csp; csp = csp->next) {
-      for (j = 0; csp->v[j].name; j++) {
-	cp = &csp->v[j];
-	printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
-      }
-    }
-
-    puts("\nAll commands also accept the standard options\n");
-    puts("\nOptions:");
-    puts("  -h            Display this information");
-    puts("  -r            Enable recursive mode");
-    puts("  -d            No-depth mode");
-    puts("  -n            No-update mode");
-    puts("  -v[<level>]   Increase/set verbosity level");
-    puts("  -S<style>     ACL print style/format [default, brief, csv, solaris]");
-    puts("  -D<level>     Increase debug level");
-  }
-  
-  return 0;
-}
-
 
 int
 cfg_parse(CONFIG *cfgp,
@@ -290,13 +245,7 @@ cfg_parse(CONFIG *cfgp,
   optreset = 1;
   while (rc == 0 && (c = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
     if (c == 'h' || c == '?') {
-      char *av[3];
-
-      av[2] = NULL;
-      av[1] = argv[optind-2];
-      av[0] = "help";
-      
-      cmd_help(2, av, cfgp);
+      cmd_help(&commands, argv[optind-2]);
       return -1;
     } else
       rc = option_set_short(cfgp, c, optarg);
@@ -309,9 +258,10 @@ cfg_parse(CONFIG *cfgp,
 int
 cmd_print(int argc,
 	  char **argv,
-	  CONFIG *cfgp) {
+	  void *vp) {
   int i;
 
+  
   for (i = 1; i < argc; i++) {
     if (i > 1)
       putchar(' ');
@@ -325,7 +275,7 @@ cmd_print(int argc,
 int
 cmd_pwd(int argc,
 	char **argv,
-	CONFIG *cfgp) {
+	void *vp) {
   char buf[2048];
 
   if (getcwd(buf, sizeof(buf)))
@@ -337,7 +287,7 @@ cmd_pwd(int argc,
 int
 cmd_cd(int argc,
        char **argv,
-       CONFIG *cfgp) {
+       void *vp) {
   int i, rc;
   
 
@@ -377,15 +327,19 @@ cmd_cd(int argc,
 int
 cmd_config(int argc,
 	   char **argv,
-	   CONFIG *cfgp) {
+	   void *vp) {
   int rc = 0;
-  
+  CONFIG *cfgp = (CONFIG *) vp;
 
+  
   if (argc == 1) {
     puts("CONFIGURATION:");
     printf("  Debug Level:        %d\n", cfgp->f_debug);
     printf("  Verbosity Level:    %d\n", cfgp->f_verbose);
-    printf("  Recurse:            %s\n", cfgp->f_recurse ? "Yes" : "No");
+    if (cfgp->max_depth < 0)
+      printf("  Recurse Max Depth:  No Limit\n");
+    else
+      printf("  Recurse Max Depth:  %d\n", cfgp->max_depth);
     printf("  Update:             %s\n", cfgp->f_noupdate ? "No" : "Yes");
     printf("  Style:              %s\n", style2str(cfgp->f_style));
   } else {
@@ -413,9 +367,10 @@ cmd_config(int argc,
 int
 cmd_exit(int argc,
 	 char **argv,
-	 CONFIG *cfgp) {
+	 void *vp) {
   int ec = 0;
 
+  
   if (argc > 1) {
     if (sscanf(argv[1], "%d", &ec) != 1) {
       fprintf(stderr, "%s: Error: %s: Invalid exit code\n", argv[0], argv[1]);
@@ -428,7 +383,6 @@ cmd_exit(int argc,
 
 
 COMMAND basic_commands[] = {
-  { "help", 	"[<command>]*",			cmd_help, 	"Display this information" },
   { "exit", 	"[<code>]",			cmd_exit,	"Exit (with exit code)" },
   { "config", 	"[<opt>[=<val>]]*",		cmd_config,	"Print/update default configuration" },
   { "print", 	"[<str>]*",			cmd_print,	"Print some text" },
@@ -438,88 +392,23 @@ COMMAND basic_commands[] = {
 };
 
 
-int
-run_cmd(int argc,
-	char *argv[],
-	CONFIG *cfgp,
-	COMMAND *commands) {
-  int ai, i, nm;
-  COMMAND *scp;
-  CONFIG cfg;
-  
-
-  cfg = *cfgp;
-  ai = 0;
-  if (cfg_parse(&cfg, &ai, argc, argv) != 0)
-    return -1;
-  
-  if (strcmp(argv[0], "?") == 0) {
-    if (cfgp != &d_cfg)
-      free(argv[0]);
-    argv[0] = s_dup("help");
-  }
-
-  nm = 0;
-  scp = NULL;
-  for (i = 0; basic_commands[i].name; i++) {
-    COMMAND *cp = &basic_commands[i];
-    
-    if (strncmp(cp->name, argv[0], strlen(argv[0])) == 0) {
-      scp = cp;
-      ++nm;
-    }
-  }
-  
-  if (commands) {
-    for (i = 0; commands[i].name; i++) {
-      COMMAND *cp = &commands[i];
-      
-      if (strncmp(cp->name, argv[0], strlen(argv[0])) == 0) {
-	scp = cp;
-	++nm;
-      }
-    }
-  }
-
-  if (nm == 0) {
-    fprintf(stderr, "Error: %s: No such command\n", argv[0]);
-    return -1;
-  }
-
-  if (nm > 1) {
-    fprintf(stderr, "Error: %s: Matches multiple commands\n", argv[0]);
-    return -1;
-  }
-
-  if (ai > 1) {
-    free(argv[ai-1]);
-    argv[ai-1] = argv[0];
-  }
-  
-  return (*scp->handler)(argc-ai+1, argv+ai-1, &cfg);
-}
-
   
 char *
 cmd_name_generator(const char *text,
 		   int state) {
-  static int ci, len;
-  const char *name;
-  COMMANDS *csp;
+  static int ci;
   COMMAND *cp;
-
   
-  if (!state) {
+  
+  if (!state)
     ci = 0;
-    len = strlen(text);
-  }
 
-  for (csp = commands; csp; csp = csp->next) {
-    cp = csp->v;
-    while ((name = cp[ci++].name) != NULL) {
-      if (strncmp(name, text, len) == 0)
-	return s_dup(name);
-    }
+  while (ci < commands.cc) {
+    cp = commands.cv[ci];
+    ++ci;
+    
+    if (s_match(text, cp->name))
+      return s_dup(cp->name);
   }
   
   return NULL;
@@ -535,21 +424,29 @@ cmd_name_completion(const char *text,
 }
 
 
+
 int
-commands_add(COMMAND *cv) {
-  COMMANDS **cspp, *ncsp = malloc(sizeof(*ncsp));
-
-  if (!ncsp)
-    return -1;
-
-  for (cspp = &commands; *cspp; cspp = &(*cspp)->next)
-    ;
+run_cmd(int argc,
+	char **argv,
+	CONFIG *cp) {
+  CONFIG cfg;
+  int ai, rc;
   
-  ncsp->v = cv;
-  ncsp->next = NULL;
-  *cspp = ncsp;
+  
+  cfg = *cp;
+  
+  ai = 0;
+  if (cfg_parse(&cfg, &ai, argc, argv) != 0)
+    return -1;
+  
+  rc = cmd_run(&commands, argc-ai+1, argv+ai-1, (void *) &cfg);
+  
+  if (ai > 1) {
+    free(argv[ai-1]);
+    argv[ai-1] = argv[0];
+  }
 
-  return 0;
+  return rc;
 }
 
 
@@ -564,8 +461,9 @@ main(int argc,
 
   argv0 = argv[0];
 
-  commands_add(basic_commands);
-  commands_add(acl_commands);
+  cmd_init(&commands);
+  cmd_register(&commands, 0, basic_commands);
+  cmd_register(&commands, 0, acl_commands);
   
   ai = 0;
   if (cfg_parse(&d_cfg, &ai, argc, argv) != 0)
@@ -594,7 +492,7 @@ main(int argc,
       default:
 	ac = argv_create(buf, NULL, NULL, &av);
 	if (ac > 0)
-	  rc = run_cmd(ac, av, &d_cfg, acl_commands);
+	  rc = run_cmd(ac, av, &d_cfg);
 	
 	argv_destroy(av);
       }
@@ -607,6 +505,6 @@ main(int argc,
     exit(rc);
   }
   
-  rc = run_cmd(argc-ai, argv+ai, &d_cfg, acl_commands);
+  rc = run_cmd(argc-ai, argv+ai, &d_cfg);
   return rc;
 }

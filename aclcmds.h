@@ -1,5 +1,5 @@
 /*
- * commands.h
+ * aclcmds.h
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,36 +31,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef COMMANDS_H
-#define COMMANDS_H 1
+#ifndef ACLCMDS_H
+#define ACLCMD_H 1
 
+#include "acltool.h"
 
-typedef struct command {
-  const char *name;
-  const char *args;
-  int (*handler)(int argc, char **argv, void *vp);
-  const char *help;
-} COMMAND;
-
-
-#define CMDS_MAX 256
-
-typedef struct commands {
-  size_t cc;
-  COMMAND *cv[CMDS_MAX];
-} COMMANDS;
-
-
-extern void
-cmd_init(COMMANDS *cp);
 
 extern int
-cmd_register(COMMANDS *cp, int c, COMMAND v[]);
+cmd_list(int argc,
+	 char **argv,
+	 CONFIG *cfgp);
 
 extern int
-cmd_run(COMMANDS *cp, int argc, char **argv, void *vp);
+cmd_copy(int argc,
+	 char **argv,
+	 CONFIG *cfgp);
 
 extern int
-cmd_help(COMMANDS *cp, const char *name);
+cmd_strip(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_set(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_grep(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_sort(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_edit(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_check(int argc,
+	  char **argv,
+	  CONFIG *cfgp);
+
+extern int
+cmd_inherit(int argc,
+	    char **argv,
+	    CONFIG *cfgp);
+
+
+extern COMMAND acl_commands[];
 
 #endif

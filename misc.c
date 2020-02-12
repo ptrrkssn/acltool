@@ -35,11 +35,18 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #include "misc.h"
+
+#define NEW(vp) ((vp) = malloc(sizeof(*(vp))))
+
 
 char *
 s_ndup(const char *s,
@@ -97,6 +104,123 @@ s_cat(const char *s,
   return res;
 }
 
+
+int
+s_trim(char *s) {
+  char *cp, *dp;
+
+  for (cp = s; *cp && isspace(*cp); ++cp)
+    ;
+  dp = s;
+  if (cp > s) {
+    while (*cp)
+      *dp++ = *cp++;
+  } else
+    while (*dp)
+      ++dp;
+
+  while (dp > s && isspace(dp[-1]))
+    --dp;
+  *dp = '\0';
+  return dp-s;
+}
+
+
+/*
+ * "lac" vs "list-access" = OK
+ * "list" vs "list-access" = OK
+ */
+int
+s_match(const char *a,
+	const char *b) {
+  int ai, bi, mlen;
+  
+
+  ai = bi = 0;
+  while (a[ai]) {
+    /* For each segment */
+    mlen = 0;
+    
+    while (a[ai] && a[ai] == b[bi]) {
+      ++ai;
+      ++bi;
+      ++mlen;
+    }
+    
+    /* At end of 'a' - signal MATCH */
+    if (!a[ai])
+      return 1;
+
+    /* Segment doesn't match at all -> signal FAIL */
+    if (mlen == 0)
+      return 0;
+
+    if (a[ai] == '-' || b[bi] != '-') {
+      if (a[ai] == '-')
+	++ai;
+      
+      while (b[bi] && b[bi] != '-')
+	++bi;
+      
+      if (!b[bi])
+	return a[ai]-b[bi] ? 0 : 1;
+    }
+    
+    ++bi;
+  }
+  
+  return 0;
+}
+
+/*
+ * "lac" vs "list-access" = OK
+ * "list" vs "list-access" = OK
+ */
+int
+s_nmatch(const char *a,
+	 const char *b,
+	 size_t len) {
+  int ai, bi, mlen;
+  
+
+  ai = bi = 0;
+  while (len > 0 && a[ai]) {
+    /* For each segment */
+    mlen = 0;
+    
+    while (a[ai] && a[ai] == b[bi]) {
+      ++ai;
+      ++bi;
+      ++mlen;
+      --len;
+    }
+    
+    /* At end of 'a' - signal MATCH */
+    if (!a[ai])
+      return 1;
+
+    /* Segment doesn't match at all -> signal FAIL */
+    if (mlen == 0)
+      return 0;
+
+    if (a[ai] == '-' || b[bi] != '-') {
+      if (a[ai] == '-') {
+	++ai;
+	--len;
+      }
+      
+      while (b[bi] && b[bi] != '-')
+	++bi;
+      
+      if (!b[bi])
+	return a[ai]-b[bi] ? 0 : 1;
+    }
+    
+    ++bi;
+  }
+  
+  return ai ? 1 : 0;
+}
 
 /*
  * Calculate the difference between two struct timespec, returns elapsed time i microseconds.
@@ -684,6 +808,157 @@ ace2str(acl_entry_t ae,
   acl_get_entry_type_np(ae, &aet);
   strcpy(rbuf, aet2str(aet));
   return res;
+}
+
+
+
+typedef struct ftdcb {
+  char *path;
+  struct stat stat;
+  size_t base;
+  size_t level;
+  struct ftdcb *next;
+} FTDCB;
+
+typedef struct ftcb {
+  FTDCB *head;
+  FTDCB **lastp;
+} FTCB;
+
+
+static void
+_ftcb_init(FTCB *ftcb) {
+  ftcb->head = NULL;
+  ftcb->lastp = &ftcb->head;
+}
+
+static void
+_ftcb_destroy(FTCB *ftcb) {
+  FTDCB *ftdcb, *next;
+
+  for (ftdcb = ftcb->head; ftdcb; ftdcb = next) {
+    next = ftdcb->next;
+    
+    free(ftdcb->path);
+    free(ftdcb);
+  }
+}
+
+
+int
+_ft_foreach(const char *path,
+	    struct stat *stat,
+	    int (*walker)(const char *path,
+			  const struct stat *stat,
+			  size_t base,
+			  size_t level,
+			  void *vp),
+	    void *vp,
+	    size_t curlevel,
+	    size_t maxlevel) {
+  FTCB ftcb;
+  FTDCB *ftdcb;
+  DIR *dp;
+  struct dirent *dep;
+  int rc;
+  struct stat sb;
+  size_t plen;
+
+
+  rc = walker(path, stat, 0, curlevel, vp);
+  if (rc < 0)
+    return rc;
+
+  if (!S_ISDIR(stat->st_mode) || (maxlevel >= 0 && curlevel == maxlevel))
+    return 0;
+
+  ++curlevel;
+  
+  _ftcb_init(&ftcb);
+  plen = strlen(path);
+  
+  dp = opendir(path);
+  if (!dp)
+    return -1;
+  
+  while ((dep = readdir(dp)) != NULL) {
+    char *fpath;
+    
+    /* Ignore . and .. */
+    if (strcmp(dep->d_name, ".") == 0 ||
+	strcmp(dep->d_name, "..") == 0)
+      continue;
+    
+    fpath = s_cat(path, "/", dep->d_name, NULL);
+    if (!fpath) {
+      rc = -1;
+      goto End;
+    }
+
+    if (lstat(fpath, &sb) < 0) {
+      free(fpath);
+      rc = -1;
+      goto End;
+    }
+
+    /* Add to queue if directory */
+    if (S_ISDIR(sb.st_mode)) {
+      FTDCB *ftdcb;
+
+
+      if (NEW(ftdcb) == NULL) {
+	rc = -1;
+	goto End;
+      }
+      
+      ftdcb->path = fpath;
+      ftdcb->base = plen+1;
+      ftdcb->stat = sb;
+      ftdcb->next = NULL;
+      
+      *(ftcb.lastp) = ftdcb;
+      ftcb.lastp = &ftdcb->next;
+    }
+    else {
+      rc = walker(fpath, &sb, 0, curlevel, vp);
+      free(fpath);
+      if (rc)
+	goto End;
+    }
+  }
+
+  closedir(dp);
+  dp = NULL;
+  
+  for (ftdcb = ftcb.head; ftdcb; ftdcb = ftdcb->next) {
+    rc = _ft_foreach(ftdcb->path, &ftdcb->stat, walker, vp, curlevel, maxlevel);
+    if (rc)
+      break;
+  }
+
+ End:
+  if (dp)
+    closedir(dp);
+  _ftcb_destroy(&ftcb);
+  return rc;
+}
+
+int
+ft_foreach(const char *path,
+	    int (*walker)(const char *path,
+			  const struct stat *stat,
+			  size_t base,
+			  size_t level,
+			  void *vp),
+	    void *vp,
+	    size_t maxlevel) {
+  struct stat stat;
+
+  
+  if (lstat(path, &stat) < 0)
+    return -1;
+  
+  return _ft_foreach(path, &stat, walker, vp, 0, maxlevel);
 }
 
 
