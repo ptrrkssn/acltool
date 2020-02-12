@@ -41,7 +41,6 @@
 #include <grp.h>
 #include <ftw.h>
 
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/acl.h>
@@ -53,10 +52,18 @@
 #include "misc.h"
 #include "commands.h"
 #include "aclcmds.h"
+#include "basic.h"
 
 #include "acltool.h"
 
+
+char *version = "1.0";
+
 COMMANDS commands;
+
+char *argv0 = "acltool";
+
+CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
 
 
 
@@ -208,13 +215,7 @@ option_set_long(CONFIG *cfgp,
 }
 
 
-char *argv0;
-CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
-
-extern COMMAND cmdv[];
-
-
-
+#if 0
 char *
 my_var_handler(const char *esc,
 	       void *xtra)
@@ -229,6 +230,7 @@ my_var_handler(const char *esc,
 
     return NULL;
 }
+#endif
 
 
 
@@ -255,6 +257,46 @@ cfg_parse(CONFIG *cfgp,
   return rc;
 }
 
+
+int
+cmd_config(int argc,
+	   char **argv,
+	   void *vp) {
+  int rc = 0;
+  CONFIG *cfgp = (CONFIG *) vp;
+
+  
+  if (argc == 1) {
+    puts("CONFIGURATION:");
+    printf("  Debug Level:        %d\n", cfgp->f_debug);
+    printf("  Verbosity Level:    %d\n", cfgp->f_verbose);
+    if (cfgp->max_depth < 0)
+      printf("  Recurse Max Depth:  No Limit\n");
+    else
+      printf("  Recurse Max Depth:  %d\n", cfgp->max_depth);
+    printf("  Update:             %s\n", cfgp->f_noupdate ? "No" : "Yes");
+    printf("  Style:              %s\n", style2str(cfgp->f_style));
+  } else {
+    int i;
+
+    
+    for (i = 1; i < argc; i++) {
+      char *cp = strchr(argv[i], '=');
+      if (cp)
+	*cp++ = '\0';
+      rc = option_set_long(cfgp, argv[i], cp);
+      if (rc)
+	return rc;
+    }
+  }
+
+  d_cfg = *cfgp;
+  return rc;
+}
+
+
+
+#if 0
 int
 cmd_print(int argc,
 	  char **argv,
@@ -323,47 +365,6 @@ cmd_cd(int argc,
 }
 
 
-
-int
-cmd_config(int argc,
-	   char **argv,
-	   void *vp) {
-  int rc = 0;
-  CONFIG *cfgp = (CONFIG *) vp;
-
-  
-  if (argc == 1) {
-    puts("CONFIGURATION:");
-    printf("  Debug Level:        %d\n", cfgp->f_debug);
-    printf("  Verbosity Level:    %d\n", cfgp->f_verbose);
-    if (cfgp->max_depth < 0)
-      printf("  Recurse Max Depth:  No Limit\n");
-    else
-      printf("  Recurse Max Depth:  %d\n", cfgp->max_depth);
-    printf("  Update:             %s\n", cfgp->f_noupdate ? "No" : "Yes");
-    printf("  Style:              %s\n", style2str(cfgp->f_style));
-  } else {
-    int i;
-
-    
-    for (i = 1; i < argc; i++) {
-      char *cp = strchr(argv[i], '=');
-      if (cp)
-	*cp++ = '\0';
-      rc = option_set_long(cfgp, argv[i], cp);
-      if (rc)
-	return rc;
-    }
-  }
-
-  d_cfg = *cfgp;
-  return rc;
-}
-
-
-
-
-
 int
 cmd_exit(int argc,
 	 char **argv,
@@ -380,14 +381,11 @@ cmd_exit(int argc,
 
   exit(ec);
 }
+#endif
 
 
-COMMAND basic_commands[] = {
-  { "exit", 	"[<code>]",			cmd_exit,	"Exit (with exit code)" },
+COMMAND acltool_commands[] = {
   { "config", 	"[<opt>[=<val>]]*",		cmd_config,	"Print/update default configuration" },
-  { "print", 	"[<str>]*",			cmd_print,	"Print some text" },
-  { "cd", 	"[<path>]*",			cmd_cd,		"Change working directory" },
-  { "pwd", 	"",				cmd_pwd,	"Print working directory" },
   { NULL,	NULL,				NULL,		NULL },
 };
 
@@ -463,6 +461,7 @@ main(int argc,
 
   cmd_init(&commands);
   cmd_register(&commands, 0, basic_commands);
+  cmd_register(&commands, 0, acltool_commands);
   cmd_register(&commands, 0, acl_commands);
   
   ai = 0;
