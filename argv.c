@@ -263,12 +263,15 @@ argv_create(const char *command,
 void
 argv_destroy(char **argv) {
   int i;
+
   
   if (!argv)
     return;
   
-  for (i = 0; argv[i]; i++)
+  for (i = 0; argv[i]; i++) {
     free(argv[i]);
+    argv[i] = NULL;
+  }
   
   free(argv);
 }

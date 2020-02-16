@@ -43,8 +43,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-#include "strings.h"
-#include "misc.h"
+#include "acltool.h"
 
 #define NEW(vp) ((vp) = malloc(sizeof(*(vp))))
 
@@ -57,54 +56,54 @@ ts_delta(struct timespec *x,
 	 const struct timespec *y,
 	 long *res,
 	 char **unit) {
-	struct timespec r;
+  struct timespec r;
   
-	/* Avoid overflow of r.tv_nsec */
-	if (x->tv_nsec < y->tv_nsec) {
-	  	x->tv_nsec += 1000000000L;
-		x->tv_sec  -= 1;
-	}
-
-	r.tv_sec  = x->tv_sec - y->tv_sec;
-	r.tv_nsec = x->tv_nsec - y->tv_nsec;
+  /* Avoid overflow of r.tv_nsec */
+  if (x->tv_nsec < y->tv_nsec) {
+    x->tv_nsec += 1000000000L;
+    x->tv_sec  -= 1;
+  }
   
-	if (unit && res) {
-	  	if (r.tv_sec >= 600) {
-		  	/* More than 10 minutes -> return minutes */
-		  	*unit = "m";
-			*res = r.tv_sec / 60;
-		} else if (r.tv_sec >= 10) {
-		  	/* More than 10 seconds - return seconds */
-		  	*unit = "s";
-			*res = r.tv_sec;
-		} else if (r.tv_sec == 0) {
-		  	if (r.tv_nsec <= 10000) {
-			  	/* Less than 10us - return nanoseconds */
-			  	*unit = "ns";
-				*res = r.tv_nsec;
-			} else if (r.tv_nsec <= 10000000) {
-			  	/* Less than 10ms - return microseconds */
-			  	*unit = "µs";
-				*res = r.tv_nsec / 1000;
-			} else {
-			  	*unit = "ms";
-				*res = r.tv_nsec / 1000000;
-			}
-		} else {
-		  	*unit = "ms";
-			*res = r.tv_sec * 1000 + r.tv_nsec / 1000000;
-		}
-	}
-
-	/* Microseconds */
-	return r.tv_sec * 1000000 + r.tv_nsec / 1000;
+  r.tv_sec  = x->tv_sec - y->tv_sec;
+  r.tv_nsec = x->tv_nsec - y->tv_nsec;
+  
+  if (unit && res) {
+    if (r.tv_sec >= 600) {
+      /* More than 10 minutes -> return minutes */
+      *unit = "m";
+      *res = r.tv_sec / 60;
+    } else if (r.tv_sec >= 10) {
+      /* More than 10 seconds - return seconds */
+      *unit = "s";
+      *res = r.tv_sec;
+    } else if (r.tv_sec == 0) {
+      if (r.tv_nsec <= 10000) {
+	/* Less than 10us - return nanoseconds */
+	*unit = "ns";
+	*res = r.tv_nsec;
+      } else if (r.tv_nsec <= 10000000) {
+	/* Less than 10ms - return microseconds */
+	*unit = "µs";
+	*res = r.tv_nsec / 1000;
+      } else {
+	*unit = "ms";
+	*res = r.tv_nsec / 1000000;
+      }
+    } else {
+      *unit = "ms";
+      *res = r.tv_sec * 1000 + r.tv_nsec / 1000000;
+    }
+  }
+  
+  /* Microseconds */
+  return r.tv_sec * 1000000 + r.tv_nsec / 1000;
 }
 
 
 /* Compare two ACL Entries */
-int
-cmp_acl_entry(const void *va,
-	      const void *vb) {
+static int
+gacl_entry_compare(const void *va,
+		   const void *vb) {
   acl_entry_type_t aet_a, aet_b;
   acl_entry_t a = * (acl_entry_t *) va;
   acl_entry_t b = * (acl_entry_t *) vb;
@@ -126,14 +125,16 @@ cmp_acl_entry(const void *va,
   /* Ignore this entry if the 'inherit_only' flag is set on one of them */
   if (inherit_only_a || inherit_only_b)
     return 0;
-  
+
+#ifdef ACL_ENTRY_INHERITED  
   inherited_a = acl_get_flag_np(afs, ACL_ENTRY_INHERITED);
   inherited_b = acl_get_flag_np(bfs, ACL_ENTRY_INHERITED);
 
   v = inherited_a-inherited_b;
   if (v)
     return v;
-  
+#endif
+
   /* Deny entries goes before allow ones */
   if (acl_get_entry_type_np(a, &aet_a) < 0)
     return -1;
@@ -166,15 +167,20 @@ cmp_acl_entry(const void *va,
   case ACL_USER:
     qa = acl_get_qualifier(a);
     qb = acl_get_qualifier(b);
-    
     v = (* (uid_t *) qa)-(* (uid_t *) qb);
+    acl_free(qa);
+    acl_free(qb);
     break;
     
   case ACL_GROUP:
     qa = acl_get_qualifier(a);
     qb = acl_get_qualifier(b);
-    
     v = (* (gid_t *) qa)-(* (gid_t *) qb);
+    acl_free(qa);
+    acl_free(qb);
+    break;
+
+  default:
     break;
   }
   
@@ -202,8 +208,8 @@ cmp_acl_entry(const void *va,
  *    access-denied ACEs are placed before access-allowed ACEs.
  */
 int
-cmp_acl_entry_sorted(const void *va,
-		     const void *vb) {
+gacl_entry_compare_sorted(const void *va,
+			  const void *vb) {
   acl_entry_type_t aet_a, aet_b;
   acl_entry_t a = * (acl_entry_t *) va;
   acl_entry_t b = * (acl_entry_t *) vb;
@@ -281,9 +287,11 @@ _sort_acl(acl_t a,
 
   if (rc < 0)
     return -1;
-  
+#if HAVE_MERGESORT  
   mergesort(&aev[0], aec, sizeof(aev[0]), sortfun);
-  
+#else
+  qsort(&aev[0], aec, sizeof(aev[0]), sortfun);
+#endif  
   na = acl_init(aec);
   if (!na)
     return -1;
@@ -317,13 +325,13 @@ _sort_acl(acl_t a,
 int
 sort_acl(acl_t a,
 	 acl_t *sa) {
-  return _sort_acl(a, sa, cmp_acl_entry);
+  return _sort_acl(a, sa, gacl_entry_compare);
 }
 
 
 int
 is_unsorted_acl(acl_t a) {
-  return _sort_acl(a, NULL, cmp_acl_entry_sorted);
+  return _sort_acl(a, NULL, gacl_entry_compare_sorted);
 }
 
 
@@ -460,7 +468,7 @@ merge_acl(acl_t *a) {
 
   aec = 0;
   while (aec < ACL_MAX_ENTRIES && (rc = acl_get_entry(*a, id, &ta)) == 1) {
-    for (i = 0; i < aec && cmp_acl_entry(&aev[i], &ta) != 0; i++)
+    for (i = 0; i < aec && gacl_entry_compare(&aev[i], &ta) != 0; i++)
       ;
     if (i < aec) {
       /* Match found - merge ACE */
@@ -626,7 +634,7 @@ char *
 flagset2str_icacls(acl_flagset_t fsp,
 		   char *res) {
   static char buf[64];
-  int i, a, n;
+  int i, a;
 
   
   if (!res)
@@ -634,7 +642,6 @@ flagset2str_icacls(acl_flagset_t fsp,
 
   res[0] = '\0';
 
-  n = 0;
   for (i = 0; f2c_windows[i].s; i++) {
     a = acl_get_flag_np(fsp, f2c_windows[i].f);
     if (a) {
@@ -651,9 +658,6 @@ flagset2str_icacls(acl_flagset_t fsp,
 const char *
 aet2str(const acl_entry_type_t aet) {
   switch (aet) {
-  case 0:
-    return "any";
-    
   case ACL_ENTRY_TYPE_ALLOW:
     return "allow";
 
@@ -710,6 +714,7 @@ ace2str_samba(acl_entry_t ae,
       rc = snprintf(res, rsize, "ACL:%s:", pp->pw_name);
     else
       rc = snprintf(res, rsize, "ACL:%u:", * (uid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_GROUP:
@@ -725,6 +730,7 @@ ace2str_samba(acl_entry_t ae,
 	rc = snprintf(res, rsize, "ACL:%s:", gp->gr_name);
     } else
       rc = snprintf(res, rsize, "ACL:GID=%u:", * (gid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_USER_OBJ:
@@ -752,7 +758,7 @@ ace2str_samba(acl_entry_t ae,
     break;
 #endif
 
-  case ACL_OTHER:
+  case ACL_OTHER_OBJ:
     rc = snprintf(res, rsize, "ACL:%s:", "Everyone");
     break;
 
@@ -883,6 +889,7 @@ ace2str_icacls(acl_entry_t ae,
       rc = snprintf(res, rsize, "%s:", pp->pw_name);
     else
       rc = snprintf(res, rsize, "%u:", * (uid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_GROUP:
@@ -898,6 +905,7 @@ ace2str_icacls(acl_entry_t ae,
 	rc = snprintf(res, rsize, "%s:", gp->gr_name);
     } else
       rc = snprintf(res, rsize, "GID=%u:", * (gid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_USER_OBJ:
@@ -1029,6 +1037,7 @@ ace2str(acl_entry_t ae,
       rc = snprintf(res, rsize, "u:%s", pp->pw_name);
     else
       rc = snprintf(res, rsize, "u:%u", * (uid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_GROUP:
@@ -1041,6 +1050,7 @@ ace2str(acl_entry_t ae,
       rc = snprintf(res, rsize, "g:%s", gp->gr_name);
     else
       rc = snprintf(res, rsize, "g:%u", * (gid_t *) qp);
+    acl_free(qp);
     break;
     
   case ACL_USER_OBJ:
@@ -1264,54 +1274,3 @@ ft_foreach(const char *path,
 }
 
 
-int
-str2style(const char *str,
-	  ACL_STYLE *sp) {
-  if (!str || !*str)
-    return 0;
-  
-  if (strcasecmp(str, "default") == 0)
-    *sp = ACL_STYLE_DEFAULT;
-  else if (strcasecmp(str, "brief") == 0)
-    *sp = ACL_STYLE_BRIEF;
-  else if (strcasecmp(str, "verbose") == 0)
-    *sp = ACL_STYLE_VERBOSE;
-  else if (strcasecmp(str, "csv") == 0)
-    *sp = ACL_STYLE_CSV;
-  else if (strcasecmp(str, "samba") == 0)
-    *sp = ACL_STYLE_SAMBA;
-  else if (strcasecmp(str, "icacls") == 0)
-    *sp = ACL_STYLE_ICACLS;
-  else if (strcasecmp(str, "solaris") == 0)
-    *sp = ACL_STYLE_SOLARIS;
-  else if (strcasecmp(str, "primos") == 0)
-    *sp = ACL_STYLE_PRIMOS;
-  else
-    return -1;
-
-  return 1;
-}
-
-const char *
-style2str(ACL_STYLE s) {
-  switch (s) {
-  case ACL_STYLE_DEFAULT:
-    return "Default";
-  case ACL_STYLE_BRIEF:
-    return "Brief";
-  case ACL_STYLE_VERBOSE:
-    return "Verbose";
-  case ACL_STYLE_CSV:
-    return "CSV";
-  case ACL_STYLE_SAMBA:
-    return "Samba";
-  case ACL_STYLE_ICACLS:
-    return "ICACLS";
-  case ACL_STYLE_SOLARIS:
-    return "Solaris";
-  case ACL_STYLE_PRIMOS:
-    return "PRIMOS";
-  }
-
-  return NULL;
-}

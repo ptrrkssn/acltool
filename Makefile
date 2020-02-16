@@ -1,9 +1,24 @@
 # Makefile for acltool
 
-CFLAGS=-O -g -Wall -I/usr/local/include
-LIBS=-L/usr/local/lib -R/usr/local/lib -lreadline
+CFLAGS=-g -Wall -I/usr/local/include
 
-OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o
+## FreeBSD:
+# XOBJS=
+# XLIBS=
+
+## Solaris:
+# CC=gcc
+# XOBJS=gacl.o solaris.o
+# XLIBS=-L/usr/local/lib -R/usr/local/lib -lcurses
+
+## Linux:
+XOBJS=gacl.o linux.o
+XLIBS=
+
+OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
+LIBS=-lreadline $(XLIBS)
+
+
 
 all: acltool
 
@@ -18,6 +33,12 @@ strings.o:	strings.c strings.h
 commands.o:	commands.c commands.h misc.h strings.h
 basic.o:	basic.c    basic.h    commands.h
 aclcmds.o:	aclcmds.c  aclcmds.h  commands.h acltool.h strings.h
+
+# FreeBSD ACL emulation stuff for Linux & Solaris
+gacl.o:		gacl.c gacl.h
+linux.o:        linux.c gacl.h
+solaris.o:      solaris.c gacl.h
+
 
 acltool: $(OBJS)
 	$(CC) -o acltool $(OBJS) $(LIBS)

@@ -36,20 +36,19 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/acl.h>
+
+#include "gacl.h"
+
+#include "argv.h"
+#include "commands.h"
+#include "aclcmds.h"
+#include "basic.h"
+#include "strings.h"
+#include "misc.h"
+#include "opts.h"
 
 
 
-typedef enum acl_style {
-			ACL_STYLE_DEFAULT = 0,
-			ACL_STYLE_BRIEF   = 1,
-			ACL_STYLE_VERBOSE = 2,
-			ACL_STYLE_CSV     = 3,
-			ACL_STYLE_SAMBA   = 4,
-			ACL_STYLE_ICACLS  = 5,
-			ACL_STYLE_SOLARIS = 6,
-			ACL_STYLE_PRIMOS  = 7,
-} ACL_STYLE;
 
 struct command;
 

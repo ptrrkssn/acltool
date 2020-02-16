@@ -89,6 +89,7 @@ opts_parse_argv(OPTION *opts,
 	*value++ = '\0';
       
       nm = 0;
+      op = NULL;
       for (k = 0; opts[k].name; k++) {
 	if (opts[k].name && s_match(name, opts[k].name)) {
 	  op = &opts[k];
@@ -98,7 +99,7 @@ opts_parse_argv(OPTION *opts,
 
       free(name);
 
-      if (nm < 1) {
+      if (nm < 1 || !op) {
 	fprintf(stderr, "%s: Error: %s: Invalid option\n", argv[0], argv[i]);
 	return -1;
       }
@@ -268,6 +269,7 @@ opts_set2(OPTION *opts,
 
   
   nm = 0;
+  op = NULL;
   for (k = 0; opts[k].name; k++) {
     if (opts[k].name && s_match(name, opts[k].name)) {
       op = &opts[k];
@@ -275,7 +277,7 @@ opts_set2(OPTION *opts,
     }
   }
   
-  if (nm < 1) {
+  if (nm < 1 || !op) {
     errno = ENOENT;
     return -1;
   }

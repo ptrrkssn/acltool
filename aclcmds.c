@@ -35,22 +35,72 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/acl.h>
 #include <dirent.h>
 #include <pwd.h>
 #include <grp.h>
 #include <ftw.h>
 
 #include "acltool.h"
-#include "misc.h"
-#include "commands.h"
-#include "aclcmds.h"
 
 
 static CONFIG *w_cfgp = NULL;
 static size_t w_c = 0;
+
+
+int
+str2style(const char *str,
+	  ACL_STYLE *sp) {
+  if (!str || !*str)
+    return 0;
+  
+  if (strcasecmp(str, "default") == 0)
+    *sp = ACL_STYLE_DEFAULT;
+  else if (strcasecmp(str, "brief") == 0)
+    *sp = ACL_STYLE_BRIEF;
+  else if (strcasecmp(str, "verbose") == 0)
+    *sp = ACL_STYLE_VERBOSE;
+  else if (strcasecmp(str, "csv") == 0)
+    *sp = ACL_STYLE_CSV;
+  else if (strcasecmp(str, "samba") == 0)
+    *sp = ACL_STYLE_SAMBA;
+  else if (strcasecmp(str, "icacls") == 0)
+    *sp = ACL_STYLE_ICACLS;
+  else if (strcasecmp(str, "solaris") == 0)
+    *sp = ACL_STYLE_SOLARIS;
+  else if (strcasecmp(str, "primos") == 0)
+    *sp = ACL_STYLE_PRIMOS;
+  else
+    return -1;
+
+  return 1;
+}
+
+const char *
+style2str(ACL_STYLE s) {
+  switch (s) {
+  case ACL_STYLE_DEFAULT:
+    return "Default";
+  case ACL_STYLE_BRIEF:
+    return "Brief";
+  case ACL_STYLE_VERBOSE:
+    return "Verbose";
+  case ACL_STYLE_CSV:
+    return "CSV";
+  case ACL_STYLE_SAMBA:
+    return "Samba";
+  case ACL_STYLE_ICACLS:
+    return "ICACLS";
+  case ACL_STYLE_SOLARIS:
+    return "Solaris";
+  case ACL_STYLE_PRIMOS:
+    return "PRIMOS";
+  }
+
+  return NULL;
+}
 
 char *
 mode2str(mode_t m) {
@@ -78,9 +128,11 @@ mode2str(mode_t m) {
   case S_IFSOCK:
     buf[0] = 's';
     break;
+#ifdef S_IFWHT
   case S_IFWHT:
     buf[0] = 'w';
     break;
+#endif
   default:
     buf[0] = '?';
   }
@@ -95,7 +147,7 @@ mode2str(mode_t m) {
 
   buf[7] = (m & S_IROTH ? 'r' : '-');
   buf[8] = (m & S_IWOTH ? 'w' : '-');
-  buf[9] = (m & S_IXOTH ? (m & S_ISTXT ? 't' : 'x') : (m & S_ISTXT ? 'T' : '-'));
+  buf[9] = (m & S_IXOTH ? (m & S_ISVTX ? 't' : 'x') : (m & S_ISVTX ? 'T' : '-'));
 
   buf[10] = '\0';
   return buf;
@@ -267,9 +319,9 @@ print_acl(FILE *fp,
     if (w_c)
       putc('\n', fp);
     
-    printf("%s%s %2d %8s %8s %8ld %16s %s\n",
+    printf("%s%s %2lu %8s %8s %8ld %16s %s\n",
 	   mode2str(sp->st_mode), is_trivial ? " " : "+",
-	   sp->st_nlink,
+	   (unsigned long int) sp->st_nlink,
 	   us, gs,
 	   sp->st_size,
 	   tbuf, path);

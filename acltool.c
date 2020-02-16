@@ -42,21 +42,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/acl.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "argv.h"
-#include "misc.h"
-#include "commands.h"
-#include "aclcmds.h"
-#include "basic.h"
-#include "strings.h"
-
 #include "acltool.h"
 
-#include "opts.h"
 
 
 char *version = "1.0";
@@ -303,7 +294,7 @@ int
 cmd_help(int argc,
 	 char **argv,
 	 void *vp) {
-  int i, rc;
+  int i, rc = 0;
 
   
   if (argc == 1) {
@@ -327,8 +318,11 @@ cmd_help(int argc,
     putchar('\n');
     puts("  You may access environment variables using ${NAME}.");
   } else {
-    for (i = 1; i < argc; i++)
+    for (i = 1; i < argc; i++) {
       rc = _cmd_help(&commands, argv[i]);
+      if (rc < 0)
+	break;
+    }
   }
 
   return rc;
@@ -402,7 +396,7 @@ run_cmd(int argc,
 	freef(argv[i]);
       argv[i++] = argv[ai++];
     }
-    argv[ai] = NULL;
+    argv[i] = NULL;
     argc -= d;
   }
   
@@ -418,7 +412,7 @@ main(int argc,
 {
   char *buf;
   char **av;
-  int ai, ac, rc;
+  int ai, ac, rc = 0;
   
 
   argv0 = argv[0];

@@ -36,7 +36,6 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/acl.h>
 #include <sys/stat.h>
 
 #include "acltool.h"
