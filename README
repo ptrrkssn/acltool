@@ -11,6 +11,8 @@ AUTHOR
 OPERATING SYSTEMS SUPPORTED (for now)
 
 - FreeBSD
+- Solaris (tested on OmniOS)
+- Linux (for NFSv4 filesystems only)
 
 
 DESCRIPTION
