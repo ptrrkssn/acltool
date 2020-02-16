@@ -502,6 +502,31 @@ walker_strip(const char *path,
   return 0;
 }
 
+static int
+walker_delete(const char *path,
+	      const struct stat *sp,
+	      size_t base,
+	      size_t level,
+	      void *vp) {
+  int rc;
+  
+  
+  if (S_ISLNK(sp->st_mode))
+    rc = acl_delete_link_np(path, ACL_TYPE_NFS4);
+  else
+    rc = acl_delete_file_np(path, ACL_TYPE_NFS4);
+  
+  if (rc < 0) {
+    fprintf(stderr, "%s: Error: %s: Deleting ACL\n", argv0, path);
+    return 1;
+  }
+
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Deleted%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
+  return 0;
+}
+
 
 static int
 walker_sort(const char *path,
@@ -693,6 +718,13 @@ aclcmd_strip(int argc,
 }
 
 int
+aclcmd_delete(int argc,
+	      char **argv,
+	      void *vp) {	       
+  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_delete, NULL);
+}
+
+int
 aclcmd_set(int argc,
 	   char **argv,
 	   void *vp) {	       
@@ -738,6 +770,7 @@ COMMAND acl_commands[] = {
   { "strip-access",     "<path>+",	aclcmd_strip,	"Strip ACL(s)" },
   { "sort-access",      "<path>+",	aclcmd_sort,	"Sort ACL(s)" },
   { "copy-access",      "<src> <dst>+",	aclcmd_copy,	"Copy ACL(s)" },
+  { "delete-access",    "<path>+",	aclcmd_delete,	"Delete ACL(s)" },
 #if 0
   { "inherit-access",   "<path>+",	aclcmd_inherit,	"Propage ACL(s) inheritance" },
   { "set-access",  	"<path>+",	aclcmd_set,	"Set ACL(s)" },

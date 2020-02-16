@@ -189,7 +189,6 @@ show_help(const char *name,
 
 
 
-
 OPTION options[] =
   {
    { "help",      'h', OPTS_TYPE_NONE,               show_help,     "Display usage" },
@@ -201,26 +200,6 @@ OPTION options[] =
    { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, "Disable modification" },
    { NULL,        -1,  0,                            NULL,          NULL },
   };
-
-
-
-
-#if 0
-char *
-my_var_handler(const char *esc,
-	       void *xtra)
-{
-    printf("Parsing var [%s]\n", esc ? esc : "<null>");
-
-    if (strcmp(esc, "P") == 0 || strcmp(esc, "phone") == 0)
-	return s_dup("+46705182786");
-    
-    if (strcmp(esc, "D") == 0 || strcmp(esc, "date") == 0)
-	return s_dup("2006-11-24 13:37");
-
-    return NULL;
-}
-#endif
 
 
 
@@ -303,7 +282,7 @@ cmd_help(int argc,
     putchar('\n');
     opts_print(&options[0], stdout);
     
-    puts("\nDetails:");
+    puts("\nDETAILS:");
     puts("  All options & commands may be abbreviated as long as they are unique.");
     puts("  For option & command names consisting of multiple 'parts' (list-access)");
     puts("  the name may be abbreviated using characters from each part, for example:");

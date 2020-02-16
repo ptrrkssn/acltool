@@ -8,11 +8,11 @@ CFLAGS=-g -Wall -I/usr/local/include
 
 ## Solaris:
 # CC=gcc
-# XOBJS=gacl.o solaris.o
+# XOBJS=gacl.o
 # XLIBS=-L/usr/local/lib -R/usr/local/lib -lcurses
 
 ## Linux:
-XOBJS=gacl.o linux.o
+XOBJS=gacl.o
 XLIBS=
 
 OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
@@ -44,7 +44,7 @@ acltool: $(OBJS)
 	$(CC) -o acltool $(OBJS) $(LIBS)
 
 clean:
-	-rm -f *~ *.o \#* core *.core acltool
+	-rm -f *~ *.o \#* core *.core acltool */*~
 
 push: 	clean
 	git add -A && git commit -a && git push

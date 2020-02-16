@@ -1,0 +1,74 @@
+Prime/PRIMOS ACLs:
+
+Prime/PRIMOS was an operating system for "supermini" computers back 
+in the 80ies or so. It had a really nice ACL system.
+
+You could set ACLs on directories or files. By default it inherited ACLs 
+from parent directories. You could also create a special ACL object (ACAT) 
+and associate that ACAT with files or directories making ACL changes for
+multiple objects quite easy.
+
+
+RIGHTS:
+
+P    Protect    D	Change access rights
+D    Delete	D	Delete directory entries
+A    Add	D	Add directory entries
+L    List	D	List directories
+U    Use	D	Attach (cd) to directories
+R    Read	F	Read files
+W    Write	F	Write files
+X    Execute	F	Run files
+O    Owner	F+D	Settings access rights except for P and ALL
+
+ALL  *		F+D	All of the above
+NONE -		F+D	No access allowed
+
+
+ACL EXAMPLE:
+
+
+
+COMMANDS:
+
+LIST_ACCESS / LAC
+SET_ACCESS / SAC
+EDIT_ACCESS / EDAC
+
+OK, LAC SOMEDIR
+ACL protecting "SOMEDIR":
+
+       AUTHOR:    ALL
+       EDITOR:    ALL
+       ADVT:      LUR
+       .XGROUP:	  DALURW
+       $REST:	  NONE
+
+OK, SAC SOMEDIR PETER:ALL JOHN:LUR $REST:NONE
+
+OK, LAC SOMEDIR
+ACL protecting "SOMEDIR":
+
+       PETER:    ALL
+       JOHN:     LUR
+       $REST:    NONE
+
+OK, EDAC SOMEDIR MIKE:LUR .MYGROUP:DALURWX
+
+OK, LAC SOMEDIR
+ACL protecting "SOMEDIR":
+
+       PETER:    ALL
+       JOHN:     LUR
+       MIKE:     LUR
+       .MYGROUP: DALURWX
+       $REST:    NONE
+
+OK, SAC NEW.ACAT PETER:DALURW
+OK, SAC SOMEFILE -CATEGORY NEW.ACAT
+OK, LAC SOMEFILE
+
+ACL protecting "SOMEFILE":
+    (from access category "NEW.ACAT"):
+       PETER:    ALL
+       $REST:    NONE

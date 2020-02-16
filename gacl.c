@@ -82,6 +82,72 @@ static struct gace_flag2c {
 };
 
 
+
+/* Generate an ACL from Unix mode bits */
+GACL *
+_gacl_from_mode(mode_t mode) {
+  GACL *ap;
+  GACE *ep;
+  GACE_PERM ua, ga, ea;
+
+
+  ua = ga = ea = GACE_READ_ACL | GACE_READ_ATTRIBUTES | GACE_READ_NAMED_ATTRS | GACE_SYNCHRONIZE;
+  ua |= GACE_WRITE_ACL | GACE_WRITE_OWNER | GACE_WRITE_ATTRIBUTES | GACE_WRITE_NAMED_ATTRS;
+
+  if (mode & S_IRUSR)
+    ua |= GACE_READ_DATA;
+  if (mode & S_IWUSR)
+    ua |= GACE_WRITE_DATA | GACE_APPEND_DATA;
+  if (mode & S_IXUSR)
+    ua |= GACE_EXECUTE;
+
+  if (mode & S_IRGRP) 
+    ga |= GACE_READ_DATA;
+  if (mode & S_IWGRP)
+    ga |= GACE_WRITE_DATA | GACE_APPEND_DATA;
+  if (mode & S_IXGRP)
+    ga |= GACE_EXECUTE;
+
+  if (mode & S_IROTH)
+    ea |= GACE_READ_DATA;
+  if (mode & S_IWOTH)
+    ea |= GACE_WRITE_DATA | GACE_APPEND_DATA;
+  if (mode & S_IXOTH)
+    ea |= GACE_EXECUTE;
+  
+  ap = acl_init(3);
+  if (!ap)
+    return NULL;
+
+  if (gacl_create_entry_np(&ap, &ep, -1) < 0)
+    goto Fail;
+  ep->tag   = GACE_TAG_USER_OBJ;
+  ep->perms = ua;
+  ep->flags = 0;
+  ep->type  = GACE_TYPE_ALLOW;
+
+  if (gacl_create_entry_np(&ap, &ep, -1) < 0)
+    goto Fail;
+  ep->tag   = GACE_TAG_GROUP_OBJ;
+  ep->perms = ga;
+  ep->flags = 0;
+  ep->type  = GACE_TYPE_ALLOW;
+
+  if (gacl_create_entry_np(&ap, &ep, -1) < 0)
+    goto Fail;
+  ep->tag   = GACE_TAG_EVERYONE;
+  ep->perms = ea;
+  ep->flags = 0;
+  ep->type  = GACE_TYPE_ALLOW;
+
+  return ap;
+
+ Fail:
+  gacl_free(ap);
+  return NULL;
+}
+
+
 GACL *
 gacl_init(int count) {
   GACL *ap;
@@ -192,8 +258,8 @@ gacl_create_entry_np(GACL **app,
 int
 gacl_create_entry(GACL **app,
 		  GACE **epp) {
-  /* TODO: prepend or append ACEs? We prepend for now... */
-  return gacl_create_entry_np(app, epp, 0);
+  /* TODO: prepend or append ACEs? We append for now... */
+  return gacl_create_entry_np(app, epp, -1);
 }
 
 
@@ -995,44 +1061,835 @@ gacl_to_text(GACL *ap,
 }
 
 
+/*
+ * Delete an ACL from an object. 
+ * We simulate that be stripping the ACL down to the bare owner@/group@/everyone@ entries
+ */
+int
+gacl_delete_file_np(const char *path,
+		   GACL_TYPE type) {
+  GACL *ap;
+  struct stat sb;
+  int rc;
 
-#if 0
+
+  if (stat(path, &sb) < 0)
+    return -1;
+
+  ap = _gacl_from_mode(sb.st_mode);
+  if (!ap)
+    return -1;
+
+  rc = gacl_set_file(path, type, ap);
+  gacl_free(ap);
+  return rc;
+}
+
+
+/*
+ * Delete an ACL from an object. 
+ * We simulate that be stripping the ACL down to the bare owner@/group@/everyone@ entries
+ */
+int
+gacl_delete_link_np(const char *path,
+		    GACL_TYPE type) {
+  GACL *ap;
+  struct stat sb;
+  int rc;
+
+
+  if (lstat(path, &sb) < 0)
+    return -1;
+
+  ap = _gacl_from_mode(sb.st_mode);
+  if (!ap)
+    return -1;
+
+  rc = gacl_set_link_np(path, type, ap);
+  gacl_free(ap);
+  return rc;
+}
+
+
+/*
+ * Delete an ACL from an object. 
+ * We simulate that be stripping the ACL down to the bare owner@/group@/everyone@ entries
+ *
+ * TODO: Replace that with an ACL created from the mode bits instead.
+ */
+int
+gacl_delete_fd_np(int fd,
+		  GACL_TYPE type) {
+  GACL *ap;
+  struct stat sb;
+  int rc;
+
+
+  if (fstat(fd, &sb) < 0)
+    return -1;
+
+  ap = _gacl_from_mode(sb.st_mode);
+  if (!ap)
+    return -1;
+
+  rc = gacl_set_fd_np(fd, ap, type);
+  gacl_free(ap);
+  return rc;
+}
+
+
+
 /* TODO: To be implemented */
 
-gacl_valid() {
+int
+gacl_delete_def_file(const char *path) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_valid_fd_np() {
-}
-
-gacl_valid_file_np() {
-}
-
-gacl_valid_link_np() {
-}
-
-gacl_calc_mask() {
+int
+gacl_delete_def_link_np(const char *path) {
+  errno = ENOSYS;
+  return -1;
 }
 
 
-gacl_from_text() {
+int
+gacl_valid(GACL *ap) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_delete_fd_np() {
+int
+gacl_valid_fd_np(int fd, 
+		 GACL_TYPE type, 
+		 GACL *ap) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_delete_file_np() {
+int
+gacl_valid_file_np(const char *path,
+		   GACL_TYPE type,
+		   GACL *ap) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_delete_link_np() {
+int
+gacl_valid_link_np(const char *path,
+		   GACL_TYPE type,
+		   GACL *ap) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_delete_def_file() {
+int
+gacl_calc_mask(GACL *ap) {
+  errno = ENOSYS;
+  return -1;
 }
 
-gacl_delete_def_link_np() {
+
+GACL *
+gacl_from_text(const char *buf) {
+  errno = ENOSYS;
+  return NULL;
+}
+
+
+/* ----- OS-specific stuff below here -------------- */
+
+#ifdef __linux__
+#include <arpa/inet.h>
+#include <attr/xattr.h>
+#include "gacl.h"
+#include "nfs4.h"
+
+#define ACL_NFS4_XATTR "system.nfs4_acl"
+
+/*
+ * xattr format:
+ * 
+ * struct acl {
+ *   u_int32_t ace_c;
+ *   struct ace {
+ *     u_int32_t type;
+ *     u_int32_t flags;
+ *     u_int32_t perms;
+ *     struct utf8str_mixed {
+ *       u_int32_t len;
+ *       char buf[len];
+ *     } id;
+ *   } ace_v[ace_c];
+ * };
+ */
+
+
+static char *
+_nfs4_id_domain(void) {
+  static char *saved_domain = NULL;
+  FILE *fp;
+  char buf[256];
+
+
+  if (saved_domain)
+    return saved_domain;
+
+  fp = fopen("/etc/idmapd.conf","r");
+  if (!fp)
+    return NULL;
+
+  while (fgets(buf, sizeof(buf), fp)) {
+    char *bp, *t;
+    bp = buf;
+
+    t = strsep(&bp, " \t\n");
+    if (!t)
+      continue;
+    if (strcmp(t, "Domain") == 0) {
+      t = strsep(&bp, " \t\n");
+      if (!t || strcmp(t, "=") != 0)
+	continue;
+      t = strsep(&bp, " \t\n");
+      if (!t) {
+	fclose(fp);
+	return NULL;
+      }
+	
+      saved_domain = strdup(t);
+      break;
+    }
+  }
+
+  fclose(fp);
+  return saved_domain;
+}
+
+/* This code is a bit of a hack */
+static int
+_nfs4_id_to_uid(char *buf,
+		size_t bufsize,
+		uid_t *uidp) {
+  struct passwd *pp;
+  int i;
+  char *idd = NULL;
+  int iddlen = -1;
+
+
+  if (bufsize < 1)
+    return -1;
+
+  for (i = 0; i < bufsize && buf[i] != '@'; i++)
+    ;
+
+  if (i < bufsize) {
+    buf[i++] = '\0';
+    
+    if (!idd || (iddlen == bufsize-i && strncmp(idd, buf+i, iddlen) == 0)) {
+      pp = getpwnam(buf);
+      if (pp) {
+	*uidp = pp->pw_uid;
+	return 1;
+      }
+    }
+  } else if (sscanf(buf, "%d", uidp) == 1)
+    return 1;
+
+  return 0;
+}
+
+/* This code is a bit of a hack */
+static int
+_nfs4_id_to_gid(char *buf,
+		size_t bufsize,
+		gid_t *gidp) {
+  struct group *gp;
+  int i;
+  char *idd = NULL;
+  int iddlen = -1;
+
+
+  if (bufsize < 1)
+    return -1;
+
+  idd = _nfs4_id_domain();
+  if (idd)
+    iddlen = strlen(idd);
+
+  for (i = 0; i < bufsize && buf[i] != '@'; i++)
+    ;
+
+  if (i < bufsize) {
+    buf[i++] = '\0';
+    
+    if (!idd || (iddlen == bufsize-i && strncmp(idd, buf+i, iddlen) == 0)) {
+      gp = getgrnam(buf);
+      if (gp) {
+	*gidp = gp->gr_gid;
+	return 1;
+      }
+    }
+  } else if (sscanf(buf, "%d", gidp) == 1)
+    return 1;
+
+  return 0;
+}
+
+
+static GACL *
+_gacl_init_from_nfs4(const char *buf,
+		     size_t bufsize) {
+  int i;
+  u_int32_t *vp;
+  u_int32_t na;
+  char *cp;
+  GACL *ap;
+
+  
+  vp = (u_int32_t *) buf;
+  na = ntohl(*vp++);
+  
+  ap = gacl_init(na);
+  if (!ap)
+    return NULL;
+
+  ap->type = GACL_TYPE_NFS4;
+  
+  for (i = 0; i < na; i++) {
+    u_int32_t idlen;
+    GACE *ep;
+    
+    if (gacl_create_entry_np(&ap, &ep, i) < 0) {
+      gacl_free(ap);
+      return NULL;
+    }
+    
+    ep->type =  ntohl(*vp++);
+    ep->flags = ntohl(*vp++);
+    ep->perms = ntohl(*vp++);
+    
+    idlen = ntohl(*vp++);
+    cp = (char *) vp;
+
+    if (ep->flags & NFS4_ACE_IDENTIFIER_GROUP) {
+      if (strncmp(cp, "GROUP@", idlen) == 0) {
+	ep->tag = GACE_TAG_GROUP_OBJ;
+	ep->id = -1;
+      } else {
+	ep->id = -1;
+	(void) _nfs4_id_to_gid(cp, idlen, &ep->id);
+	ep->tag = GACE_TAG_GROUP;
+      }
+    } else {
+      if (strncmp(cp, "OWNER@", idlen) == 0) {
+	ep->tag = GACE_TAG_USER_OBJ;
+	ep->id = -1;
+      } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
+	ep->tag = GACE_TAG_EVERYONE;
+	ep->id = -1;
+      } else {
+	ep->id = -1;
+	(void) _nfs4_id_to_uid(cp, idlen, &ep->id);
+	ep->tag = GACE_TAG_USER;
+      }
+    }
+
+#if 0
+    printf(" - T=%d, F=%08x, P=%08x, ID=%d (%.*s)\n", 
+	   ep->type, ep->flags, ep->perms, ep->id, idlen, cp);
+#endif
+
+    vp += idlen / sizeof(u_int32_t);
+    if (idlen % sizeof(u_int32_t))
+      vp++;
+  }
+
+  return ap;
+}
+
+
+GACL *
+_gacl_get_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  int flags) {
+  char *buf;
+  ssize_t bufsize, rc;
+
+  
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW) {
+    
+      bufsize = lgetxattr(path, ACL_NFS4_XATTR, NULL, 0);
+      if (bufsize < 0)
+	return NULL;
+
+      buf = malloc(bufsize);
+      if (!buf)
+	return NULL;
+
+      rc = lgetxattr(path, ACL_NFS4_XATTR, buf, bufsize);
+      if (rc < 0) {
+	free(buf);
+	return NULL;
+      }
+    } else {
+      
+      bufsize = getxattr(path, ACL_NFS4_XATTR, NULL, 0);
+      if (bufsize < 0)
+	return NULL;
+      
+      buf = malloc(bufsize);
+      if (!buf)
+	return NULL;
+      
+      rc = getxattr(path, ACL_NFS4_XATTR, buf, bufsize);
+      if (rc < 0) {
+	free(buf);
+	return NULL;
+      }
+      
+    }
+  } else {
+    
+    bufsize = fgetxattr(fd, ACL_NFS4_XATTR, NULL, 0);
+    if (bufsize < 0)
+      return NULL;
+    
+    buf = malloc(bufsize);
+    if (!buf)
+      return NULL;
+    
+    rc = fgetxattr(fd, ACL_NFS4_XATTR, buf, bufsize);
+    if (rc < 0) {
+      free(buf);
+      return NULL;
+    }
+    
+  }
+
+  return _gacl_init_from_nfs4(buf, bufsize);
+}
+
+
+
+static ssize_t 
+_gacl_to_nfs4(GACL *ap, 
+	      char *buf, 
+	      size_t bufsize) {
+  u_int32_t *vp, *endp;
+  size_t buflen, vlen;
+  int i, rc;
+
+
+  vp = (u_int32_t *) buf;
+  buflen = bufsize/sizeof(u_int32_t);
+  endp = vp+buflen;
+
+  /* Number of ACEs */
+  *vp++ = htonl(ap->ac);
+
+  for (i = 0; i < ap->ac; i++) {
+    char *idname;
+    u_int32_t idlen;
+    struct passwd *pp;
+    struct group *gp;
+    char *idd;
+    char tbuf[256];
+    GACE *ep = &ap->av[i];
+
+    if (vp >= endp) {
+      errno = ENOMEM;
+      return -1;
+    }
+    *vp++ = htonl(ep->type);
+
+    if (vp >= endp) {
+      errno = ENOMEM;
+      return -1;
+    }
+    *vp++ = htonl(ep->flags | (ep->tag == GACE_TAG_GROUP || ep->tag == GACE_TAG_GROUP_OBJ ? 
+			       NFS4_ACE_IDENTIFIER_GROUP : 0));
+    
+    if (vp >= endp) {
+      errno = ENOMEM;
+      return -1;
+    }
+    *vp++ = htonl(ep->perms);
+
+    switch (ep->tag) {
+    case GACE_TAG_USER_OBJ:
+      idname = "OWNER@";
+      break;
+    case GACE_TAG_GROUP_OBJ:
+      idname = "GROUP@";
+      break;
+    case GACE_TAG_EVERYONE:
+      idname = "EVERYONE@";
+      break;
+    case GACE_TAG_USER:
+      pp = getpwuid(ep->id);
+      if (pp) {
+	idd = _nfs4_id_domain();
+	rc = snprintf(tbuf, sizeof(tbuf), "%s@%s", pp->pw_name, idd ? idd : "");
+      } else
+	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->id);
+      if (rc < 0) {
+	errno = EINVAL;
+	return -1;
+      }
+      idname = tbuf;
+      break;
+    case GACE_TAG_GROUP:
+      gp = getgrgid(ep->id);
+      if (gp) {
+	idd = _nfs4_id_domain();
+	rc = snprintf(tbuf, sizeof(tbuf), "%s@%s", gp->gr_name, idd ? idd : "");
+      } else
+	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->id);
+      if (rc < 0) {
+	errno = EINVAL;
+	return -1;
+      }
+      idname = tbuf;
+      break;
+    default:
+      errno = EINVAL;
+      return -1;
+    }
+
+    idlen = strlen(idname);
+    vlen = idlen / sizeof(u_int32_t);
+    if (idlen % sizeof(u_int32_t))
+      ++vlen;
+
+    if (vp+vlen >= endp) {
+      errno = ENOMEM;
+      return -1;
+    }
+    *vp++ = htonl(idlen);
+    memcpy(vp, idname, idlen);
+    vp += vlen;
+  }
+
+  return ((char *) vp) - buf;
+}
+
+
+int
+_gacl_set_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  GACL *ap,
+		  int flags) {
+  char buf[8192];
+  ssize_t bufsize, rc;
+
+
+  bufsize = _gacl_to_nfs4(ap, buf, sizeof(buf));
+  if (bufsize < 0)
+    return -1;
+
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW) {
+    
+      rc = lsetxattr(path, ACL_NFS4_XATTR, buf, bufsize, 0);
+      if (rc < 0)
+	return -1;
+
+    } else {
+      
+      rc = setxattr(path, ACL_NFS4_XATTR, buf, bufsize, 0);
+      if (rc < 0)
+	return -1;
+      
+    }
+  } else {
+    
+    rc = fsetxattr(fd, ACL_NFS4_XATTR, buf, bufsize, 0);
+    if (rc < 0)
+      return -1;
+    
+  }
+
+  return rc;
+}
+#endif
+
+#ifdef __sun__
+/* Internal: Convert to and from Solaris ace_t to standard GACE entry */
+static int
+_gacl_entry_to_ace(GACE *ep,
+		   ace_t *ap) {
+  if (!ep || !ap) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  switch (ep->tag) {
+  case GACE_TAG_USER_OBJ:
+    ap->a_flags = ACE_OWNER;
+    break;
+
+  case GACE_TAG_GROUP_OBJ:
+    ap->a_flags = (ACE_GROUP|ACE_IDENTIFIER_GROUP);
+    break;
+
+  case GACE_TAG_EVERYONE:
+    ap->a_flags = ACE_EVERYONE;
+    break;
+
+  case GACE_TAG_USER:
+    break;
+
+  case GACE_TAG_GROUP:
+    ap->a_flags = ACE_IDENTIFIER_GROUP;
+    break;
+
+  default:
+    errno = ENOSYS;
+    return -1;
+  }
+  
+  ap->a_who = ep->id;
+  ap->a_access_mask = ep->perms;
+  ap->a_flags |= ep->flags;
+  ap->a_type  = ep->type;
+  
+  return 0;
+}
+
+static int
+_gacl_entry_from_ace(GACE *ep,
+		     ace_t *ap) {
+  if (!ep || !ap) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  switch (ap->a_flags & (ACE_OWNER|ACE_GROUP|ACE_EVERYONE)) {
+  case ACE_OWNER:
+    ep->tag = GACE_TAG_USER_OBJ;
+    break;
+
+  case ACE_GROUP:
+    ep->tag = GACE_TAG_GROUP_OBJ;
+    break;
+
+  case ACE_EVERYONE:
+    ep->tag = GACE_TAG_EVERYONE;
+    break;
+
+  default:
+    if (ap->a_flags & ACE_IDENTIFIER_GROUP)
+      ep->tag = GACE_TAG_GROUP;
+    else
+      ep->tag = GACE_TAG_USER;
+  }
+  
+  ep->id    = ap->a_who;
+  ep->perms = ap->a_access_mask;
+  ep->flags = (ap->a_flags & GACE_FLAGS_ALL);
+  ep->type  = ap->a_type;
+  
+  return 0;
+}
+
+
+
+GACL *
+_gacl_get_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  int flags) {
+  GACL *ap;
+  int i, n;
+#if 0
+  aclent_t *aep;
+#endif
+  ace_t *acp;
+
+  
+  if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
+    struct stat sb;
+    
+    if (lstat(path, &sb) < 0)
+      return NULL;
+    
+    if (S_ISLNK(sb.st_mode)) {
+      /* Solaris doesn't support doing ACL operations on symbolic links - sorry */
+      errno = ENOSYS;
+      return NULL;
+    }
+  }
+  
+  switch (type) {
+  case GACL_TYPE_NONE:
+    return gacl_init(0);
+
+  case GACL_TYPE_NFS4:
+    if (path)
+      n = acl(path, ACE_GETACLCNT, 0, NULL);
+    else
+      n = facl(fd, ACE_GETACLCNT, 0, NULL);
+      
+    if (n < 0)
+      return NULL;
+
+    acp = calloc(n, sizeof(*acp));
+    if (!acp) {
+      return NULL;
+    }
+    
+    ap = gacl_init(n);
+    if (!ap) {
+      free(acp);
+      return NULL;
+    }
+
+    ap->type = type;
+    ap->ac = n;
+    
+    if (path)
+      n = acl(path, ACE_GETACL, n, (void *) acp);
+    else
+      n = facl(fd, ACE_GETACL, n, (void *) acp);
+    if (n < 0) {
+      free(acp);
+      gacl_free(ap);
+      return NULL;
+    }
+    
+    for (i = 0; i < n; i++)
+      if (_gacl_entry_from_ace(&ap->av[i], &acp[i]) < 0) {
+	free(acp);
+	gacl_free(ap);
+	return NULL;
+      }
+    return ap;
+
+#if 0
+  case GACL_TYPE_ACCESS:
+  case GACL_TYPE_DEFAULT:
+    if (path)
+      n = acl(path, GETACLCNT, 0, NULL);
+    else
+      n = facl(fd, GETACLCNT, 0, NULL);
+    if (n < 0)
+      return NULL;
+
+    aep = calloc(n, sizeof(*aep));
+    if (!aep)
+      return NULL;
+    
+    ap = gacl_init(n);
+    if (!ap) {
+      free(aep);
+      return NULL;
+    }
+
+    ap->type = type;
+    ap->ac = n;
+    
+    if (path)
+      n = acl(path, GETACL, n, (void *) aep);
+    else
+      n = facl(fd, GETACL, n, (void *) aep);
+    if (n < 0) {
+      gacl_free(ap);
+      return NULL;
+    }
+    for (i = 0; i < n; i++)
+      if (_gacl_entry_from_aclent(&ap->av[i], &aep[i]) < 0) {
+	free(acp);
+	gacl_free(ap);
+	return NULL;
+      }
+    ap->type = type;
+    ap->ac = cnt;
+    return ap;
+#endif
+    
+  default:
+    errno = ENOSYS;
+    return NULL;
+  }
+
+  errno = EINVAL;
+  return NULL;
+}
+
+
+
+int
+_gacl_set_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  GACL *ap,
+		  int flags) {
+  int i, rc;
+  ace_t *acp;
+#if 0
+  aclent_t *aep;
+#endif
+  
+  if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
+    struct stat sb;
+    
+    if (lstat(path, &sb) < 0)
+      return -1;
+    
+    if (S_ISLNK(sb.st_mode)) {
+      /* Solaris doesn't support doing ACL operations on symbolic links - sorry */
+      errno = ENOSYS;
+      return -1;
+    }
+  }
+  
+  switch (type) {
+  case GACL_TYPE_NONE:
+    /* XXX: Remove ACL? */
+    errno = ENOSYS;
+    return -1;
+    
+  case GACL_TYPE_NFS4:
+    acp = calloc(ap->ac, sizeof(*acp));
+    if (!acp)
+      return -1;
+
+    for (i = 0; i < ap->ac; i++)
+      if (_gacl_entry_to_ace(&ap->av[i], &acp[i]) < 0) {
+	free(acp);
+	return -1;
+      }
+    
+    if (path)
+      rc = acl(path, ACE_SETACL, ap->ac, (void *) acp);
+    else
+      rc = facl(fd, ACE_SETACL, ap->ac, (void *) acp);
+    free(acp);
+    fprintf(stderr, "rc=%d\n", rc);
+    return rc;
+
+#if 0
+  case GACL_TYPE_ACCESS:
+    /* XXX: Do special handling? (R-M-W - only update access parts) */
+    if (acl(path, SETACL, ap->ac, (void *) &ap->av[0]) < 0)
+      return -1;
+    return 0;
+    
+  case GACL_TYPE_DEFAULT:
+    /* XXX: Do special handling? (R-M-W - only update default parts) */
+    if (acl(path, SETACL, ap->ac, (void *) &ap->av[0]) < 0)
+      return -1;
+    return 0;
+#endif
+
+  default:
+    errno = EINVAL;
+    return -1;
+  }
 }
 
 #endif
-
-

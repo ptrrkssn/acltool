@@ -38,7 +38,33 @@
 
 #if defined(__FreeBSD__)
 
+#if GACL_MASK_FREEBSD_IMPLEMENTATION
+#define acl_t            freebsd_acl_t
+#define acl_entry_t      freebsd_acl_entry_t
+#define acl_type_t       freebsd_acl_type_t
+
+#define acl_get_file     freebsd_acl_get_file
+#define acl_get_link_np  freebsd_acl_get_link_np
+#define acl_get_fd       freebsd_acl_get_fd
+#define acl_get_fd_np    freebsd_acl_get_fd_np
+
+#define acl_set_file     freebsd_acl_set_file
+#define acl_set_link_np  freebsd_acl_set_link_np
+#define acl_set_fd       freebsd_acl_set_fd
+#define acl_set_fd_np    freebsd_acl_set_fd_np
+
+#define GACL_FREEBSD_EMULATION 1
+#endif
+
+#define GACL_SOLARIS_EMULATION 1
+
 #include <sys/acl.h>
+
+#if GACL_MASK_FREEBSD_IMPLEMENTATION
+#undef acl_t
+#undef acl_entry_t
+#undef acl_type_t
+#endif
 
 #elif defined(__sun__)
 
@@ -460,6 +486,24 @@ gacl_to_text(GACL *ap,
 	     ssize_t *bsp);
 
 
+extern int
+gacl_delete_file_np(const char *path,
+		    GACL_TYPE type);
+
+extern int
+gacl_delete_link_np(const char *path,
+		    GACL_TYPE type);
+
+extern int
+gacl_delete_fd_np(int fd,
+		  GACL_TYPE type);
+
+extern int
+gacl_delete_def_file(const char *path);
+
+extern int
+gacl_delete_def_link_np(const char *path);
+
 
 #if GACL_FREEBSD_EMULATION
 
@@ -561,6 +605,11 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_get_entry_type_np     gacl_get_entry_type_np
 #define acl_to_text_np            gacl_to_text_np
 #define acl_to_text               gacl_to_text
+#define acl_delete_file_np        gacl_delete_file_np
+#define acl_delete_link_np        gacl_delete_link_np
+#define acl_delete_fd_np          gacl_delete_fd_np
+#define acl_delete_def_file       gacl_delete_def_file
+#define acl_delete_def_link_np    gacl_delete_def_link_np
 
 
 
