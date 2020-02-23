@@ -151,6 +151,7 @@ typedef enum gace_type {
 #define GACE_FLAG_INHERITED             NFS4_ACE_INHERITED_ACE
 #endif
 
+
 #elif defined(__sun__)
 
 #define GACL_MAX_ENTRIES MAX_ACL_ENTRIES
@@ -255,6 +256,7 @@ typedef struct gace {
   GACE_PERMSET perms;
   GACE_FLAGSET flags;
   GACE_TYPE type;
+  GACL_BRAND brand;
 } GACE;
 
 
@@ -382,12 +384,19 @@ gacl_set_fd(int fd,
 
 
 extern int
+gacl_set_tag_type(GACE *ep,
+		  GACE_TAG et);
+
+extern int
 gacl_get_tag_type(GACE *ep,
 		  GACE_TAG *etp);
 
 extern void *
 gacl_get_qualifier(GACE *ep);
 
+extern int
+gacl_set_qualifier(GACE *ep,
+		   const void *qp);
 
 extern int
 gacl_get_permset(GACE *ep,
@@ -439,6 +448,10 @@ extern int
 gacl_get_entry_type_np(GACE *ep,
 		       GACE_TYPE *etp);
 
+extern int
+gacl_set_entry_type_np(GACE *ep,
+		       GACE_TYPE et);
+
 
 
 #define GACL_TEXT_VERBOSE      0x0010
@@ -484,6 +497,9 @@ gacl_to_text_np(GACL *ap,
 extern char *
 gacl_to_text(GACL *ap,
 	     ssize_t *bsp);
+
+extern GACL *
+gacl_from_text(const char *buf);
 
 
 extern int
@@ -588,7 +604,9 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_set_link_np           gacl_set_link_np
 #define acl_set_fd                gacl_set_fd
 #define acl_set_fd_np             gacl_set_fd_np
+#define acl_set_tag_type          gacl_set_tag_type
 #define acl_get_tag_type          gacl_get_tag_type
+#define acl_set_qualifier         gacl_set_qualifier
 #define acl_get_qualifier         gacl_get_qualifier
 #define acl_get_permset           gacl_get_permset
 #define acl_set_permset           gacl_set_permset
@@ -603,6 +621,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_add_flag_np           gacl_add_flag_np
 #define acl_delete_flag_np        gacl_delete_flag_np
 #define acl_get_entry_type_np     gacl_get_entry_type_np
+#define acl_set_entry_type_np     gacl_set_entry_type_np
 #define acl_to_text_np            gacl_to_text_np
 #define acl_to_text               gacl_to_text
 #define acl_delete_file_np        gacl_delete_file_np
@@ -610,6 +629,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_delete_fd_np          gacl_delete_fd_np
 #define acl_delete_def_file       gacl_delete_def_file
 #define acl_delete_def_link_np    gacl_delete_def_link_np
+#define acl_from_text             gacl_from_text
 
 
 

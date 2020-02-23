@@ -338,6 +338,19 @@ gacl_get_brand_np(GACL *ap,
   return -1;
 }
 
+static int
+_gacl_entry_set_brand_np(GACE *ep,
+			 GACL_BRAND b) {
+  if (ep->brand != GACL_BRAND_NONE && ep->brand != b) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  ep->brand = b;
+  return 0;
+}
+
+
 
 GACL *
 gacl_dup(GACL *ap) {
@@ -576,6 +589,38 @@ gacl_get_tag_type(GACE *ep,
   }
 
   *etp = ep->tag;
+  return 0;
+}
+
+int
+gacl_set_tag_type(GACE *ep,
+		  GACE_TAG et) {
+  if (!ep) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  switch (et) {
+  case ACL_USER_OBJ:
+  case ACL_USER:
+  case ACL_GROUP_OBJ:
+  case ACL_GROUP:
+
+  case ACL_MASK:
+  case ACL_OTHER_OBJ:
+    _gacl_entry_set_brand_np(ep, GACL_BRAND_POSIX);
+    break;
+
+  case ACL_EVERYONE:
+    _gacl_entry_set_brand_np(ep, GACL_BRAND_NFS4);
+    break;
+
+  default:
+    errno = EINVAL;
+    return -1;
+  }
+
+  ep->tag = et;
   return 0;
 }
 
@@ -1191,9 +1236,265 @@ gacl_calc_mask(GACL *ap) {
 }
 
 
+int
+_gacl_permset_from_text(const char *buf,
+			GACE_PERMSET *psp) {
+  int i;
+  char c;
+  GACE_PERMSET nps = 0;
+
+
+  if (!buf) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (!*buf)
+    return 0;
+
+  while ((c = *buf++) != '\0') {
+    if (c == '-')
+      continue;
+    for (i = 0; gace_p2c[i].c && gace_p2c[i].c != c; i++)
+      ;
+    if (!gace_p2c[i].c) {
+      errno = EINVAL;
+      return -1;
+    }
+
+    nps |= gace_p2c[i].p;
+  }
+
+  *psp = nps;
+  return 1;
+}
+
+
+int
+_gacl_flagset_from_text(const char *buf,
+		       GACE_FLAGSET *fsp) {
+  int i;
+  char c;
+  GACE_FLAGSET nfs = 0;
+
+
+  if (!buf) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (!*buf)
+    return 0;
+
+  while ((c = *buf++) != '\0') {
+    if (c == '-')
+      continue;
+    for (i = 0; gace_f2c[i].c && gace_f2c[i].c != c; i++)
+      ;
+    if (!gace_f2c[i].c) {
+      errno = EINVAL;
+      return -1;
+    }
+
+    nfs |= gace_f2c[i].f;
+  }
+
+  *fsp = nfs;
+  return 1;
+}
+
+
+int
+_gacl_entry_from_text(char *cp,
+		      GACE *ep) {
+  char *np;
+
+
+  /* 1. Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ ) */
+
+  np = strchr(cp, ':');
+  if (!np) {
+    errno = EINVAL;
+    return -1;
+  }
+  *np++ = '\0';
+
+  if (strcmp(cp, "user") == 0 || strcmp(cp, "u") == 0) {
+    struct passwd *pp;
+    uid_t uid;
+
+    cp = np;
+    np = strchr(cp, ':');
+    if (!np) {
+      errno = EINVAL;
+      return -1;
+    }
+    *np++ = '\0';
+    
+    if (sscanf(cp, "%d", &uid) == 1) {
+      ep->tag = GACE_TAG_USER;
+      ep->id = uid;
+    } else if ((pp = getpwnam(cp)) != NULL) {
+      ep->tag = GACE_TAG_USER;
+      ep->id = pp->pw_uid;
+    } else {
+      errno = EINVAL;
+      return -1;
+    }
+
+  } else if (strcasecmp(cp, "group") == 0 || strcasecmp(cp, "g") == 0) {
+    struct group *gp;
+    gid_t gid;
+    
+    cp = np;
+    np = strchr(cp, ':');
+    if (!np) {
+      errno = EINVAL;
+      return -1;
+    }
+    *np++ = '\0';
+    
+    if (sscanf(cp, "%d", &gid) == 1) {
+      ep->tag = GACE_TAG_GROUP;
+      ep->id = gid;
+    } else if ((gp = getgrnam(cp)) != NULL) {
+      ep->tag = GACE_TAG_GROUP;
+      ep->id = gp->gr_gid;
+    } else {
+      errno = EINVAL;
+      return -1;
+    }
+
+  } else if (strcasecmp(cp, "owner@") == 0) {
+    
+    ep->tag = GACE_TAG_USER_OBJ;
+    ep->id = -1;
+
+  } else if (strcasecmp(cp, "group@") == 0) {
+    
+    ep->tag = GACE_TAG_GROUP_OBJ;
+    ep->id = -1;
+
+  } else if (strcasecmp(cp, "everyone@") == 0) {
+
+    ep->tag = GACE_TAG_EVERYONE;
+    ep->id = -1;
+
+  } else {
+
+    /* Attempt to autodetect user/group - must be unique user/group name or uid/gid to work! */
+    struct passwd *pp;
+    struct group *gp;
+    uid_t id;
+    
+    
+    if (sscanf(cp, "%d", &id) == 1) {
+      pp = getpwuid(id);
+      gp = getgrgid(id);
+    } else {
+      pp = getpwnam(cp);
+      gp = getgrnam(cp);
+    }
+
+    if (pp && gp) {
+      errno = EINVAL;
+      return -1;
+    }
+
+    if (pp) {
+      ep->tag = GACE_TAG_USER;
+      ep->id = pp->pw_uid;
+    } else if (gp) {
+      ep->tag = GACE_TAG_GROUP;
+      ep->id = gp->gr_gid;
+    } else {
+      errno = EINVAL;
+      return -1;
+    }
+
+  }
+
+
+  /* 2. Get permset */
+  cp = np;
+  np = strchr(cp, ':');
+  if (np)
+    *np++ = '\0';
+
+  if (_gacl_permset_from_text(cp, &ep->perms) < 0)
+    return -1;
+  cp = np;
+
+  /* 3. Get flagset */
+  if (cp) {
+    np = strchr(cp, ':');
+    if (np)
+      *np++ = '\0';
+    /* Parse flags in cp */
+    if (_gacl_flagset_from_text(cp, &ep->flags) >= 0) {
+      if (np)
+	cp = np;
+    }
+  } else
+    ep->flags = 0;
+
+
+  /* 4. Get type (allow, deny, alarm, audit) */
+  if (cp) {
+    np = strchr(cp, ':');
+    if (np) {
+      errno = EINVAL;
+      return -1;
+    }
+    if (strcasecmp(cp, "allow") == 0) 
+      ep->type = GACE_TYPE_ALLOW;
+    else if (strcasecmp(cp, "deny") == 0)
+      ep->type = GACE_TYPE_DENY;
+    else if (strcasecmp(cp, "audit") == 0)
+      ep->type = GACE_TYPE_AUDIT;
+    else if (strcasecmp(cp, "alarm") == 0)
+      ep->type = GACE_TYPE_ALARM;
+    else {
+      errno = EINVAL;
+      return -1;
+    }
+  } else
+    ep->type = GACE_TYPE_ALLOW;
+
+  return 0;
+}
+
+
 GACL *
 gacl_from_text(const char *buf) {
-  errno = ENOSYS;
+  GACL *ap;
+  char *bp, *tbuf, *es;
+
+
+  bp = tbuf = strdup(buf);
+
+  ap = gacl_init(GACL_MAX_ENTRIES);
+  if (!ap) {
+    free(tbuf);
+    return NULL;
+  }
+
+  while ((es = strsep(&bp, ", \t\n\r")) != NULL) {
+    GACE *ep;
+
+
+    if (gacl_create_entry_np(&ap, &ep, -1) < 0)
+      goto Fail;
+
+    if (_gacl_entry_from_text(es, ep) < 0)
+      goto Fail;
+  }
+
+  return ap;
+
+ Fail:
+  gacl_free(ap);
+  errno = EINVAL;
   return NULL;
 }
 

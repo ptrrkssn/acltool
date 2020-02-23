@@ -155,6 +155,35 @@ mode2str(mode_t m) {
 
 
 int
+_acl_filter_file(acl_t ap) {
+  acl_entry_t ae;
+  int i;
+  
+
+  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    acl_flagset_t fs;
+    int fi;
+
+    if (acl_get_flagset_np(ae, &fs) < 0)
+      return -1;
+
+    fi = acl_get_flag_np(fs, ACL_ENTRY_INHERITED);
+
+    /* Remove all flags except for the INHERITED one */
+    acl_clear_flags_np(fs);
+    if (fi)
+      acl_add_flag_np(fs, ACL_ENTRY_INHERITED);
+
+    if (acl_set_flagset_np(ae, fs) < 0)
+      return -1;
+  }
+
+  return 0;
+}
+
+	       
+
+int
 print_acl(FILE *fp,
 	  acl_t a,
 	  const char *path,
@@ -575,6 +604,7 @@ walker_sort(const char *path,
   return 0;
 }
 
+#if 0
 static int
 walker_copy(const char *path,
 	    const struct stat *sp,
@@ -601,6 +631,176 @@ walker_copy(const char *path,
   
   return 0;
 }
+#endif
+
+
+typedef struct {
+  acl_t da;
+  acl_t fa;
+} DACL;
+
+
+static int
+walker_set(const char *path,
+	   const struct stat *sp,
+	   size_t base,
+	   size_t level,
+	   void *vp) {
+  int rc;
+  DACL *a = (DACL *) vp;
+
+  
+  if (!w_cfgp->f_noupdate) {
+    if (S_ISLNK(sp->st_mode))
+      rc = acl_set_link_np(path, ACL_TYPE_NFS4, a->fa);
+    else if (S_ISDIR(sp->st_mode))
+      rc = acl_set_file(path, ACL_TYPE_NFS4, a->da);
+    else
+      rc = acl_set_file(path, ACL_TYPE_NFS4, a->fa);
+
+    if (rc < 0) {
+      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+      return 1;
+    }
+  }
+  
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Set%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
+  return 0;
+}
+
+static int
+ _acl_entry_pos(acl_t ap, 
+		acl_tag_t tt, 
+		acl_entry_type_t et) {
+  int i;
+  acl_entry_t ae;
+
+
+  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    acl_tag_t ott;
+    acl_entry_type_t oet;
+
+    acl_get_tag_type(ae, &ott);
+    acl_get_entry_type_np(ae, &oet);
+
+    if (ott > tt) {
+      return i;
+    } else if (ott == tt && oet > et)
+      return i;
+  }
+
+  return -1;
+}
+
+
+static int
+walker_edit(const char *path,
+	    const struct stat *sp,
+	    size_t base,
+	    size_t level,
+	    void *vp) {
+  int rc, i, j;
+  acl_t oap, nap;
+  acl_entry_t nae;
+  DACL *a = (DACL *) vp;
+
+  
+  if (S_ISLNK(sp->st_mode))
+    oap = acl_get_link_np(path, ACL_TYPE_NFS4);
+  else
+    oap = acl_get_file(path, ACL_TYPE_NFS4);
+
+  if (S_ISDIR(sp->st_mode)) {
+    nap = a->da;
+  } else {
+    nap = a->fa;
+  }
+
+  for (i = 0; acl_get_entry(nap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &nae) == 1; i++) {
+    acl_entry_t oae;
+    acl_tag_t ntt;
+    acl_entry_type_t net;
+    uid_t *nip;
+    int nm;
+    acl_permset_t ps;
+    acl_flagset_t fs;
+
+
+    acl_get_tag_type(nae, &ntt);
+    acl_get_entry_type_np(nae, &net);
+    nip = acl_get_qualifier(nae);
+    
+    if (acl_get_permset(nae, &ps) < 0 ||
+	acl_get_flagset_np(nae, &fs) < 0)
+      goto Fail;
+    
+    nm = 0;
+
+    for (j = 0; acl_get_entry(oap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
+      acl_tag_t ott;
+      acl_entry_type_t oet;
+      uid_t *oip;
+      
+
+      acl_get_tag_type(oae, &ott);
+      acl_get_entry_type_np(oae, &oet);
+      oip = acl_get_qualifier(oae);
+      
+      if (ott == ntt && oet == net) {
+	if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !nip || *oip != *nip))
+	  continue;
+
+	if (acl_set_permset(oae, ps) < 0 ||
+	    acl_set_flagset_np(oae, fs) < 0)
+	  goto Fail;
+
+	++nm;
+      }
+    }
+
+    if (nm == 0) {
+      int p;
+
+      p = _acl_entry_pos(oap, ntt, net);
+      acl_create_entry_np(&oap, &oae, p);
+
+      if (acl_set_tag_type(oae, ntt) < 0 ||
+	  acl_set_permset(oae, ps) < 0 ||
+	  acl_set_flagset_np(oae, fs) < 0 ||
+	  acl_set_entry_type_np(oae, net) < 0)
+	goto Fail;
+
+      if (ntt == ACL_USER || ntt == ACL_GROUP)
+	acl_set_qualifier(oae, nip);
+    }
+  }
+
+  if (!w_cfgp->f_noupdate) {
+    if (S_ISLNK(sp->st_mode))
+      rc = acl_set_link_np(path, ACL_TYPE_NFS4, oap);
+    else if (S_ISDIR(sp->st_mode))
+      rc = acl_set_file(path, ACL_TYPE_NFS4, oap);
+    else
+      rc = acl_set_file(path, ACL_TYPE_NFS4, oap);
+
+    if (rc < 0) {
+      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+      goto Fail;
+    }
+  }
+  
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Set%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
+  return 0;
+
+ Fail:
+  acl_free(oap);
+  return 1;
+}
+
 
 static int
 walker_print(const char *path,
@@ -650,7 +850,7 @@ _aclcmd_foreach(int argc,
   w_cfgp = cfgp;
   w_c = 0;
   
-  for (i = 1; rc == 0 && i < argc; i++) {
+  for (i = 0; rc == 0 && i < argc; i++) {
     rc = ft_foreach(argv[i], handler, vp,
 		    cfgp->f_recurse ? -1 : cfgp->max_depth);
     if (rc)
@@ -664,7 +864,7 @@ int
 aclcmd_list(int argc,
 	    char **argv,
 	    void *vp) {	       
-  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_print, NULL);
+  return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_print, NULL);
 }
 
 
@@ -673,32 +873,38 @@ int
 aclcmd_copy(int argc,
 	    char **argv,
 	    void *vp) {	       
-  int i, rc;
-  acl_t ap;
+  int rc;
   struct stat s0;
+  DACL a;
 
   
-  i = 1;
-  if (lstat(argv[i], &s0) != 0) {
+  if (lstat(argv[1], &s0) != 0) {
     fprintf(stderr, "%s: Error: %s: Accessing: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
 
   if (S_ISLNK(s0.st_mode))
-    ap = acl_get_link_np(argv[i], ACL_TYPE_NFS4);
+    a.da = acl_get_link_np(argv[1], ACL_TYPE_NFS4);
   else
-    ap = acl_get_file(argv[i], ACL_TYPE_NFS4);
-  if (!ap) {
+    a.da = acl_get_file(argv[1], ACL_TYPE_NFS4);
+  if (!a.da) {
     fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
 
-  --argc;
-  ++argv;
+  a.fa = acl_dup(a.da);
+  if (!a.fa) {
+    acl_free(a.da);
+    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+ 
+  _acl_filter_file(a.fa);
 
-  rc = _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_copy, (void *) ap);
+  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_set, (void *) &a);
   
-  acl_free(ap);
+  acl_free(a.da);
+  acl_free(a.fa);
   return rc;
 }
 
@@ -706,7 +912,7 @@ int
 aclcmd_sort(int argc,
 	    char **argv,
 	    void *vp) {	       
-  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_sort, NULL);
+  return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_sort, NULL);
 }
 
 
@@ -714,22 +920,50 @@ int
 aclcmd_strip(int argc,
 	     char **argv,
 	     void *vp) {	       
-  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_strip, NULL);
+  return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_strip, NULL);
 }
 
 int
 aclcmd_delete(int argc,
 	      char **argv,
 	      void *vp) {	       
-  return _aclcmd_foreach(argc, argv, (CONFIG *) vp, walker_delete, NULL);
+  return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_delete, NULL);
 }
+
 
 int
 aclcmd_set(int argc,
 	   char **argv,
-	   void *vp) {	       
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
+	   void *vp) {
+  int rc;
+  DACL a;
+
+
+  if (argc < 2) {
+    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
+    return 1;
+  }
+
+
+  a.da = acl_from_text(argv[1]);
+  if (!a.da) {
+    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+
+  a.fa = acl_dup(a.da);
+  if (!a.fa) {
+    acl_free(a.da);
+    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+
+  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_set, (void *) &a);
+
+  acl_free(a.da);
+  acl_free(a.fa);
+
+  return rc;
 }
 
 int
@@ -744,8 +978,37 @@ int
 aclcmd_edit(int argc,
 	    char **argv,
 	    void *vp) {	       
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
+  int rc;
+  DACL a;
+
+
+  if (argc < 2) {
+    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
+    return 1;
+  }
+
+
+  a.da = acl_from_text(argv[1]);
+  if (!a.da) {
+    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+
+  a.fa = acl_dup(a.da);
+  if (!a.fa) {
+    acl_free(a.da);
+    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+
+  _acl_filter_file(a.fa);
+
+  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_edit, (void *) &a);
+
+  acl_free(a.da);
+  acl_free(a.fa);
+
+  return rc;
 }
 
 int
@@ -766,17 +1029,17 @@ aclcmd_check(int argc,
 
 
 COMMAND acl_commands[] = {
-  { "list-access", 	"<path>+",	aclcmd_list,	"List ACL(s)" },
-  { "strip-access",     "<path>+",	aclcmd_strip,	"Strip ACL(s)" },
-  { "sort-access",      "<path>+",	aclcmd_sort,	"Sort ACL(s)" },
-  { "copy-access",      "<src> <dst>+",	aclcmd_copy,	"Copy ACL(s)" },
-  { "delete-access",    "<path>+",	aclcmd_delete,	"Delete ACL(s)" },
+  { "list-access", 	"<path>+",		aclcmd_list,	"List ACL(s)" },
+  { "strip-access",     "<path>+",		aclcmd_strip,	"Strip ACL(s)" },
+  { "sort-access",      "<path>+",		aclcmd_sort,	"Sort ACL(s)" },
+  { "copy-access",      "<src> <dst>+",		aclcmd_copy,	"Copy ACL(s)" },
+  { "delete-access",    "<path>+",		aclcmd_delete,	"Delete ACL(s)" },
+  { "set-access",  	"<acl> <path>+",	aclcmd_set,	"Set ACL(s)" },
+  { "edit-access",      "<path>+",		aclcmd_edit,	"Edit ACL(s)" },
 #if 0
-  { "inherit-access",   "<path>+",	aclcmd_inherit,	"Propage ACL(s) inheritance" },
-  { "set-access",  	"<path>+",	aclcmd_set,	"Set ACL(s)" },
-  { "edit-access",      "<path>+",	aclcmd_edit,	"Edit ACL(s)" },
-  { "grep-access",      "<path>+",	aclcmd_grep,	"Search ACL(s)" },
-  { "check-access",     "<path>+",	aclcmd_check,	"Sanity-check ACL(s)" },
+  { "inherit-access",   "<path>+",		aclcmd_inherit,	"Propage ACL(s) inheritance" },
+  { "grep-access",      "<path>+",		aclcmd_grep,	"Search ACL(s)" },
+  { "check-access",     "<path>+",		aclcmd_check,	"Sanity-check ACL(s)" },
 #endif
-  { NULL,		NULL,		NULL,		NULL },
+  { NULL,		NULL,			NULL,		NULL },
 };

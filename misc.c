@@ -104,7 +104,9 @@ ts_delta(struct timespec *x,
 static int
 gacl_entry_compare(const void *va,
 		   const void *vb) {
+#if 0
   acl_entry_type_t aet_a, aet_b;
+#endif
   acl_entry_t a = * (acl_entry_t *) va;
   acl_entry_t b = * (acl_entry_t *) vb;
   acl_tag_t ta, tb;
@@ -135,6 +137,7 @@ gacl_entry_compare(const void *va,
     return v;
 #endif
 
+#if 0
   /* Deny entries goes before allow ones */
   if (acl_get_entry_type_np(a, &aet_a) < 0)
     return -1;
@@ -145,7 +148,7 @@ gacl_entry_compare(const void *va,
   v = aet_b - aet_a;
   if (v)
     return v;
-
+#endif
   
   /* User entries before group entries before 'other' entries */
   if (acl_get_tag_type(a, &ta) < 0)
@@ -154,11 +157,13 @@ gacl_entry_compare(const void *va,
   if (acl_get_tag_type(b, &tb) < 0)
     return 1;
 
+#if 0
   if (ta == ACL_USER_OBJ)
     ta = ACL_USER;
   if (tb == ACL_USER_OBJ)
     tb = ACL_USER;
-  
+#endif
+
   v = ta-tb;
   if (v)
     return v;
@@ -183,10 +188,22 @@ gacl_entry_compare(const void *va,
   default:
     break;
   }
-  
   if (v)
     return v;
   
+#if 0
+  /* Deny entries goes before allow ones */
+  if (acl_get_entry_type_np(a, &aet_a) < 0)
+    return -1;
+  
+  if (acl_get_entry_type_np(b, &aet_b) < 0)
+    return 1;
+
+  v = aet_b - aet_a;
+  if (v)
+    return v;
+#endif
+
   return 0;
 }
 
@@ -210,7 +227,9 @@ gacl_entry_compare(const void *va,
 int
 gacl_entry_compare_sorted(const void *va,
 			  const void *vb) {
+#if 0
   acl_entry_type_t aet_a, aet_b;
+#endif
   acl_entry_t a = * (acl_entry_t *) va;
   acl_entry_t b = * (acl_entry_t *) vb;
   acl_tag_t ta, tb;
@@ -237,7 +256,8 @@ gacl_entry_compare_sorted(const void *va,
   v = inherited_a-inherited_b;
   if (v)
     return v;
-  
+
+#if 0  
   /* Deny entries goes before allow ones */
   if (acl_get_entry_type_np(a, &aet_a) < 0)
     return -1;
@@ -245,10 +265,10 @@ gacl_entry_compare_sorted(const void *va,
   if (acl_get_entry_type_np(b, &aet_b) < 0)
     return 1;
 
-  v = aet_b - aet_a;
+  v = aet_a - aet_b;
   if (v)
     return v;
-
+#endif
   
   /* User entries before group entries before 'other' entries */
   if (acl_get_tag_type(a, &ta) < 0)
