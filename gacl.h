@@ -591,6 +591,11 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_WRITE_OWNER           GACE_WRITE_OWNER
 #define ACL_SYNCHRONIZE           GACE_SYNCHRONIZE
 
+#define ACL_FULL_SET              GACE_FULL_SET
+#define ACL_MODIFY_SET            GACE_MODIFY_SET
+#define ACL_READ_SET              GACE_READ_SET
+#define ACL_WRITE_SET             GACE_WRITE_SET
+
 #define ACL_FIRST_ENTRY           GACL_FIRST_ENTRY
 #define ACL_NEXT_ENTRY            GACL_NEXT_ENTRY
 

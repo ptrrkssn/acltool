@@ -191,6 +191,7 @@ print_acl(FILE *fp,
 	  CONFIG *cfgp) {
   acl_entry_t ae;
   int i, is_trivial, d, len;
+  uid_t *idp;
   char *as, *cp;
   char acebuf[2048], ubuf[64], gbuf[64], tbuf[80], *us, *gs;
   struct passwd *pp = NULL;
@@ -200,28 +201,29 @@ print_acl(FILE *fp,
 
   if (strncmp(path, "./", 2) == 0)
     path += 2;
+
+  us = gs = NULL;
+  pp = NULL;
+  gp = NULL;
+  if (sp) {
+    pp = getpwuid(sp->st_uid);
+    gp = getgrgid(sp->st_gid);
+  }
+  
+  if (!pp) {
+    snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
+    us = s_dup(ubuf);
+  } else
+    us = s_dup(pp->pw_name);
+  
+  if (!gp) {
+    snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
+    gs = s_dup(gbuf);
+  } else
+    gs = s_dup(gp->gr_name);
   
   switch (cfgp->f_style) {
   case ACL_STYLE_DEFAULT:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-
-    if (!pp) {
-      snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
-      us = ubuf;
-    } else
-      us = pp->pw_name;
-    
-    if (!gp) {
-      snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
-      gs = gbuf;
-    } else
-      gs = gp->gr_name;
-    
     as = acl_to_text_np(a, NULL, (w_cfgp->f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
@@ -232,21 +234,20 @@ print_acl(FILE *fp,
       putc('\n', fp);
     
     fprintf(fp, "# file: %s\n", path);
-    fprintf(fp, "# owner: %s\n", us);
-    fprintf(fp, "# group: %s\n", gs);
+    if (cfgp->f_verbose)
+      fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);
+    else
+      fprintf(fp, "# owner: %s\n", us);
+    if (cfgp->f_verbose)
+      fprintf(fp, "# group: %s (%d)\n", gs, sp->st_gid);
+    else
+      fprintf(fp, "# group: %s\n", gs);
     fputs(as, fp);
     acl_free(as);
     break;
     
   case ACL_STYLE_CSV:
     /* One-liner, CSV-style */
-
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
 
     fprintf(fp, "%s;", path);
     for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
@@ -255,15 +256,10 @@ print_acl(FILE *fp,
       ace2str(ae, acebuf, sizeof(acebuf));
       fprintf(fp, "%s", acebuf);
     }
-    if (pp)
-      fprintf(fp, ";%s", pp->pw_name);
-    else
-      fprintf(fp, ";%d", sp->st_uid);
-    if (gp)
-      fprintf(fp, ";%s", gp->gr_name);
-    else
-      fprintf(fp, ";%d", sp->st_gid);
-    
+    fprintf(fp, ";%d", sp->st_uid);
+    fprintf(fp, ";%d", sp->st_gid);
+    fprintf(fp, ";%s", us ? us : "-");
+    fprintf(fp, ";%s", gs ? gs : "-");
     putc('\n', fp);
     break;
 
@@ -283,13 +279,6 @@ print_acl(FILE *fp,
     break;
 
   case ACL_STYLE_VERBOSE:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-    
     if (w_c)
       putc('\n', fp);
     
@@ -297,50 +286,63 @@ print_acl(FILE *fp,
     for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *cp;
       int len;
-      
+      acl_tag_t tt;
+
+      acl_get_tag_type(ae, &tt);
       ace2str(ae, acebuf, sizeof(acebuf));
 
       cp = strchr(acebuf, ':');
-      len = cp - acebuf;
+      if (cp) {
+	len = cp-acebuf;
+	if (len > 0 && (tt == ACL_USER || tt == ACL_GROUP)) {
+	  cp = strchr(cp+1, ':');
+	  if (cp)
+	    len = cp-acebuf;
+	}
+      } else
+	len = 0;
+
       fprintf(fp, "%*s%s", (18-len), "", acebuf);
-      if (strncmp(acebuf, "owner@", len) == 0) {
-	if (pp)
-	  fprintf(fp, "\t# %s", pp->pw_name);
-	else
-	  fprintf(fp, "\t# %d", sp->st_uid);
-      }
-      if (strncmp(acebuf, "group@", len) == 0) {
-	if (gp)
-	  fprintf(fp, "\t# %s", gp->gr_name);
-	else
-	  fprintf(fp, "\t# %d", sp->st_gid);
+      switch (tt) {
+      case ACL_USER_OBJ:
+	if (us) {
+	  if (cfgp->f_verbose)
+	    fprintf(fp, "\t# %s (%d)", us, sp->st_uid);
+	  else
+	    fprintf(fp, "\t# %s", us);
+	} else
+	  fprintf(fp, "\t# (%d)", sp->st_uid);
+	break;
+
+      case ACL_GROUP_OBJ:
+	if (gs) {
+	  if (cfgp->f_verbose)
+	    fprintf(fp, "\t# %s (%d)", gs, sp->st_gid);
+	  else
+	    fprintf(fp, "\t# %s", gs);
+	} else
+	  fprintf(fp, "\t# (%d)", sp->st_gid);
+	break;
+
+      case ACL_USER:
+      case ACL_GROUP:
+	if (cfgp->f_verbose) {
+	  idp = (uid_t *) acl_get_qualifier(ae);
+	  if (idp)
+	    fprintf(fp, "\t# (%d)", *idp);
+	}
+	break;
+
+      default:
+	break;
       }
       putc('\n', fp);
     }
     break;
     
   case ACL_STYLE_SOLARIS:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-
-    if (!pp) {
-      snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
-      us = ubuf;
-    } else
-      us = pp->pw_name;
-    
-    if (!gp) {
-      snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
-      gs = gbuf;
-    } else
-      gs = gp->gr_name;
-
     tp = localtime(&sp->st_mtime);
-    strftime(tbuf, sizeof(tbuf), "%c", tp);
+    strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %R", tp);
 
     is_trivial = 0;
     acl_is_trivial_np(a, &is_trivial);
@@ -366,13 +368,6 @@ print_acl(FILE *fp,
     break;
 
   case ACL_STYLE_PRIMOS:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-    
     if (w_c)
       putc('\n', fp);
     
@@ -380,43 +375,66 @@ print_acl(FILE *fp,
     
     for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *perms, *flags, *type;
-      
+      acl_tag_t tt;
+
+      acl_get_tag_type(ae, &tt);
       ace2str(ae, acebuf, sizeof(acebuf));
 
       perms = strchr(acebuf, ':');
+      *perms = '\0';
+      if (tt == ACL_USER || tt == ACL_GROUP) {
+	*perms++ = ':';
+	perms = strchr(perms, ':');
+      } else
+	++perms;
       *perms++ = '\0';
-      
+
       flags = strchr(perms, ':');
       *flags++ = '\0';
       
       type  = strchr(flags, ':');
       *type++ = '\0';
 
-      fprintf(fp, "\t%-15s\t%-15s\t%-15s\t%-6s", acebuf, perms, flags, type);
-      if (strcmp(acebuf, "owner@") == 0) {
-	if (pp)
-	  fprintf(fp, "\t# %s", pp->pw_name);
-	else
-	  fprintf(fp, "\t# %d", sp->st_uid);
+      fprintf(fp, "\t%15s:  %-14s  %-7s  %-5s", acebuf, perms, flags, type);
+      switch (tt) {
+      case ACL_USER_OBJ:
+	if (us) {
+	  if (cfgp->f_verbose)
+	    fprintf(fp, "  # %s (%d)", us, sp->st_uid);
+	  else 
+	    fprintf(fp, "  # %s", us);
+	} else
+	  fprintf(fp, "  # (%d)", sp->st_uid);
+	break;
+
+      case ACL_GROUP_OBJ:
+	if (gs) {
+	  if (cfgp->f_verbose)
+	    fprintf(fp, "  # %s (%d)", gs, sp->st_gid);
+	  else
+	    fprintf(fp, "  # %s", gs);
+	} else
+	  fprintf(fp, "  # (%d)", sp->st_gid);
+	break;
+
+      case ACL_USER:
+      case ACL_GROUP:
+	if (cfgp->f_verbose) {
+	  idp = (uid_t *) acl_get_qualifier(ae);
+	  if (idp)
+	    fprintf(fp, "  # (%d)", *idp);
+	}
+	break;
+
+      default:
+	break;
       }
-      if (strcmp(acebuf, "group@") == 0) {
-	if (gp)
-	  fprintf(fp, "\t# %s", gp->gr_name);
-	else
-	  fprintf(fp, "\t# %d", sp->st_gid);
-      }
+
       putc('\n', fp);
     }
     break;
     
   case ACL_STYLE_SAMBA:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-    
     if (w_c)
       putc('\n', fp);
 
@@ -425,12 +443,12 @@ print_acl(FILE *fp,
     fprintf(fp, "CONTROL:SR|DP\n");
 
     if (pp)
-      fprintf(fp, "OWNER:%s\n", pp->pw_name);
+      fprintf(fp, "OWNER:%s\n", us);
     else
       fprintf(fp, "OWNER:%d\n", sp->st_uid);
 
     if (gp)
-      fprintf(fp, "GROUP:%s\n", gp->gr_name);
+      fprintf(fp, "GROUP:%s\n", gs);
     else
       fprintf(fp, "GROUP:%d\n", sp->st_gid);
 
@@ -448,13 +466,6 @@ print_acl(FILE *fp,
     break;
     
   case ACL_STYLE_ICACLS:
-    pp = NULL;
-    gp = NULL;
-    if (sp) {
-      pp = getpwuid(sp->st_uid);
-      gp = getgrgid(sp->st_gid);
-    }
-    
     if (w_c)
       putc('\n', fp);
 
@@ -472,6 +483,8 @@ print_acl(FILE *fp,
     return -1;
   }
   
+  free(us);
+  free(gs);
   return 0;
 }
 
@@ -689,8 +702,6 @@ static int
     acl_get_entry_type_np(ae, &oet);
     oip = acl_get_qualifier(ae);
 
-    fprintf(stderr, "i=%d, ott=%d vs tt=%d, oet=%d vs et=%d\n", i, ott, tt, oet, et);
-
     if (ott > tt)
       return i;
 
@@ -698,8 +709,6 @@ static int
       if ((ott == ACL_USER || ott == ACL_GROUP)) {
 	if (*oip < *ip)
 	  continue;
-
-	fprintf(stderr, "  i=%d, oid=%d vs id=%d, oet=%d vs et=%d\n", i, *oip, *ip, oet, et);
 
 	if (*oip == *ip) {
 	  if (oet < et)
@@ -812,7 +821,6 @@ walker_edit(const char *path,
       int p;
 
       p = _acl_entry_pos(oap, ntt, net, nip);
-      fprintf(stderr, "p=%d\n", p);
       acl_create_entry_np(&oap, &oae, p);
 
       if (acl_set_tag_type(oae, ntt) < 0 ||
@@ -827,12 +835,6 @@ walker_edit(const char *path,
   }
 
   gacl_clean(oap);
-
-  {
-    char *as = acl_to_text(oap, NULL);
-    puts(as);
-    acl_free(as);
-  }
 
   if (!w_cfgp->f_noupdate) {
     if (S_ISLNK(sp->st_mode))

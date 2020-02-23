@@ -1368,17 +1368,35 @@ _gacl_permset_from_text(const char *buf,
   if (!*buf)
     return 0;
 
-  while ((c = *buf++) != '\0') {
-    if (c == '-')
-      continue;
-    for (i = 0; gace_p2c[i].c && gace_p2c[i].c != c; i++)
-      ;
-    if (!gace_p2c[i].c) {
-      errno = EINVAL;
-      return -1;
+  if (strcasecmp(buf, "full_set") == 0 ||
+      strcasecmp(buf, "all") == 0)
+    nps = ACL_FULL_SET;
+  else if (strcasecmp(buf, "modify_set") == 0 ||
+	   strcasecmp(buf, "modify") == 0)
+    nps = ACL_MODIFY_SET;
+  else if (strcasecmp(buf, "write_set") == 0 ||
+	   strcasecmp(buf, "write") == 0)
+    nps = ACL_WRITE_SET;
+  else if (strcasecmp(buf, "read_set") == 0 ||
+	   strcasecmp(buf, "read") == 0)
+    nps = ACL_READ_SET;
+  else if (strcasecmp(buf, "empty_set") == 0 ||
+	   strcasecmp(buf, "none") == 0)
+    nps = 0;
+  else {
+    while ((c = *buf++) != '\0') {
+      if (c == '-')
+	continue;
+      for (i = 0; gace_p2c[i].c && gace_p2c[i].c != c; i++)
+	;
+      if (!gace_p2c[i].c) {
+	errno = EINVAL;
+	return -1;
+      }
+      
+      nps |= gace_p2c[i].p;
     }
-
-    nps |= gace_p2c[i].p;
+    
   }
 
   *psp = nps;
@@ -1425,6 +1443,7 @@ _gacl_entry_from_text(char *cp,
 		      GACE *ep,
 		      char *editchars) {
   char *np;
+  int f_none;
 
 
   if (editchars) {
@@ -1543,6 +1562,8 @@ _gacl_entry_from_text(char *cp,
   np = strchr(cp, ':');
   if (np)
     *np++ = '\0';
+  
+  f_none = (strcasecmp(cp, "none") == 0);
 
   if (_gacl_permset_from_text(cp, &ep->perms) < 0)
     return -1;
@@ -1581,8 +1602,13 @@ _gacl_entry_from_text(char *cp,
       errno = EINVAL;
       return -1;
     }
-  } else
-    ep->type = GACE_TYPE_ALLOW;
+  } else {
+    if (f_none) {
+      ep->perms = GACE_FULL_SET;
+      ep->type = GACE_TYPE_DENY;
+    } else 
+      ep->type = GACE_TYPE_ALLOW;
+  }
 
   return 0;
 }
