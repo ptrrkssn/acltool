@@ -364,20 +364,18 @@ run_cmd(int argc,
   if (cfg_parse(&cfg, &ai, argc, argv) != 0)
     return -1;
 
-  if (ai != 1) {
-    int d;
+  printf("ai=%d, argc=%d\n", ai, argc);
 
-    i = 1;
-    d = ai - 1;
-    
-    while (ai < argc) {
-      if (freef)
-	freef(argv[i]);
-      argv[i++] = argv[ai++];
+  while (--ai) {
+    fprintf(stderr, "*** Freeing %p\n", argv[1]);
+    if (freef)
+      freef(argv[1]);
+    for (i = 1; i < argc-1; i++) {
+      argv[i] = argv[i+1];
     }
-    argv[i] = NULL;
-    argc -= d;
+    --argc;
   }
+  argv[argc] = NULL;
   
   rc = cmd_run(&commands, argc, argv, (void *) &cfg);
   
