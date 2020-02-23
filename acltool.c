@@ -50,7 +50,7 @@
 
 
 
-char *version = "1.0";
+char *version = "1.1";
 
 COMMANDS commands;
 
