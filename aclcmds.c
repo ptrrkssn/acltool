@@ -395,7 +395,7 @@ print_acl(FILE *fp,
       type  = strchr(flags, ':');
       *type++ = '\0';
 
-      fprintf(fp, "\t%15s:  %-14s  %-7s  %-5s", acebuf, perms, flags, type);
+      fprintf(fp, "\t%15s:  %-13s  %-7s  %-5s", acebuf, perms, flags, type);
       switch (tt) {
       case ACL_USER_OBJ:
 	if (us) {
@@ -862,6 +862,70 @@ walker_edit(const char *path,
 
 
 static int
+walker_find(const char *path,
+	    const struct stat *sp,
+	    size_t base,
+	    size_t level,
+	    void *vp) {
+  acl_t ap, map = (acl_t) vp;
+  int i, j, nm;
+  acl_entry_t ae, mae;
+
+
+  if (S_ISLNK(sp->st_mode))
+    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
+  else
+    ap = acl_get_file(path, ACL_TYPE_NFS4);
+  
+  if (!ap)
+    return 0;
+
+  nm = 0;
+  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    acl_tag_t tt;
+    acl_entry_type_t et;
+    uid_t *idp;
+
+    acl_get_tag_type(ae, &tt);
+    acl_get_entry_type_np(ae, &et);
+    idp = acl_get_qualifier(ae);
+
+    for (j = 0; acl_get_entry(map, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &mae) == 1; j++) {
+      acl_tag_t mtt;
+      acl_entry_type_t met;
+      uid_t *midp;
+      
+      acl_get_tag_type(mae, &mtt);
+      acl_get_entry_type_np(mae, &met);
+      midp = acl_get_qualifier(mae);
+
+      if (tt == mtt && et == met) {
+	if (tt == ACL_USER || tt == ACL_GROUP) {
+	  if (idp && midp && *idp == *midp) {
+	    ++nm;
+	    break;
+	  }
+	} else {
+	  ++nm;
+	  break;
+	}
+      }
+    }
+  }
+
+  if (nm > 0) {
+    if (w_cfgp->f_verbose) {
+      print_acl(stdout, ap, path, sp, w_cfgp);
+      w_c++;
+    }
+    else
+      puts(path);
+  }
+
+  return 0;
+}
+
+static int
 walker_print(const char *path,
 	     const struct stat *sp,
 	     size_t base,
@@ -1026,11 +1090,21 @@ aclcmd_set(int argc,
 }
 
 int
-aclcmd_grep(int argc,
+aclcmd_find(int argc,
 	    char **argv,	
 	    void *vp) {	       
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
+  acl_t ap;
+
+
+  if (argc < 2) {
+    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
+    return 1;
+  }
+
+
+  ap = acl_from_text(argv[1]);
+
+  return _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_find, (void *) ap);
 }
 
 int
@@ -1056,7 +1130,7 @@ aclcmd_edit(int argc,
   a.fa = acl_dup(a.da);
   if (!a.fa) {
     acl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    fprintf(stderr, "%s: Error: %s: Invalid dACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
 
@@ -1095,9 +1169,9 @@ COMMAND acl_commands[] = {
   { "delete-access",    "<path>+",		aclcmd_delete,	"Delete ACL(s)" },
   { "set-access",  	"<acl> <path>+",	aclcmd_set,	"Set ACL(s)" },
   { "edit-access",      "<path>+",		aclcmd_edit,	"Edit ACL(s)" },
+  { "find-access",      "<path>+",		aclcmd_find,	"Search ACL(s)" },
 #if 0
   { "inherit-access",   "<path>+",		aclcmd_inherit,	"Propage ACL(s) inheritance" },
-  { "grep-access",      "<path>+",		aclcmd_grep,	"Search ACL(s)" },
   { "check-access",     "<path>+",		aclcmd_check,	"Sanity-check ACL(s)" },
 #endif
   { NULL,		NULL,			NULL,		NULL },

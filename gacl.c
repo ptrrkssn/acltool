@@ -1461,7 +1461,7 @@ _gacl_entry_from_text(char *cp,
   }
   *np++ = '\0';
 
-  if (strcmp(cp, "user") == 0 || strcmp(cp, "u") == 0) {
+  if (strcasecmp(cp, "user") == 0 || strcasecmp(cp, "u") == 0) {
     struct passwd *pp;
     uid_t uid;
 
@@ -1569,20 +1569,19 @@ _gacl_entry_from_text(char *cp,
     return -1;
   cp = np;
 
+
   /* 3. Get flagset */
   if (cp) {
     np = strchr(cp, ':');
     if (np)
       *np++ = '\0';
     /* Parse flags in cp */
-    if (_gacl_flagset_from_text(cp, &ep->flags) >= 0) {
-      if (np)
-	cp = np;
-    }
+    if (_gacl_flagset_from_text(cp, &ep->flags) < 0)
+      return -1;
   } else
     ep->flags = 0;
 
-
+  cp = np;
   /* 4. Get type (allow, deny, alarm, audit) */
   if (cp) {
     np = strchr(cp, ':');
