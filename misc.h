@@ -75,11 +75,13 @@ is_unsorted_acl(acl_t a);
 
 extern int
 merge_permset(acl_permset_t d,
-	      acl_permset_t s);
+	      acl_permset_t s,
+	      int f);
 
 extern int
 merge_flagset(acl_flagset_t d,
-	      acl_flagset_t s);
+	      acl_flagset_t s,
+	      int f);
 
 extern int
 merge_acl(acl_t *a);

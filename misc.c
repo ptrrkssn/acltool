@@ -438,14 +438,21 @@ static struct flag2str_windows {
 
 int
 merge_permset(acl_permset_t d,
-	      acl_permset_t s) {
+	      acl_permset_t s,
+	      int f) {
   int i, a, rc, ec = 0;
 
   
+  if (f == 0)
+    acl_clear_perms(d);
+
   for (i = 0; p2c[i].c; i++) {
     a = acl_get_perm_np(s, p2c[i].p);
     if (a && !acl_get_perm_np(d, p2c[i].p)) {
-      rc = acl_add_perm(d, p2c[i].p);
+      if (f > 0)
+	rc = acl_add_perm(d, p2c[i].p);
+      else if (f < 0)
+	rc = acl_delete_perm(d, p2c[i].p);
       if (rc < 0)
 	return rc;
 
@@ -459,14 +466,21 @@ merge_permset(acl_permset_t d,
 
 int
 merge_flagset(acl_flagset_t d,
-	      acl_flagset_t s) {
+	      acl_flagset_t s,
+	      int f) {
   int i, a, rc, ec = 0;
 
-  
+
+  if (f == 0)
+    acl_clear_flags_np(d);
+
   for (i = 0; f2c[i].c; i++) {
     a = acl_get_flag_np(s, f2c[i].f);
     if (a && !acl_get_flag_np(d, f2c[i].f)) {
-      rc = acl_add_flag_np(d, f2c[i].f);
+      if (f > 0)
+	rc = acl_add_flag_np(d, f2c[i].f);
+      else if (f < 0)
+	rc = acl_delete_flag_np(d, f2c[i].f);
       if (rc < 0)
 	return rc;
 
@@ -501,8 +515,8 @@ merge_acl(acl_t *a) {
       acl_get_flagset_np(aev[i], &fs_a);
       acl_get_flagset_np(ta, &fs_b);
       
-      merge_permset(ps_a, ps_b);
-      merge_flagset(fs_a, fs_b);
+      merge_permset(ps_a, ps_b, +1);
+      merge_flagset(fs_a, fs_b, +1);
       ++n;
     } else {
       /* No match found - append ACE */

@@ -250,6 +250,8 @@ typedef enum gace_type {
   GACE_FULL_SET
 
 
+typedef char GACE_EDIT;
+
 typedef struct gace {
   GACE_TAG tag;
   uid_t id;
@@ -257,6 +259,7 @@ typedef struct gace {
   GACE_FLAGSET flags;
   GACE_TYPE type;
   GACL_BRAND brand;
+  GACE_EDIT edit;
 } GACE;
 
 
@@ -407,11 +410,23 @@ gacl_set_permset(GACE *ep,
 		 GACE_PERMSET *psp);
 
 extern int
+_gacl_merge_permset(GACE_PERMSET *d,
+		    GACE_PERMSET *s,
+		    int f);
+
+extern int
+_gacl_empty_permset(GACE_PERMSET *p);
+
+extern int
 gacl_get_perm_np(GACE_PERMSET *epp,
 		 GACE_PERM p);
 
 extern int
 gacl_clear_perms(GACE_PERMSET *psp);
+
+
+extern int
+gacl_clean(GACL *ap);
 
 extern int
 gacl_add_perm(GACE_PERMSET *psp,
@@ -426,8 +441,16 @@ gacl_get_flagset_np(GACE *ep,
 		    GACE_FLAGSET **fspp);
 
 extern int
+_gacl_empty_flagset(GACE_FLAGSET *f);
+
+extern int
 gacl_set_flagset_np(GACE *ep,
 		    GACE_FLAGSET *fsp);
+
+extern int
+_gacl_merge_flagset(GACE_FLAGSET *d,
+		    GACE_FLAGSET *s,
+		    int f);
 
 extern int
 gacl_clear_flags_np(GACE_FLAGSET *fsp);

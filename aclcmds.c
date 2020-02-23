@@ -673,7 +673,8 @@ walker_set(const char *path,
 static int
  _acl_entry_pos(acl_t ap, 
 		acl_tag_t tt, 
-		acl_entry_type_t et) {
+		acl_entry_type_t et,
+		uid_t *ip) {
   int i;
   acl_entry_t ae;
 
@@ -681,14 +682,31 @@ static int
   for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
     acl_tag_t ott;
     acl_entry_type_t oet;
+    uid_t *oip;
+
 
     acl_get_tag_type(ae, &ott);
     acl_get_entry_type_np(ae, &oet);
+    oip = acl_get_qualifier(ae);
 
-    if (ott > tt) {
+    fprintf(stderr, "i=%d, ott=%d vs tt=%d, oet=%d vs et=%d\n", i, ott, tt, oet, et);
+
+    if (ott > tt)
       return i;
-    } else if (ott == tt && oet > et)
-      return i;
+
+    if (ott == tt) {
+      if ((ott == ACL_USER || ott == ACL_GROUP)) {
+	if (*oip < *ip)
+	  continue;
+
+	fprintf(stderr, "  i=%d, oid=%d vs id=%d, oet=%d vs et=%d\n", i, *oip, *ip, oet, et);
+
+	if (*oip == *ip) {
+	  if (oet < et)
+	    return i;
+	}
+      }
+    }
   }
 
   return -1;
@@ -724,16 +742,16 @@ walker_edit(const char *path,
     acl_entry_type_t net;
     uid_t *nip;
     int nm;
-    acl_permset_t ps;
-    acl_flagset_t fs;
+    acl_permset_t nps;
+    acl_flagset_t nfs;
 
 
     acl_get_tag_type(nae, &ntt);
     acl_get_entry_type_np(nae, &net);
     nip = acl_get_qualifier(nae);
     
-    if (acl_get_permset(nae, &ps) < 0 ||
-	acl_get_flagset_np(nae, &fs) < 0)
+    if (acl_get_permset(nae, &nps) < 0 ||
+	acl_get_flagset_np(nae, &nfs) < 0)
       goto Fail;
     
     nm = 0;
@@ -741,6 +759,8 @@ walker_edit(const char *path,
     for (j = 0; acl_get_entry(oap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
       acl_tag_t ott;
       acl_entry_type_t oet;
+      acl_permset_t ops;
+      acl_flagset_t ofs;
       uid_t *oip;
       
 
@@ -752,29 +772,66 @@ walker_edit(const char *path,
 	if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !nip || *oip != *nip))
 	  continue;
 
-	if (acl_set_permset(oae, ps) < 0 ||
-	    acl_set_flagset_np(oae, fs) < 0)
-	  goto Fail;
+	switch (nae->edit) {
+	case '+':
+	  if (acl_get_permset(oae, &ops) < 0 ||
+	      acl_get_flagset_np(oae, &ofs) < 0)
+	    goto Fail;
+
+	  _gacl_merge_permset(ops, nps, +1);
+	  _gacl_merge_flagset(ofs, nfs, +1);
+	  if (acl_set_permset(oae, ops) < 0 ||
+	      acl_set_flagset_np(oae, ofs) < 0)
+	    goto Fail;
+	  break;
+
+	case '-':
+	  if (acl_get_permset(oae, &ops) < 0 ||
+	      acl_get_flagset_np(oae, &ofs) < 0)
+	    goto Fail;
+
+	  _gacl_merge_permset(ops, nps, -1);
+	  _gacl_merge_flagset(ofs, nfs, -1);
+
+	  if (acl_set_permset(oae, ops) < 0 ||
+	      acl_set_flagset_np(oae, ofs) < 0)
+	    goto Fail;
+	  break;
+
+	default:
+	  if (acl_set_permset(oae, nps) < 0 ||
+	      acl_set_flagset_np(oae, nfs) < 0)
+	    goto Fail;
+	}
 
 	++nm;
       }
     }
 
-    if (nm == 0) {
+    if (nm == 0 && !nae->edit) {
       int p;
 
-      p = _acl_entry_pos(oap, ntt, net);
+      p = _acl_entry_pos(oap, ntt, net, nip);
+      fprintf(stderr, "p=%d\n", p);
       acl_create_entry_np(&oap, &oae, p);
 
       if (acl_set_tag_type(oae, ntt) < 0 ||
-	  acl_set_permset(oae, ps) < 0 ||
-	  acl_set_flagset_np(oae, fs) < 0 ||
+	  acl_set_permset(oae, nps) < 0 ||
+	  acl_set_flagset_np(oae, nfs) < 0 ||
 	  acl_set_entry_type_np(oae, net) < 0)
 	goto Fail;
 
       if (ntt == ACL_USER || ntt == ACL_GROUP)
 	acl_set_qualifier(oae, nip);
     }
+  }
+
+  gacl_clean(oap);
+
+  {
+    char *as = acl_to_text(oap, NULL);
+    puts(as);
+    acl_free(as);
   }
 
   if (!w_cfgp->f_noupdate) {

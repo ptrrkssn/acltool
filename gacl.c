@@ -148,6 +148,90 @@ _gacl_from_mode(mode_t mode) {
 }
 
 
+int
+_gacl_merge_permset(GACE_PERMSET *d,
+		    GACE_PERMSET *s,
+		    int f) {
+  int i, a, rc, ec = 0;
+
+  
+  if (f == 0)
+    gacl_clear_perms(d);
+
+  for (i = 0; gace_p2c[i].c; i++) {
+    a = gacl_get_perm_np(s, gace_p2c[i].p);
+    if (a) {
+      if (f > 0)
+	rc = gacl_add_perm(d, gace_p2c[i].p);
+      else if (f < 0)
+	rc = gacl_delete_perm(d, gace_p2c[i].p);
+      if (rc < 0)
+	return rc;
+      
+      ec = 1;
+    }
+  }
+
+  return ec;
+}
+
+int
+_gacl_empty_permset(GACE_PERMSET *p) {
+  int i, n;
+
+  n = 0;
+  for (i = 0; gace_p2c[i].c; i++) {
+    if (gacl_get_perm_np(p, gace_p2c[i].p))
+      ++n;
+  }
+  
+  return n == 0;
+}
+
+int
+_gacl_empty_flagset(GACE_FLAGSET *f) {
+  int i, n;
+
+  n = 0;
+  for (i = 0; gace_f2c[i].c; i++) {
+    if (gacl_get_flag_np(f, gace_f2c[i].f))
+      ++n;
+  }
+  
+  return n == 0;
+}
+
+
+int
+_gacl_merge_flagset(GACE_FLAGSET *d,
+		    GACE_FLAGSET *s,
+		    int f) {
+  int i, a, rc, ec = 0;
+
+
+  if (f == 0)
+    gacl_clear_flags_np(d);
+
+  for (i = 0; gace_f2c[i].c; i++) {
+    a = gacl_get_flag_np(s, gace_f2c[i].f);
+    if (a) {
+      if (f > 0)
+	rc = gacl_add_flag_np(d, gace_f2c[i].f);
+      else if (f < 0)
+	rc = acl_delete_flag_np(d, gace_f2c[i].f);
+      if (rc < 0)
+	return rc;
+      
+      ec = 1;
+    }
+  }
+
+  return ec;
+}
+
+
+
+
 GACL *
 gacl_init(int count) {
   GACL *ap;
@@ -374,6 +458,38 @@ gacl_dup(GACL *ap) {
   return nap;
 }
 
+
+/* 
+ * Remove redundant ACL entries:
+ * - Deny ACLs without permissions
+ */
+int
+gacl_clean(GACL *ap) {
+  int i, rc;
+  GACE *ep;
+
+
+ RESTART:
+  for (i = 0; (rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1; i++) {
+    GACE_PERMSET *ps;
+    GACE_FLAGSET *fs;
+
+
+    if (gacl_get_permset(ep, &ps) < 0)
+      return -1;
+    if (gacl_get_flagset_np(ep, &fs) < 0)
+      return -1;
+
+    if (_gacl_empty_permset(ps) && _gacl_empty_flagset(fs)) {
+      if (gacl_delete_entry_np(ap, i) < 0)
+	return -1;
+
+      goto RESTART;
+    }
+  }
+
+  return 0;
+}
 
 int
 gacl_is_trivial_np(GACL *ap,
@@ -1306,12 +1422,19 @@ _gacl_flagset_from_text(const char *buf,
 
 int
 _gacl_entry_from_text(char *cp,
-		      GACE *ep) {
+		      GACE *ep,
+		      char *editchars) {
   char *np;
 
 
+  if (editchars) {
+    if (strchr(editchars, *cp))
+      ep->edit = *cp++;
+    else
+      ep->edit = 0;
+  }
+    
   /* 1. Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ ) */
-
   np = strchr(cp, ':');
   if (!np) {
     errno = EINVAL;
@@ -1482,11 +1605,10 @@ gacl_from_text(const char *buf) {
   while ((es = strsep(&bp, ", \t\n\r")) != NULL) {
     GACE *ep;
 
-
     if (gacl_create_entry_np(&ap, &ep, -1) < 0)
       goto Fail;
 
-    if (_gacl_entry_from_text(es, ep) < 0)
+    if (_gacl_entry_from_text(es, ep, "+-=") < 0)
       goto Fail;
   }
 
