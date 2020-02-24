@@ -1,24 +1,35 @@
 # Makefile for acltool
 
-CFLAGS=-g -Wall -I/usr/local/include
+CFLAGS=-g -Wall
+CC=gcc
 
 ## FreeBSD:
 # XOBJS=
 # XLIBS=
 
 ## Solaris:
-# CC=gcc
 # XOBJS=gacl.o
 # XLIBS=-L/usr/local/lib -R/usr/local/lib -lcurses
 
 ## Linux:
-XOBJS=gacl.o
-XLIBS=
+# XOBJS=gacl.o
+# XLIBS=
 
 OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
 LIBS=-lreadline $(XLIBS)
 
+usage:
+	@echo "Use: 'make linux', 'make freebsd' or 'make solaris'
+	@exit 1
 
+solaris:
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XOBJS="gacl.o" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
+
+linux:
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XOBJS="gacl.o" all
+
+freebsd:
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 all: acltool
 

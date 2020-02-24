@@ -2425,7 +2425,6 @@ _gacl_set_fd_file(int fd,
     else
       rc = facl(fd, ACE_SETACL, ap->ac, (void *) acp);
     free(acp);
-    fprintf(stderr, "rc=%d\n", rc);
     return rc;
 
 #if 0
