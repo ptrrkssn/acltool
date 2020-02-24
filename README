@@ -71,6 +71,17 @@ COMMANDS
     set-access, set-acc, set, s-a, sac
 
 
+ACL PRINT STYLES
+  default         FreeBSD-style
+  verbose	  A more verbose version of FreeBSD
+  brief		  A one-line version
+  csv		  A CSV-styl one-line version
+  solaris	  Solaris-style
+  primos	  Prime/PRIMOS-style
+  samba		  Samba-style
+  icacls	  Windows ICACLS-style
+
+
 ACL FORMAT SPECIFICATION
 
   ACLs used as arguments are specified as comma separated lists of ACE entries looking like:
