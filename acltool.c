@@ -436,7 +436,7 @@ main(int argc,
     
     rl_attempted_completion_function = cmd_name_completion;
     
-    while ((buf = readline("> ")) != NULL) {
+    while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
       add_history(buf);
 
       while (*buf && isspace(*buf))
@@ -460,8 +460,6 @@ main(int argc,
       }
       
       free(buf);
-      if (rc > 0)
-	fprintf(stderr, "ERR");
     }
 
     exit(rc);

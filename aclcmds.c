@@ -881,9 +881,11 @@ walker_edit(const char *path,
     fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
     goto Fail;
   }
-  
-  if (w_cfgp->f_verbose)
-    printf("%s: ACL Set%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+
+  if (w_cfgp->f_verbose && rc > 0)
+    printf("%s: ACL Updated%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  if (w_cfgp->f_verbose > 1)
+    print_acl(stdout, ap, path, sp, w_cfgp);
   
   return 0;
 
