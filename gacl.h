@@ -65,7 +65,6 @@
 
 #ifdef GACL_C_INTERNAL
 #define _ACL_PRIVATE 1
-#include <sys/acl.h>
 #endif
 
 #include <sys/acl.h>
@@ -139,10 +138,8 @@ typedef enum gace_type {
 
 #include <sys/acl.h>
 
-#if 0
 #undef acl_t
 #undef acl_type_t
-#endif
 
 #define GACL_MAX_ENTRIES MAX_ACL_ENTRIES
 

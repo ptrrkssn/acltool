@@ -19,19 +19,19 @@ OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o
 LIBS=-lreadline $(XLIBS)
 
 auto:
-	@exec $(MAKE) `uname -s`
+	@$(MAKE) `uname -s`
 
 help:
 	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, clean" ; exit 0
 
 SunOS solaris omnios illumos:
-	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
 
 Linux linux:
-	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 FreeBSD freebsd:
-	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
 
 all: acltool
 
