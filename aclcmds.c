@@ -1005,10 +1005,14 @@ _aclcmd_foreach(int argc,
   for (i = 0; rc == 0 && i < argc; i++) {
     rc = ft_foreach(argv[i], handler, vp,
 		    cfgp->f_recurse ? -1 : cfgp->max_depth);
-    if (rc)
+    if (rc) {
+      if (rc < 0)
+	fprintf(stderr, "%s: Error: %s: Accessing object: %s\n", 
+		argv0, argv[i], strerror(errno));
       break;
+    }
   }
-  
+
   return rc;
 }
 

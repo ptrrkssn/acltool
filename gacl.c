@@ -219,7 +219,7 @@ gacl_merge_flagset(GACE_FLAGSET *d,
       if (f > 0)
 	rc = gacl_add_flag_np(d, gace_f2c[i].f);
       else if (f < 0)
-	rc = acl_delete_flag_np(d, gace_f2c[i].f);
+	rc = gacl_delete_flag_np(d, gace_f2c[i].f);
       if (rc < 0)
 	return rc;
       
@@ -519,14 +519,12 @@ _gacl_entry_compare(const void *va,
   if (inherit_only_a || inherit_only_b)
     return 0;
 
-#ifdef ACL_ENTRY_INHERITED  
   inherited_a = gacl_get_flag_np(afs, GACE_FLAG_INHERITED);
   inherited_b = gacl_get_flag_np(bfs, GACE_FLAG_INHERITED);
 
   v = inherited_a-inherited_b;
   if (v)
     return v;
-#endif
 
   /* order: owner@ - user - group@ - group - everyone @ */
   if (gacl_get_tag_type(a, &ta) < 0)
@@ -540,7 +538,7 @@ _gacl_entry_compare(const void *va,
     return v;
 
   switch (ta) {
-  case ACL_USER:
+  case GACE_TAG_USER:
     qa = (uid_t *) gacl_get_qualifier(a);
     qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
@@ -550,7 +548,7 @@ _gacl_entry_compare(const void *va,
       return v;
     break;
     
-  case ACL_GROUP:
+  case GACE_TAG_GROUP:
     qa = (uid_t *) gacl_get_qualifier(a);
     qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
@@ -886,17 +884,17 @@ gacl_set_tag_type(GACE *ep,
   }
 
   switch (et) {
-  case ACL_USER_OBJ:
-  case ACL_USER:
-  case ACL_GROUP_OBJ:
-  case ACL_GROUP:
+  case GACE_TAG_USER_OBJ:
+  case GACE_TAG_USER:
+  case GACE_TAG_GROUP_OBJ:
+  case GACE_TAG_GROUP:
 
-  case ACL_MASK:
-  case ACL_OTHER_OBJ:
+  case GACE_TAG_MASK:
+  case GACE_TAG_OTHER_OBJ:
     _gacl_entry_set_brand_np(ep, GACL_BRAND_POSIX);
     break;
 
-  case ACL_EVERYONE:
+  case GACE_TAG_EVERYONE:
     _gacl_entry_set_brand_np(ep, GACL_BRAND_NFS4);
     break;
 
@@ -1488,16 +1486,16 @@ _gacl_permset_from_text(const char *buf,
 
   if (strcasecmp(buf, "full_set") == 0 ||
       strcasecmp(buf, "all") == 0)
-    nps = ACL_FULL_SET;
+    nps = GACE_FULL_SET;
   else if (strcasecmp(buf, "modify_set") == 0 ||
 	   strcasecmp(buf, "modify") == 0)
-    nps = ACL_MODIFY_SET;
+    nps = GACE_MODIFY_SET;
   else if (strcasecmp(buf, "write_set") == 0 ||
 	   strcasecmp(buf, "write") == 0)
-    nps = ACL_WRITE_SET;
+    nps = GACE_WRITE_SET;
   else if (strcasecmp(buf, "read_set") == 0 ||
 	   strcasecmp(buf, "read") == 0)
-    nps = ACL_READ_SET;
+    nps = GACE_READ_SET;
   else if (strcasecmp(buf, "empty_set") == 0 ||
 	   strcasecmp(buf, "empty") == 0 ||
 	   strcasecmp(buf, "none") == 0) /* XXX: Remove, but handle the magic 'none' case for edit-access */
