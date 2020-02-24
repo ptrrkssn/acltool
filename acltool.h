@@ -55,6 +55,8 @@ struct command;
 typedef struct config {
   int f_debug;
   int f_verbose;
+  int f_sort;
+  int f_merge;
   int f_recurse;
   int f_noupdate;
   ACL_STYLE f_style;

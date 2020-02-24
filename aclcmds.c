@@ -489,6 +489,61 @@ print_acl(FILE *fp,
 }
 
 
+static acl_t 
+get_acl(const char *path, 
+	const struct stat *sp) {
+  acl_t ap;
+
+
+  if (S_ISLNK(sp->st_mode))
+    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
+  else
+    ap = acl_get_file(path, ACL_TYPE_NFS4);
+  if (!ap) {
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
+    return NULL;
+  }
+
+  if (w_cfgp->f_sort) {
+    acl_t sap = acl_sort(ap);
+    if (!sap) {
+      fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
+      return NULL;
+    }
+    acl_free(ap);
+    ap = sap;
+  }
+
+  return ap;
+}
+
+
+static int
+set_acl(const char *path,
+	const struct stat *sp,
+	acl_t ap,
+	acl_t oap) {
+  int rc;
+
+
+  /* Skip set operation if old and new acl is the same */
+  if (oap && acl_equal(ap, oap) == 1)
+    return 0;
+  
+  rc = 0;
+  if (!w_cfgp->f_noupdate) {
+    if (S_ISLNK(sp->st_mode))
+      rc = acl_set_link_np(path, ACL_TYPE_NFS4, ap);
+    else
+      rc = acl_set_file(path, ACL_TYPE_NFS4, ap);
+  }
+
+  if (rc < 0)
+    return rc;
+
+  return 1;
+}
+
 static int
 walker_strip(const char *path,
 	     const struct stat *sp,
@@ -499,21 +554,16 @@ walker_strip(const char *path,
   acl_t ap, na;
   int tf;
   
-  
-  if (S_ISLNK(sp->st_mode))
-    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
-  else
-    ap = acl_get_file(path, ACL_TYPE_NFS4);
-  
-  if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL\n", argv0, path);
+
+  ap = get_acl(path, sp);
+  if (!ap)
     return 1;
-  }
 
   tf = 0;
   if (acl_is_trivial_np(ap, &tf) < 0) {
+    fprintf(stderr, "%s: Error: %s: Internal Error: %s\n", argv0, path, strerror(errno));
     acl_free(ap);
-    return -1;
+    return 1;
   }
 
   if (tf) {
@@ -522,17 +572,12 @@ walker_strip(const char *path,
   }
   
   na = acl_strip_np(ap, 0);
-  acl_free(ap);
-  
-  rc = 0;
-  if (!w_cfgp->f_noupdate) {
-    if (S_ISLNK(sp->st_mode))
-      rc = acl_set_link_np(path, ACL_TYPE_NFS4, na);
-    else
-      rc = acl_set_file(path, ACL_TYPE_NFS4, na);
-  }
-  
+
+  rc = set_acl(path, sp, na, ap);
+
   acl_free(na);
+  acl_free(ap);
+
   if (rc < 0) {
     fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
     return 1;
@@ -579,40 +624,31 @@ walker_sort(const char *path,
   int rc;
   acl_t ap, na;
 
-  
-  if (S_ISLNK(sp->st_mode))
-    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
-  else
-    ap = acl_get_file(path, ACL_TYPE_NFS4);
-  
+
+  ap = get_acl(path, sp);
   if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL\n", argv0, path);
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
     return 1;
   }
 
-  rc = sort_acl(ap, &na);
+  na = acl_sort(ap);
+  if (!na) {
+    fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
+    return 1;
+  }
+
+  rc = set_acl(path, sp, na, ap);
+
+  acl_free(na);
   acl_free(ap);
 
-  if (rc < 0)
-    return rc;
-
-  if (rc == 1) {
-    rc = 0;
-    if (!w_cfgp->f_noupdate) {
-      if (S_ISLNK(sp->st_mode))
-	rc = acl_set_link_np(path, ACL_TYPE_NFS4, na);
-      else
-	rc = acl_set_file(path, ACL_TYPE_NFS4, na);
-    }
-    acl_free(na);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
-      return 1;
-    }
-
-    if (w_cfgp->f_verbose)
-      printf("%s: ACL Sorted%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  if (rc < 0) {
+    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+    return 1;
   }
+
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Sorted%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
 
   return 0;
 }
@@ -664,13 +700,10 @@ walker_set(const char *path,
 
   
   if (!w_cfgp->f_noupdate) {
-    if (S_ISLNK(sp->st_mode))
-      rc = acl_set_link_np(path, ACL_TYPE_NFS4, a->fa);
-    else if (S_ISDIR(sp->st_mode))
-      rc = acl_set_file(path, ACL_TYPE_NFS4, a->da);
+    if (S_ISDIR(sp->st_mode))
+      rc = set_acl(path, sp, a->da, NULL);
     else
-      rc = acl_set_file(path, ACL_TYPE_NFS4, a->fa);
-
+      rc = set_acl(path, sp, a->fa, NULL);
     if (rc < 0) {
       fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
       return 1;
@@ -729,15 +762,22 @@ walker_edit(const char *path,
 	    size_t level,
 	    void *vp) {
   int rc, i, j;
-  acl_t oap, nap;
+  acl_t oap, ap, nap;
   acl_entry_t nae;
   DACL *a = (DACL *) vp;
 
-  
-  if (S_ISLNK(sp->st_mode))
-    oap = acl_get_link_np(path, ACL_TYPE_NFS4);
-  else
-    oap = acl_get_file(path, ACL_TYPE_NFS4);
+
+  oap = get_acl(path, sp);  
+  if (!oap) {
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
+    return 1;
+  }
+
+  ap = acl_dup(oap);
+  if (!ap) {
+    fprintf(stderr, "%s: Error: %s: Internal Fault (acl_dup): %s\n", argv0, path, strerror(errno));
+    return 1;
+  }
 
   if (S_ISDIR(sp->st_mode)) {
     nap = a->da;
@@ -765,7 +805,7 @@ walker_edit(const char *path,
     
     nm = 0;
 
-    for (j = 0; acl_get_entry(oap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
+    for (j = 0; acl_get_entry(ap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
       acl_tag_t ott;
       acl_entry_type_t oet;
       acl_permset_t ops;
@@ -787,8 +827,8 @@ walker_edit(const char *path,
 	      acl_get_flagset_np(oae, &ofs) < 0)
 	    goto Fail;
 
-	  _gacl_merge_permset(ops, nps, +1);
-	  _gacl_merge_flagset(ofs, nfs, +1);
+	  acl_merge_permset(ops, nps, +1);
+	  acl_merge_flagset(ofs, nfs, +1);
 	  if (acl_set_permset(oae, ops) < 0 ||
 	      acl_set_flagset_np(oae, ofs) < 0)
 	    goto Fail;
@@ -799,8 +839,8 @@ walker_edit(const char *path,
 	      acl_get_flagset_np(oae, &ofs) < 0)
 	    goto Fail;
 
-	  _gacl_merge_permset(ops, nps, -1);
-	  _gacl_merge_flagset(ofs, nfs, -1);
+	  acl_merge_permset(ops, nps, -1);
+	  acl_merge_flagset(ofs, nfs, -1);
 
 	  if (acl_set_permset(oae, ops) < 0 ||
 	      acl_set_flagset_np(oae, ofs) < 0)
@@ -820,8 +860,8 @@ walker_edit(const char *path,
     if (nm == 0 && !nae->edit) {
       int p;
 
-      p = _acl_entry_pos(oap, ntt, net, nip);
-      acl_create_entry_np(&oap, &oae, p);
+      p = _acl_entry_pos(ap, ntt, net, nip);
+      acl_create_entry_np(&ap, &oae, p);
 
       if (acl_set_tag_type(oae, ntt) < 0 ||
 	  acl_set_permset(oae, nps) < 0 ||
@@ -834,20 +874,12 @@ walker_edit(const char *path,
     }
   }
 
-  gacl_clean(oap);
+  gacl_clean(ap);
 
-  if (!w_cfgp->f_noupdate) {
-    if (S_ISLNK(sp->st_mode))
-      rc = acl_set_link_np(path, ACL_TYPE_NFS4, oap);
-    else if (S_ISDIR(sp->st_mode))
-      rc = acl_set_file(path, ACL_TYPE_NFS4, oap);
-    else
-      rc = acl_set_file(path, ACL_TYPE_NFS4, oap);
-
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
-      goto Fail;
-    }
+  rc = set_acl(path, sp, ap, oap);
+  if (rc < 0) {
+    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+    goto Fail;
   }
   
   if (w_cfgp->f_verbose)
@@ -857,6 +889,7 @@ walker_edit(const char *path,
 
  Fail:
   acl_free(oap);
+  acl_free(ap);
   return 1;
 }
 
@@ -872,13 +905,11 @@ walker_find(const char *path,
   acl_entry_t ae, mae;
 
 
-  if (S_ISLNK(sp->st_mode))
-    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
-  else
-    ap = acl_get_file(path, ACL_TYPE_NFS4);
-  
-  if (!ap)
+  ap = get_acl(path, sp);
+  if (!ap) {
+    /* Silently ignore this one - not ACL set? */
     return 0;
+  }
 
   nm = 0;
   for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
@@ -936,14 +967,10 @@ walker_print(const char *path,
 
 
   fp = stdout;
-  
-  if (S_ISLNK(sp->st_mode))
-    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
-  else
-    ap = acl_get_file(path, ACL_TYPE_NFS4);
-  
+
+  ap = get_acl(path, sp);  
   if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Unable to read ACL\n", argv0, path);
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
     return 1;
   }
   
@@ -1006,10 +1033,7 @@ aclcmd_copy(int argc,
     return 1;
   }
 
-  if (S_ISLNK(s0.st_mode))
-    a.da = acl_get_link_np(argv[1], ACL_TYPE_NFS4);
-  else
-    a.da = acl_get_file(argv[1], ACL_TYPE_NFS4);
+  a.da = get_acl(argv[1], &s0);
   if (!a.da) {
     fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
@@ -1018,7 +1042,7 @@ aclcmd_copy(int argc,
   a.fa = acl_dup(a.da);
   if (!a.fa) {
     acl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    fprintf(stderr, "%s: Error: %s: Internal Fault (acl_dup): %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
  

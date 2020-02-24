@@ -287,6 +287,13 @@ extern GACL *
 gacl_dup(GACL *ap);
 
 extern int
+gacl_equal(GACL *ap,
+	   GACL *bp);
+
+extern GACL *
+gacl_sort(GACL *ap);
+
+extern int
 gacl_is_trivial_np(GACL *ap,
 		   int *trivialp);
 
@@ -410,12 +417,12 @@ gacl_set_permset(GACE *ep,
 		 GACE_PERMSET *psp);
 
 extern int
-_gacl_merge_permset(GACE_PERMSET *d,
-		    GACE_PERMSET *s,
-		    int f);
+gacl_merge_permset(GACE_PERMSET *d,
+		   GACE_PERMSET *s,
+		   int f);
 
 extern int
-_gacl_empty_permset(GACE_PERMSET *p);
+gacl_empty_permset(GACE_PERMSET *p);
 
 extern int
 gacl_get_perm_np(GACE_PERMSET *epp,
@@ -441,16 +448,16 @@ gacl_get_flagset_np(GACE *ep,
 		    GACE_FLAGSET **fspp);
 
 extern int
-_gacl_empty_flagset(GACE_FLAGSET *f);
+gacl_empty_flagset(GACE_FLAGSET *f);
 
 extern int
 gacl_set_flagset_np(GACE *ep,
 		    GACE_FLAGSET *fsp);
 
 extern int
-_gacl_merge_flagset(GACE_FLAGSET *d,
-		    GACE_FLAGSET *s,
-		    int f);
+gacl_merge_flagset(GACE_FLAGSET *d,
+		   GACE_FLAGSET *s,
+		   int f);
 
 extern int
 gacl_clear_flags_np(GACE_FLAGSET *fsp);
@@ -665,6 +672,13 @@ typedef GACE_FLAGSET *acl_flagset_t;
 
 #define acl_init_entry            gacl_init_entry
 #define acl_add_entry_np          gacl_add_entry_np
+
+#define acl_equal                 gacl_equal
+#define acl_sort                  gacl_sort
+#define acl_empty_permset         gacl_empty_permset
+#define acl_merge_permset         gacl_merge_permset
+#define acl_empty_flagset         gacl_empty_flagset
+#define acl_merge_flagset         gacl_merge_flagset
 
 #define acl_entry_tag_to_text     gacl_entry_tag_to_text
 #define acl_entry_permset_to_text gacl_entry_permset_to_text

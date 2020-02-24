@@ -95,6 +95,34 @@ set_verbose(const char *name,
 }
 
 int
+set_sort(const char *name,
+	 const char *value,
+	 unsigned int type,
+	 void *vp,
+	 void *xp,
+	 const char *a0) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  cp->f_sort++;
+  
+  return 0;
+}
+
+int
+set_merge(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  void *vp,
+	  void *xp,
+	  const char *a0) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  cp->f_merge++;
+  
+  return 0;
+}
+
+int
 set_recurse(const char *name,
 	    const char *value,
 	    unsigned int type,
@@ -194,6 +222,8 @@ OPTION options[] =
    { "help",      'h', OPTS_TYPE_NONE,               show_help,     "Display usage" },
    { "debug",     'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     "Debug level" },
    { "verbose",   'v', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_verbose,   "Verbosity level" },
+   { "sort",      's', OPTS_TYPE_NONE,               set_sort,      "Enable sorting" },
+   { "merge",     'm', OPTS_TYPE_NONE,               set_merge,     "Enable merging" },
    { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   "Enable recursion" },
    { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     "Increase/decrease max depth" },
    { "style",     'S', OPTS_TYPE_STR,                set_style,     "Select ACL print style" },

@@ -149,9 +149,9 @@ _gacl_from_mode(mode_t mode) {
 
 
 int
-_gacl_merge_permset(GACE_PERMSET *d,
-		    GACE_PERMSET *s,
-		    int f) {
+gacl_merge_permset(GACE_PERMSET *d,
+		   GACE_PERMSET *s,
+		   int f) {
   int i, a, rc, ec = 0;
 
   
@@ -176,7 +176,7 @@ _gacl_merge_permset(GACE_PERMSET *d,
 }
 
 int
-_gacl_empty_permset(GACE_PERMSET *p) {
+gacl_empty_permset(GACE_PERMSET *p) {
   int i, n;
 
   n = 0;
@@ -189,7 +189,7 @@ _gacl_empty_permset(GACE_PERMSET *p) {
 }
 
 int
-_gacl_empty_flagset(GACE_FLAGSET *f) {
+gacl_empty_flagset(GACE_FLAGSET *f) {
   int i, n;
 
   n = 0;
@@ -203,9 +203,9 @@ _gacl_empty_flagset(GACE_FLAGSET *f) {
 
 
 int
-_gacl_merge_flagset(GACE_FLAGSET *d,
-		    GACE_FLAGSET *s,
-		    int f) {
+gacl_merge_flagset(GACE_FLAGSET *d,
+		   GACE_FLAGSET *s,
+		   int f) {
   int i, a, rc, ec = 0;
 
 
@@ -480,7 +480,7 @@ gacl_clean(GACL *ap) {
     if (gacl_get_flagset_np(ep, &fs) < 0)
       return -1;
 
-    if (_gacl_empty_permset(ps) && _gacl_empty_flagset(fs)) {
+    if (gacl_empty_permset(ps) && gacl_empty_flagset(fs)) {
       if (gacl_delete_entry_np(ap, i) < 0)
 	return -1;
 
@@ -490,6 +490,113 @@ gacl_clean(GACL *ap) {
 
   return 0;
 }
+
+
+/* Compare two ACL Entries */
+static int
+_gacl_entry_compare(const void *va,
+		    const void *vb) {
+  GACE *a = (GACE *) va;
+  GACE *b = (GACE *) vb;
+  GACE_TYPE aet_a, aet_b;
+  GACE_TAG ta, tb;
+  GACE_FLAGSET *afs, *bfs;
+  int v;
+  int inherited_a, inherited_b;
+  int inherit_only_a, inherit_only_b;
+  uid_t *qa, *qb;
+  
+
+  /* Explicit entries goes before inherited ones */
+  gacl_get_flagset_np(a, &afs);
+  gacl_get_flagset_np(b, &bfs);
+  
+  inherit_only_a = gacl_get_flag_np(afs, ACL_ENTRY_INHERIT_ONLY);
+  inherit_only_b = gacl_get_flag_np(bfs, ACL_ENTRY_INHERIT_ONLY);
+
+  /* Ignore this entry if the 'inherit_only' flag is set on one of them */
+  if (inherit_only_a || inherit_only_b)
+    return 0;
+
+#ifdef ACL_ENTRY_INHERITED  
+  inherited_a = gacl_get_flag_np(afs, ACL_ENTRY_INHERITED);
+  inherited_b = gacl_get_flag_np(bfs, ACL_ENTRY_INHERITED);
+
+  v = inherited_a-inherited_b;
+  if (v)
+    return v;
+#endif
+
+  /* order: owner@ - user - group@ - group - everyone @ */
+  if (gacl_get_tag_type(a, &ta) < 0)
+    return -1;
+  
+  if (gacl_get_tag_type(b, &tb) < 0)
+    return 1;
+
+  v = ta-tb;
+  if (v)
+    return v;
+
+  switch (ta) {
+  case ACL_USER:
+    qa = (uid_t *) gacl_get_qualifier(a);
+    qb = (uid_t *) gacl_get_qualifier(b);
+    v = (*qa-*qb);
+    acl_free((void *) qa);
+    acl_free((void *) qb);
+    if (v)
+      return v;
+    break;
+    
+  case ACL_GROUP:
+    qa = (uid_t *) acl_get_qualifier(a);
+    qb = (uid_t *) acl_get_qualifier(b);
+    v = (*qa-*qb);
+    acl_free((void *) qa);
+    acl_free((void *) qb);
+    if (v)
+      return v;
+    break;
+
+  default:
+    break;
+  }
+  
+  /* Deny entries goes before allow ones */
+  if (acl_get_entry_type_np(a, &aet_a) < 0)
+    return -1;
+  
+  if (acl_get_entry_type_np(b, &aet_b) < 0)
+    return 1;
+
+  v = aet_b - aet_a;
+  if (v)
+    return v;
+
+  return 0;
+}
+
+
+/* 
+ * foreach CLASS (implicit, inherited)
+ *   foreach TAG (owner@, user:uid, group@, group:gid, everyone@)
+ *     foreach ID (x)
+ *       foreach TYPE (deny, allow)
+ */
+GACL *
+gacl_sort(GACL *ap) {
+  GACL *nap;
+
+
+  nap = gacl_dup(ap);
+  if (!nap)
+    return NULL;
+
+  qsort(&nap->av[0], nap->ac, sizeof(nap->av[0]), _gacl_entry_compare);
+  return nap;
+}
+
 
 int
 gacl_is_trivial_np(GACL *ap,
@@ -1381,7 +1488,8 @@ _gacl_permset_from_text(const char *buf,
 	   strcasecmp(buf, "read") == 0)
     nps = ACL_READ_SET;
   else if (strcasecmp(buf, "empty_set") == 0 ||
-	   strcasecmp(buf, "none") == 0)
+	   strcasecmp(buf, "empty") == 0 ||
+	   strcasecmp(buf, "none") == 0) /* XXX: Remove, but handle the magic 'none' case for edit-access */
     nps = 0;
   else {
     while ((c = *buf++) != '\0') {
