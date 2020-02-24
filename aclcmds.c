@@ -1067,7 +1067,7 @@ aclcmd_get(int argc,
     ns = strlen(argv[i])+1+strlen(as)+1;
     nv = malloc(ns);
     if (!nv) {
-      fprintf(stderr, "%s: Error: Malloc(%d): %s\n", argv0, ns, strerror(errno));
+      fprintf(stderr, "%s: Error: Malloc(%d): %s\n", argv0, (int) ns, strerror(errno));
     }
     snprintf(nv, ns, "%s=%s", argv[i], as);
     putenv(nv);
