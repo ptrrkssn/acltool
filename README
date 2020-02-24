@@ -1,43 +1,146 @@
 ACLTOOL
 
-A tool to view and manipulate ACL (Access Control Lists) on filesystems.
-
+  This is a tool to manage ACLs - listing, creating, editing, searching, stripping, sorting
+  and removing redundant entries and more.
 
 AUTHOR
 
-- Peter Eriksson <pen@lysator.liu.se>
+  Peter Eriksson <pen@lysator.liu.se>
 
 
 OPERATING SYSTEMS SUPPORTED (for now)
 
-- FreeBSD
-- Solaris (tested on OmniOS)
-- Linux (for NFSv4 filesystems only)
+  - FreeBSD (ZFS & NFSv4)
+  - Solaris (tested on OmniOS, ZFS & NFSv4)
+  - Linux (for NFSv4 only)
 
 
-DESCRIPTION
+BUILD INSTRUCTIONS
 
-This is a tool to manage ACLs - listing, creating, editing, searching, stripping, sorting
-and removing redundant entries and more.
+  Just type 'make' in the source directory. It will automatically detect, freebsd, linux 
+  or solaris-based systems.
 
 
-CANONICAL SORT ORDER
+USAGE
+
+  acltool [<global-options>] [<command> [<options>] [<arguments>]]
+
+
+OPTIONS
+
+  -h / --help           -       Display usage
+  -D / --debug          [<n>]   Debug level
+  -v / --verbose        [<n>]   Verbosity level
+  -s / --sort           -       Enable sorting
+  -m / --merge          -       Enable merging
+  -r / --recurse        -       Enable recursion
+  -d / --depth          [<n>]   Increase/decrease max depth
+  -S / --style          <s>     Select ACL print style
+  -n / --no-update      -       Disable modification
+
+
+COMMANDS
+
+  exit                  [<code>]                Exit (with exit code)
+  echo                  [<str>]*                Print some text
+  cd                    [<path>]*               Change working directory
+  pwd                   -                       Print working directory
+  version               -                       Display program version
+  config                [<opt>[=<val>]]*        Print/update default configuration
+  help                  [<command>]*            Display usage information
+  list-access           <path>+                 List ACL(s)
+  strip-access          <path>+                 Strip ACL(s)
+  sort-access           <path>+                 Sort ACL(s)
+  copy-access           <src> <dst>+            Copy ACL(s)
+  delete-access         <path>+                 Delete ACL(s)
+  set-access            <acl> <path>+           Set ACL(s)
+  edit-access           <path>+                 Edit ACL(s)
+  find-access           <path>+                 Search ACL(s)
+
+
+  Acltool can either be used directly from the command line or by entering a CLI mode by starting 
+  it without any arguments (sans any global options).
+
+  All commands and long option names can be abbreviated using the parts of the names. 
+  Some examples of valid abbreviations:
+
+    list-access, list-a, list, l-ac, lac, liac
+    edit-access, edit-a, edit, e-ac, edac
+    set-access, set-acc, set, s-a, sac
+
+
+ACL FORMAT SPECIFICATION
+
+  ACLs used as arguments are specified as comma separated lists of ACE entries looking like:
+
+    [<opt>]<tag>:<permissions>[:<flags>[:<type>]]
+
+  <opt> is used by the 'edit-access' and 'find-access' commands and ignored for others:
+    +      Add permission and flag bits on matching ACE entries
+    -      Delete permission and flag bits on matching ACE entries
+    =      Set the full permission and flag sets on matching ACE entries
+
+    If no <opt> is specified then it works like "=" but adds a new entry in each ACL if
+    none was there before.
+
+  <tag> tells the tag type of the ACE:
+    owner@           The object "owner"
+    group@           The object "group"
+    everyone@        The object "other"
+    [u|user]:<id>    A user name/uid
+    [g|group]:<id>   A group name/gid
+    <id>             A user or group (if unique)
+
+  <permissions> Describes the rights allowed or denied.
+    r / read_data         Read data
+    w / write_data        Write data
+    x / execute           Execute
+    p / append_data       Append data
+    d / delete 	          Delete
+    D / delete_child      Remove files/subdirs
+    a / read_attributes   Read Attributes
+    A / write_attributes  Write Attributes
+    R / read_xattrs	  Read Xattrs
+    W / write_xattrs	  Write Xattrs
+    c / read_acl	  Read ACLs
+    C / write_acl	  Write ACLs
+    o / write_owner	  Write Owner
+    s / synchronize	  Synchronize
+
+  <flags> Describes permission inheritance 
+    f 	   File inherit
+    d	   Directory inherit
+    i	   Inherit only
+    n	   No propagate inherit
+    S	   Successful access (not used)
+    F	   Failed access (not used)
+    I	   Inherited (ZFS on FreeBSD only)
+
+  <type> Describes the type of ACE entry:
+    allow	   Describes rights allowed
+    deny	   Describes rights denied
+    audit	   Not used right now
+    alarm	   Not used right now
+
+
+SOME THOUGHTS ABOUT CANONICAL SORT ORDER
 
 NFSv4/ZFS-ACLs doesn't really care about sort order, except that you probably always want
 to have the "deny" ACEs before the "allow" ones (recommendation: Stay away from deny ACEs).
 But there are two other models, Windows and Posix, that have opinions, and Windows is the
 most important...
 
-Windows systems wants ACLs to be sorted in a "canonical" order. This is what Microsoft write about it:
+Windows systems wants ACLs to be sorted in a "canonical" order. This is what Microsoft 
+write about it:
 
-The preferred order of ACEs in a DACL is called the "canonical" order. For Windows 2000 and Windows
-Server 2003, the canonical order is the following:
+The preferred order of ACEs in a DACL is called the "canonical" order. For Windows 2000 
+and Windows Server 2003, the canonical order is the following:
  
- - All explicit ACEs are placed in a group before any inherited ACEs.
- - Within the group of explicit ACEs, access-denied ACEs are placed before access-allowed ACEs.
- - Within the inherited group, ACEs that are inherited from the child object's parent come first,
-   and then ACEs inherited from the grandparent, and so on up the tree of objects.
- - After that, access-denied ACEs are placed before access-allowed ACEs.
+  - All explicit ACEs are placed in a group before any inherited ACEs.
+  - Within the group of explicit ACEs, access-denied ACEs are placed before access-allowed ACEs.
+  - Within the inherited group, ACEs that are inherited from the child object's parent come first,
+    and then ACEs inherited from the grandparent, and so on up the tree of objects.
+  - After that, access-denied ACEs are placed before access-allowed ACEs.
 
 POSIX (from the aclsort() manual page in some Unixes):
 
@@ -55,4 +158,3 @@ A call to aclsort will result in the contents of the buffer being sorted in the 
  10. Default additional group entries
  11. Default class entry
  12. Default entry for other
-
