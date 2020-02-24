@@ -15,20 +15,20 @@ CC=gcc
 # XOBJS=gacl.o
 # XLIBS=
 
-OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
+OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o gacl.o $(XOBJS)
 LIBS=-lreadline $(XLIBS)
 
 usage:
 	@echo "Use: 'make linux', 'make freebsd' or 'make solaris'" ; exit 0
 
-solaris:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XOBJS="gacl.o" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
+solaris omnios:
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
 
 linux:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XOBJS="gacl.o" all
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 freebsd:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
 
 all: acltool
 
