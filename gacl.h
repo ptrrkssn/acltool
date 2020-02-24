@@ -36,13 +36,22 @@
 
 #include <stdint.h>
 
-#if defined(__FreeBSD__)
 
-#if GACL_MASK_FREEBSD_IMPLEMENTATION
+#if defined(__FreeBSD__)
+/* ---------------------------------------- FreeBSD - START ---------------------------------------- */
+
+#define GACL_LINUX_EMULATION   1
+#define GACL_SOLARIS_EMULATION 1
+
 #define acl_t            freebsd_acl_t
 #define acl_entry_t      freebsd_acl_entry_t
+#define acl_entry_type_t freebsd_acl_entry_type_t
 #define acl_type_t       freebsd_acl_type_t
+#define acl_tag_t        freebsd_acl_tag_t
+#define acl_flagset_t    freebsd_acl_flagset_t
+#define acl_permset_t    freebsd_acl_permset_t
 
+#if 0
 #define acl_get_file     freebsd_acl_get_file
 #define acl_get_link_np  freebsd_acl_get_link_np
 #define acl_get_fd       freebsd_acl_get_fd
@@ -52,23 +61,77 @@
 #define acl_set_link_np  freebsd_acl_set_link_np
 #define acl_set_fd       freebsd_acl_set_fd
 #define acl_set_fd_np    freebsd_acl_set_fd_np
-
-#define GACL_FREEBSD_EMULATION 1
 #endif
 
-#define GACL_SOLARIS_EMULATION 1
+#ifdef GACL_C_INTERNAL
+#define _ACL_PRIVATE 1
+#include <sys/acl.h>
+#endif
 
 #include <sys/acl.h>
 
-#if GACL_MASK_FREEBSD_IMPLEMENTATION
 #undef acl_t
 #undef acl_entry_t
+#undef acl_entry_type_t
 #undef acl_type_t
-#endif
+#undef acl_tag_t
+#undef acl_permset_t
+#undef acl_flagset_t
+
+#undef acl_get_file
+#undef acl_get_link_np
+#undef acl_get_fd
+#undef acl_get_fd_np
+
+#undef acl_set_file
+#undef acl_set_link_np
+#undef acl_set_fd
+#undef acl_set_fd_np
+
+typedef enum gace_type {
+  GACE_TYPE_ALLOW = ACL_ENTRY_TYPE_ALLOW,
+  GACE_TYPE_DENY  = ACL_ENTRY_TYPE_DENY,
+  GACE_TYPE_AUDIT = ACL_ENTRY_TYPE_AUDIT,
+  GACE_TYPE_ALARM = ACL_ENTRY_TYPE_ALARM,
+} GACE_TYPE;
+
+#define GACE_READ_DATA           	ACL_READ_DATA
+#define GACE_LIST_DIRECTORY      	ACL_LIST_DIRECTORY
+#define GACE_WRITE_DATA          	ACL_WRITE_DATA
+#define GACE_ADD_FILE            	ACL_ADD_FILE
+#define GACE_APPEND_DATA         	ACL_APPEND_DATA
+#define GACE_ADD_SUBDIRECTORY    	ACL_ADD_SUBDIRECTORY
+#define GACE_READ_NAMED_ATTRS    	ACL_READ_NAMED_ATTRS
+#define GACE_WRITE_NAMED_ATTRS   	ACL_WRITE_NAMED_ATTRS
+#define GACE_EXECUTE             	ACL_EXECUTE
+#define GACE_DELETE_CHILD        	ACL_DELETE_CHILD
+#define GACE_READ_ATTRIBUTES     	ACL_READ_ATTRIBUTES
+#define GACE_WRITE_ATTRIBUTES    	ACL_WRITE_ATTRIBUTES
+#define GACE_DELETE              	ACL_DELETE
+#define GACE_READ_ACL            	ACL_READ_ACL
+#define GACE_WRITE_ACL           	ACL_WRITE_ACL
+#define GACE_WRITE_OWNER         	ACL_WRITE_OWNER
+#define GACE_SYNCHRONIZE         	ACL_SYNCHRONIZE
+
+#define GACE_FLAG_FILE_INHERIT          ACL_ENTRY_FILE_INHERIT
+#define GACE_FLAG_DIRECTORY_INHERIT     ACL_ENTRY_DIRECTORY_INHERIT
+#define GACE_FLAG_NO_PROPAGATE_INHERIT  ACL_ENTRY_NO_PROPAGATE_INHERIT
+#define GACE_FLAG_INHERIT_ONLY          ACL_ENTRY_INHERIT_ONLY
+#define GACE_FLAG_SUCCESSFUL_ACCESS     ACL_ENTRY_SUCCESSFUL_ACCESS
+#define GACE_FLAG_FAILED_ACCESS         ACL_ENTRY_FAILED_ACCESS
+#define GACE_FLAG_INHERITED             ACL_ENTRY_INHERITED
+
+#define GACL_MAX_ENTRIES 		ACL_MAX_ENTRIES
+
+/* ---------------------------------------- FreeBSD - END ---------------------------------------- */
+
 
 #elif defined(__sun__)
 
+/* ---------------------------------------- Solaris - START ---------------------------------------- */
+
 #define GACL_FREEBSD_EMULATION 1
+#define GACL_LINUX_EMULATION   1
 
 /* Mask some types that conflict */
 #define acl_t      sun_acl_t
@@ -76,59 +139,60 @@
 
 #include <sys/acl.h>
 
+#if 0
 #undef acl_t
 #undef acl_type_t
+#endif
+
+#define GACL_MAX_ENTRIES MAX_ACL_ENTRIES
+
+/* Use Sun's definitions */
+typedef enum gace_type {
+  GACE_TYPE_ALLOW = ACE_ACCESS_ALLOWED_ACE_TYPE,
+  GACE_TYPE_DENY  = ACE_ACCESS_DENIED_ACE_TYPE,
+  GACE_TYPE_AUDIT = ACE_SYSTEM_AUDIT_ACE_TYPE,
+  GACE_TYPE_ALARM = ACE_SYSTEM_ALARM_ACE_TYPE,
+} GACE_TYPE;
+
+#define GACE_FLAG_FILE_INHERIT          ACE_FILE_INHERIT_ACE
+#define GACE_FLAG_DIRECTORY_INHERIT     ACE_DIRECTORY_INHERIT_ACE
+#define GACE_FLAG_NO_PROPAGATE_INHERIT  ACE_NO_PROPAGATE_INHERIT_ACE
+#define GACE_FLAG_INHERIT_ONLY          ACE_INHERIT_ONLY_ACE
+#define GACE_FLAG_SUCCESSFUL_ACCESS     ACE_SUCCESSFUL_ACCESS_ACE_FLAG
+#define GACE_FLAG_FAILED_ACCESS         ACE_FAILED_ACCESS_ACE_FLAG
+#ifdef ACE_INHERITED_ACE
+#define GACE_FLAG_INHERITED             ACE_INHERITED_ACE
+#endif
+
+#define GACE_READ_DATA           ACE_READ_DATA
+#define GACE_LIST_DIRECTORY      ACE_LIST_DIRECTORY
+#define GACE_WRITE_DATA          ACE_WRITE_DATA
+#define GACE_ADD_FILE            ACE_ADD_FILE
+#define GACE_APPEND_DATA         ACE_APPEND_DATA
+#define GACE_ADD_SUBDIRECTORY    ACE_ADD_SUBDIRECTORY
+#define GACE_READ_NAMED_ATTRS    ACE_READ_NAMED_ATTRS
+#define GACE_WRITE_NAMED_ATTRS   ACE_WRITE_NAMED_ATTRS
+#define GACE_EXECUTE             ACE_EXECUTE
+#define GACE_DELETE_CHILD        ACE_DELETE_CHILD
+#define GACE_READ_ATTRIBUTES     ACE_READ_ATTRIBUTES
+#define GACE_WRITE_ATTRIBUTES    ACE_WRITE_ATTRIBUTES
+#define GACE_DELETE              ACE_DELETE
+#define GACE_READ_ACL            ACE_READ_ACL
+#define GACE_WRITE_ACL           ACE_WRITE_ACL
+#define GACE_WRITE_OWNER         ACE_WRITE_OWNER
+#define GACE_SYNCHRONIZE         ACE_SYNCHRONIZE
+
+/* ---------------------------------------- Solaris - END ---------------------------------------- */
+
 
 #elif defined(__linux__)
+
+/* ---------------------------------------- Linux - START ---------------------------------------- */
 
 #define GACL_FREEBSD_EMULATION 1
 #define GACL_SOLARIS_EMULATION 1
 
 #include "nfs4.h"
-
-#endif
-
-
-
-typedef enum gacl_brand {
-  GACL_BRAND_NONE  = 0,
-  GACL_BRAND_POSIX = 3,
-  GACL_BRAND_NFS4  = 4,
-} GACL_BRAND;
-
-typedef enum gacl_type {
-  GACL_TYPE_NONE    = 0,
-  GACL_TYPE_ACCESS  = 1,
-  GACL_TYPE_DEFAULT = 2,
-  GACL_TYPE_NFS4    = 4,
-} GACL_TYPE;
-
-typedef uint16_t GACE_FLAGSET;
-typedef uint16_t GACE_FLAG;
-
-typedef uint32_t GACE_PERMSET;
-typedef uint32_t GACE_PERM;
-
-
-#define GACL_FIRST_ENTRY 0
-#define GACL_NEXT_ENTRY  1
-
-
-
-typedef enum gace_tag {
-  GACE_TAG_UNDEFINED = 0x0000,
-  GACE_TAG_USER_OBJ  = 0x0001,
-  GACE_TAG_USER      = 0x0002,
-  GACE_TAG_GROUP_OBJ = 0x0004,
-  GACE_TAG_GROUP     = 0x0008,
-  GACE_TAG_MASK      = 0x0010,
-  GACE_TAG_OTHER_OBJ = 0x0020,
-  GACE_TAG_EVERYONE  = 0x0040,
-} GACE_TAG;
-
-#define GACE_TAG_OTHER GACE_TAG_OTHER_OBJ
-
-#if defined(__linux__)
 
 /* Wild guess - probably not right for Linux */
 #define GACL_MAX_ENTRIES 1024
@@ -151,58 +215,6 @@ typedef enum gace_type {
 #define GACE_FLAG_INHERITED             NFS4_ACE_INHERITED_ACE
 #endif
 
-
-#elif defined(__sun__)
-
-#define GACL_MAX_ENTRIES MAX_ACL_ENTRIES
-
-/* Use Sun's definitions */
-typedef enum gace_type {
-  GACE_TYPE_ALLOW = ACE_ACCESS_ALLOWED_ACE_TYPE,
-  GACE_TYPE_DENY  = ACE_ACCESS_DENIED_ACE_TYPE,
-  GACE_TYPE_AUDIT = ACE_SYSTEM_AUDIT_ACE_TYPE,
-  GACE_TYPE_ALARM = ACE_SYSTEM_ALARM_ACE_TYPE,
-} GACE_TYPE;
-
-#define GACE_FLAG_FILE_INHERIT          ACE_FILE_INHERIT_ACE
-#define GACE_FLAG_DIRECTORY_INHERIT     ACE_DIRECTORY_INHERIT_ACE
-#define GACE_FLAG_NO_PROPAGATE_INHERIT  ACE_NO_PROPAGATE_INHERIT_ACE
-#define GACE_FLAG_INHERIT_ONLY          ACE_INHERIT_ONLY_ACE
-#define GACE_FLAG_SUCCESSFUL_ACCESS     ACE_SUCCESSFUL_ACCESS_ACE_FLAG
-#define GACE_FLAG_FAILED_ACCESS         ACE_FAILED_ACCESS_ACE_FLAG
-#ifdef ACE_INHERITED_ACE
-#define GACE_FLAG_INHERITED             ACE_INHERITED_ACE
-#endif
-
-#endif
- 
-#define GACE_FLAGS_ALL \
-  (GACE_FLAG_FILE_INHERIT|GACE_FLAG_DIRECTORY_INHERIT|GACE_FLAG_NO_PROPAGATE_INHERIT| \
-   GACE_FLAG_INHERIT_ONLY|GACE_FLAG_SUCCESSFUL_ACCESS|GACE_FLAG_FAILED_ACCESS|GACE_FLAG_INHERITED)
-
-
-#if defined(__sun__)
-
-#define GACE_READ_DATA           ACE_READ_DATA
-#define GACE_LIST_DIRECTORY      ACE_LIST_DIRECTORY
-#define GACE_WRITE_DATA          ACE_WRITE_DATA
-#define GACE_ADD_FILE            ACE_ADD_FILE
-#define GACE_APPEND_DATA         ACE_APPEND_DATA
-#define GACE_ADD_SUBDIRECTORY    ACE_ADD_SUBDIRECTORY
-#define GACE_READ_NAMED_ATTRS    ACE_READ_NAMED_ATTRS
-#define GACE_WRITE_NAMED_ATTRS   ACE_WRITE_NAMED_ATTRS
-#define GACE_EXECUTE             ACE_EXECUTE
-#define GACE_DELETE_CHILD        ACE_DELETE_CHILD
-#define GACE_READ_ATTRIBUTES     ACE_READ_ATTRIBUTES
-#define GACE_WRITE_ATTRIBUTES    ACE_WRITE_ATTRIBUTES
-#define GACE_DELETE              ACE_DELETE
-#define GACE_READ_ACL            ACE_READ_ACL
-#define GACE_WRITE_ACL           ACE_WRITE_ACL
-#define GACE_WRITE_OWNER         ACE_WRITE_OWNER
-#define GACE_SYNCHRONIZE         ACE_SYNCHRONIZE
-
-#elif defined(__linux__)
-
 #define GACE_READ_DATA           NFS4_ACE_READ_DATA
 #define GACE_LIST_DIRECTORY      NFS4_ACE_LIST_DIRECTORY
 #define GACE_WRITE_DATA          NFS4_ACE_WRITE_DATA
@@ -221,7 +233,16 @@ typedef enum gace_type {
 #define GACE_WRITE_OWNER         NFS4_ACE_WRITE_OWNER
 #define GACE_SYNCHRONIZE         NFS4_ACE_SYNCHRONIZE
 
+/* ---------------------------------------- Linux - END ---------------------------------------- */
+
 #endif
+
+
+/* ---------------------------------------- Common - START ---------------------------------------- */
+
+#define GACE_FLAGS_ALL \
+  (GACE_FLAG_FILE_INHERIT|GACE_FLAG_DIRECTORY_INHERIT|GACE_FLAG_NO_PROPAGATE_INHERIT| \
+   GACE_FLAG_INHERIT_ONLY|GACE_FLAG_SUCCESSFUL_ACCESS|GACE_FLAG_FAILED_ACCESS|GACE_FLAG_INHERITED)
 
 
 /* POSIX.1e */
@@ -248,6 +269,43 @@ typedef enum gace_type {
 
 #define GACE_NFS4_PERM_BITS \
   GACE_FULL_SET
+
+
+
+typedef enum gacl_brand {
+  GACL_BRAND_NONE  = 0,
+  GACL_BRAND_POSIX = 3,
+  GACL_BRAND_NFS4  = 4,
+} GACL_BRAND;
+
+typedef enum gacl_type {
+  GACL_TYPE_NONE    = 0,
+  GACL_TYPE_ACCESS  = 1,
+  GACL_TYPE_DEFAULT = 2,
+  GACL_TYPE_NFS4    = 4,
+} GACL_TYPE;
+
+typedef uint16_t GACE_FLAGSET;
+typedef uint16_t GACE_FLAG;
+
+typedef uint32_t GACE_PERMSET;
+typedef uint32_t GACE_PERM;
+
+typedef enum gace_tag {
+  GACE_TAG_UNDEFINED = 0x0000,
+  GACE_TAG_USER_OBJ  = 0x0001,
+  GACE_TAG_USER      = 0x0002,
+  GACE_TAG_GROUP_OBJ = 0x0004,
+  GACE_TAG_GROUP     = 0x0008,
+  GACE_TAG_MASK      = 0x0010,
+  GACE_TAG_OTHER_OBJ = 0x0020,
+  GACE_TAG_EVERYONE  = 0x0040,
+} GACE_TAG;
+
+#define GACE_TAG_OTHER GACE_TAG_OTHER_OBJ
+
+#define GACL_FIRST_ENTRY 0
+#define GACL_NEXT_ENTRY  1
 
 
 typedef char GACE_EDIT;
@@ -293,10 +351,12 @@ gacl_equal(GACL *ap,
 extern GACL *
 gacl_sort(GACL *ap);
 
+extern GACL *
+gacl_merge(GACL *ap);
+
 extern int
 gacl_is_trivial_np(GACL *ap,
 		   int *trivialp);
-
 
 extern GACL *
 gacl_strip_np(GACL *ap,
@@ -304,7 +364,6 @@ gacl_strip_np(GACL *ap,
 
 extern int
 gacl_init_entry(GACE *ep);
-
 
 extern int
 gacl_create_entry_np(GACL **app,
@@ -339,7 +398,6 @@ gacl_get_entry(GACL *ap,
 	       GACE **epp);
 
 
-
 #define GACL_F_SYMLINK_NOFOLLOW 0x0001
 
 GACL *
@@ -359,7 +417,7 @@ extern GACL *
 gacl_get_file(const char *path,
 	      GACL_TYPE type);
 
-/* Beware that Solaris doesn't support doing ACL operations on symbolic links */
+/* Beware that Solaris and Linux currently doesn't support doing ACL operations on symbolic links */
 GACL *
 gacl_get_link_np(const char *path,
 		 GACL_TYPE type);
@@ -371,13 +429,12 @@ gacl_get_fd_np(int fd,
 extern GACL *
 gacl_get_fd(int fd);
 
-
 extern int
 gacl_set_file(const char *path,
 	      GACL_TYPE type,
 	      GACL *ap);
 
-/* Beware that Solaris doesn't support doing ACL operations on symbolic links */
+/* Beware that Solaris and Linux doesn't support doing ACL operations on symbolic links */
 extern int
 gacl_set_link_np(const char *path,
 		 GACL_TYPE type,
@@ -391,7 +448,6 @@ gacl_set_fd_np(int fd,
 extern int
 gacl_set_fd(int fd,
 	    GACL *ap);
-
 
 extern int
 gacl_set_tag_type(GACE *ep,
@@ -512,7 +568,6 @@ gacl_entry_type_to_text(GACE *ep,
 			size_t bufsize,
 			int flags);
 
-
 extern ssize_t
 gacl_entry_to_text(GACE *ep,
 		   char *buf,
@@ -530,7 +585,6 @@ gacl_to_text(GACL *ap,
 
 extern GACL *
 gacl_from_text(const char *buf);
-
 
 extern int
 gacl_delete_file_np(const char *path,
@@ -551,7 +605,8 @@ extern int
 gacl_delete_def_link_np(const char *path);
 
 
-#if GACL_FREEBSD_EMULATION
+
+#ifndef GACL_C_INTERNAL
 
 typedef GACL *acl_t;
 typedef GACE *acl_entry_t;
@@ -562,6 +617,7 @@ typedef GACE_TYPE acl_entry_type_t;
 typedef GACE_PERMSET *acl_permset_t;
 typedef GACE_FLAGSET *acl_flagset_t;
 
+#ifndef __FreeBSD__
 #define ACL_TYPE_NFS4             GACL_TYPE_NFS4
 #define ACL_MAX_ENTRIES           GACL_MAX_ENTRIES
 
@@ -620,6 +676,8 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_TEXT_NUMERIC_IDS      GACL_TEXT_NUMERIC_IDS
 #define ACL_TEXT_APPEND_ID        GACL_TEXT_APPEND_ID
 
+#endif
+
 #define acl_init                  gacl_init
 #define acl_free                  gacl_free
 #define acl_get_brand_np          gacl_get_brand_np
@@ -631,6 +689,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_delete_entry_np       gacl_delete_entry_np
 #define acl_copy_entry            gacl_copy_entry
 #define acl_get_entry             gacl_get_entry
+
 #define acl_get_file              gacl_get_file
 #define acl_get_link_np           gacl_get_link_np
 #define acl_get_fd                gacl_get_fd
@@ -639,6 +698,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_set_link_np           gacl_set_link_np
 #define acl_set_fd                gacl_set_fd
 #define acl_set_fd_np             gacl_set_fd_np
+
 #define acl_set_tag_type          gacl_set_tag_type
 #define acl_get_tag_type          gacl_get_tag_type
 #define acl_set_qualifier         gacl_set_qualifier
@@ -666,10 +726,25 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_delete_def_link_np    gacl_delete_def_link_np
 #define acl_from_text             gacl_from_text
 
+#endif
+
+
+#if GACL_SOLARIS_EMULATION
+
+#define acl                       gacl_get_solaris
+#define facl                      gacl_fget_solaris
+
+#endif
+
+
+#if GACL_LINUX_EMULATION
+
+/* Nothing to emulate... */
+
+#endif
 
 
 /* GACL extensions */
-
 #define acl_init_entry            gacl_init_entry
 #define acl_add_entry_np          gacl_add_entry_np
 
@@ -684,12 +759,6 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_entry_permset_to_text gacl_entry_permset_to_text
 #define acl_entry_flagset_to_text gacl_entry_flagset_to_text
 #define acl_entry_to_text         gacl_entry_to_text
-#endif
-
-#if GACL_SOLARIS_EMULATION
-#define acl                       gacl_get_solaris
-#define facl                      gacl_fget_solaris
-#endif
 
 
 #endif

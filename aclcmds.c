@@ -529,7 +529,7 @@ set_acl(const char *path,
   /* Skip set operation if old and new acl is the same */
   if (oap && acl_equal(ap, oap) == 1)
     return 0;
-  
+
   rc = 0;
   if (!w_cfgp->f_noupdate) {
     if (S_ISLNK(sp->st_mode))

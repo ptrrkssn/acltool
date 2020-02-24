@@ -52,40 +52,6 @@ ts_delta(struct timespec *x,
 	 char **unit);
 
 
-/* 
- * Compare two ACL Entries
- */
-extern int
-cmp_acl_entry(const void *va,
-	      const void *vb);
-
-/* 
- * Compare two ACL Entries - ignore uids & gids
- */
-extern int
-cmp_acl_entry_sorted(const void *va,
-		     const void *vb);
-
-extern int
-sort_acl(acl_t a,
-	 acl_t *sa);
-
-extern int
-is_unsorted_acl(acl_t a);
-
-extern int
-merge_permset(acl_permset_t d,
-	      acl_permset_t s,
-	      int f);
-
-extern int
-merge_flagset(acl_flagset_t d,
-	      acl_flagset_t s,
-	      int f);
-
-extern int
-merge_acl(acl_t *a);
-
 extern char *
 permset2str(acl_permset_t psp, char *res);
 
@@ -126,7 +92,6 @@ ft_foreach(const char *path,
 extern int
 str2style(const char *str,
 	  ACL_STYLE *sp);
-
 
 extern const char *
 style2str(ACL_STYLE s);

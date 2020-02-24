@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#define GACL_C_INTERNAL 1
 #include "gacl.h"
 
 
@@ -115,7 +116,7 @@ _gacl_from_mode(mode_t mode) {
   if (mode & S_IXOTH)
     ea |= GACE_EXECUTE;
   
-  ap = acl_init(3);
+  ap = gacl_init(3);
   if (!ap)
     return NULL;
 
@@ -511,16 +512,16 @@ _gacl_entry_compare(const void *va,
   gacl_get_flagset_np(a, &afs);
   gacl_get_flagset_np(b, &bfs);
   
-  inherit_only_a = gacl_get_flag_np(afs, ACL_ENTRY_INHERIT_ONLY);
-  inherit_only_b = gacl_get_flag_np(bfs, ACL_ENTRY_INHERIT_ONLY);
+  inherit_only_a = gacl_get_flag_np(afs, GACE_FLAG_INHERIT_ONLY);
+  inherit_only_b = gacl_get_flag_np(bfs, GACE_FLAG_INHERIT_ONLY);
 
   /* Ignore this entry if the 'inherit_only' flag is set on one of them */
   if (inherit_only_a || inherit_only_b)
     return 0;
 
 #ifdef ACL_ENTRY_INHERITED  
-  inherited_a = gacl_get_flag_np(afs, ACL_ENTRY_INHERITED);
-  inherited_b = gacl_get_flag_np(bfs, ACL_ENTRY_INHERITED);
+  inherited_a = gacl_get_flag_np(afs, GACE_FLAG_INHERITED);
+  inherited_b = gacl_get_flag_np(bfs, GACE_FLAG_INHERITED);
 
   v = inherited_a-inherited_b;
   if (v)
@@ -543,18 +544,18 @@ _gacl_entry_compare(const void *va,
     qa = (uid_t *) gacl_get_qualifier(a);
     qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
-    acl_free((void *) qa);
-    acl_free((void *) qb);
+    gacl_free((void *) qa);
+    gacl_free((void *) qb);
     if (v)
       return v;
     break;
     
   case ACL_GROUP:
-    qa = (uid_t *) acl_get_qualifier(a);
-    qb = (uid_t *) acl_get_qualifier(b);
+    qa = (uid_t *) gacl_get_qualifier(a);
+    qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
-    acl_free((void *) qa);
-    acl_free((void *) qb);
+    gacl_free((void *) qa);
+    gacl_free((void *) qb);
     if (v)
       return v;
     break;
@@ -564,10 +565,10 @@ _gacl_entry_compare(const void *va,
   }
   
   /* Deny entries goes before allow ones */
-  if (acl_get_entry_type_np(a, &aet_a) < 0)
+  if (gacl_get_entry_type_np(a, &aet_a) < 0)
     return -1;
   
-  if (acl_get_entry_type_np(b, &aet_b) < 0)
+  if (gacl_get_entry_type_np(b, &aet_b) < 0)
     return 1;
 
   v = aet_b - aet_a;
@@ -595,6 +596,59 @@ gacl_sort(GACL *ap) {
 
   qsort(&nap->av[0], nap->ac, sizeof(nap->av[0]), _gacl_entry_compare);
   return nap;
+}
+
+
+
+GACL *
+gacl_merge(GACL *ap) {
+  GACL *nap;
+  int i, j, n;
+  
+
+  nap = gacl_dup(ap);
+  if (!nap)
+    return NULL;
+
+  n = 0;
+  for (i = 0; i < nap->ac; i++) {
+  AGAIN:
+    for (j = i+1; j < nap->ac && _gacl_entry_compare(&nap->av[i], &nap->av[j]) != 0; j++)
+      ;
+    
+    if (i < nap->ac) {
+      /* Match found - merge ACE */
+      GACE_PERMSET *ps_a, *ps_b;
+      GACE_FLAGSET *fs_a, *fs_b;
+      
+      if (gacl_get_permset(&nap->av[i], &ps_a) < 0 ||
+	  gacl_get_permset(&nap->av[j], &ps_b) < 0)
+	goto Fail;
+      
+      if (gacl_get_flagset_np(&nap->av[i], &fs_a) < 0 ||
+	  gacl_get_flagset_np(&nap->av[j], &fs_b) < 0)
+	goto Fail;
+      
+      if (gacl_merge_permset(ps_a, ps_b, +1) < 0 ||
+	  gacl_merge_flagset(fs_a, fs_b, +1) < 0)
+	goto Fail;
+
+      if (gacl_set_permset(&nap->av[i], ps_a) < 0)
+	goto Fail;
+      
+      if (gacl_delete_entry_np(ap, j) < 0)
+	goto Fail;
+      
+      ++n;
+      goto AGAIN;
+    }
+  }
+
+  return nap;
+
+ Fail:
+  gacl_free(nap);
+  return NULL;
 }
 
 
@@ -682,8 +736,8 @@ gacl_equal(GACL *ap,
   GACE_FLAGSET *afsp, *bfsp;
   GACE_TYPE aet, bet;
   int p, arc, brc;
-  
 
+  
   if (ap->ac != bp->ac)
     return 0;
 
@@ -696,38 +750,46 @@ gacl_equal(GACL *ap,
 
     switch (ap->type) {
     case GACL_TYPE_NFS4:
-      if (gacl_get_tag_type(aep, &att) < 0)
+      if (gacl_get_tag_type(aep, &att) < 0) {
 	return -1;
+      }
       
-      if (gacl_get_tag_type(bep, &btt) < 0)
+      if (gacl_get_tag_type(bep, &btt) < 0) {
 	return -1;
+      }
       
       if (att != btt)
 	return 0;
       
-      if (gacl_get_permset(aep, &apsp) < 0)
+      if (gacl_get_permset(aep, &apsp) < 0) {
 	return -1;
+      }
       
-      if (gacl_get_permset(bep, &bpsp) < 0)
+      if (gacl_get_permset(bep, &bpsp) < 0) {
 	return -1;
+      }
       
       if (memcmp(apsp, bpsp, sizeof(*apsp)) != 0)
 	return 0;
       
-      if (gacl_get_flagset_np(aep, &afsp) < 0)
+      if (gacl_get_flagset_np(aep, &afsp) < 0) {
 	return -1;
+      }
       
-      if (gacl_get_flagset_np(bep, &bfsp) < 0)
+      if (gacl_get_flagset_np(bep, &bfsp) < 0) {
 	return -1;
+      }
       
       if (memcmp(afsp, bfsp, sizeof(*afsp)) != 0)
 	return 0;
       
-      if (gacl_get_entry_type_np(aep, &aet) < 0)
+      if (gacl_get_entry_type_np(aep, &aet) < 0) {
 	return -1;
+      }
       
-      if (gacl_get_entry_type_np(bep, &bet) < 0)
+      if (gacl_get_entry_type_np(bep, &bet) < 0) {
 	return -1;
+      }
       
       if (aet != bet)
 	return 0;
@@ -1331,7 +1393,7 @@ gacl_to_text(GACL *ap,
 
 /*
  * Delete an ACL from an object. 
- * We simulate that be stripping the ACL down to the bare owner@/group@/everyone@ entries
+ * We simulate that by stripping the ACL down to the bare owner@/group@/everyone@ entries
  */
 int
 gacl_delete_file_np(const char *path,
@@ -1406,57 +1468,6 @@ gacl_delete_fd_np(int fd,
 }
 
 
-
-/* TODO: To be implemented */
-
-int
-gacl_delete_def_file(const char *path) {
-  errno = ENOSYS;
-  return -1;
-}
-
-int
-gacl_delete_def_link_np(const char *path) {
-  errno = ENOSYS;
-  return -1;
-}
-
-
-int
-gacl_valid(GACL *ap) {
-  errno = ENOSYS;
-  return -1;
-}
-
-int
-gacl_valid_fd_np(int fd, 
-		 GACL_TYPE type, 
-		 GACL *ap) {
-  errno = ENOSYS;
-  return -1;
-}
-
-int
-gacl_valid_file_np(const char *path,
-		   GACL_TYPE type,
-		   GACL *ap) {
-  errno = ENOSYS;
-  return -1;
-}
-
-int
-gacl_valid_link_np(const char *path,
-		   GACL_TYPE type,
-		   GACL *ap) {
-  errno = ENOSYS;
-  return -1;
-}
-
-int
-gacl_calc_mask(GACL *ap) {
-  errno = ENOSYS;
-  return -1;
-}
 
 
 int
@@ -2173,6 +2184,122 @@ _gacl_set_fd_file(int fd,
 }
 #endif
 
+#ifdef __FreeBSD__
+
+static int
+_gacl_entry_from_acl_entry(GACE *nep,
+			   freebsd_acl_entry_t oep) {
+  nep->tag   = oep->ae_tag;
+  nep->id    = oep->ae_id;
+  nep->perms = oep->ae_perm;
+  nep->flags = oep->ae_flags;
+  nep->type  = oep->ae_entry_type;
+
+  return 1;
+}
+
+static int
+_acl_entry_from_gace(freebsd_acl_entry_t nep,
+		     GACE *oep) {
+  nep->ae_tag        = oep->tag;
+  nep->ae_id         = oep->id;
+  nep->ae_perm       = oep->perms;
+  nep->ae_flags      = oep->flags;
+  nep->ae_entry_type = oep->type;
+
+  return 1;
+}
+
+GACL *
+_gacl_get_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  int flags) {
+  GACL *nap;
+  freebsd_acl_t oap;
+  freebsd_acl_entry_t oep;
+  int id, rc;
+  
+  
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW)
+      oap = acl_get_link_np(path, type);
+    else
+      oap = acl_get_file(path, type);
+  } else
+    oap = acl_get_fd_np(fd, type);
+
+  nap = gacl_init(0);
+  id = ACL_FIRST_ENTRY;
+  nap->type = type;
+  
+  while ((rc = acl_get_entry(oap, id, &oep)) == 1) {
+    GACE *nep;
+
+    id = ACL_NEXT_ENTRY;
+    if (gacl_create_entry_np(&nap, &nep, -1) < 0)
+      goto Fail;
+
+    if (_gacl_entry_from_acl_entry(nep, oep) < 0)
+      goto Fail;
+  }
+
+  if (rc < 0)
+    goto Fail;
+  
+  return nap;
+
+ Fail:
+  acl_free(oap);
+  gacl_free(nap);
+  return NULL;
+}
+
+
+int
+_gacl_set_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  GACL *ap,
+		  int flags) {
+  GACE *oep;
+  freebsd_acl_t nap;
+  int i, rc;
+  
+  
+  nap = acl_init(ap->ac);
+
+  for (i = 0; (rc = gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &oep)) == 1; i++) {
+    freebsd_acl_entry_t nep;
+
+    if (acl_create_entry_np(&nap, &nep, i) < 0)
+      goto Fail;
+
+    if (_acl_entry_from_gace(nep, oep) < 0)
+      goto Fail;
+  }
+
+  if (rc < 0)
+    goto Fail;
+  
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW)
+      rc = acl_set_link_np(path, type, nap);
+    else
+      rc = acl_set_file(path, type, nap);
+  } else
+    rc = acl_set_fd_np(fd, nap, type);
+
+  acl_free(nap);
+  return rc;
+
+ Fail:
+  acl_free(ap);
+  gacl_free(nap);
+  return -1;
+}
+#endif
+
 #ifdef __sun__
 /* Internal: Convert to and from Solaris ace_t to standard GACE entry */
 static int
@@ -2448,3 +2575,57 @@ _gacl_set_fd_file(int fd,
 }
 
 #endif
+
+
+/* TODO: To be implemented */
+
+int
+gacl_delete_def_file(const char *path) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+gacl_delete_def_link_np(const char *path) {
+  errno = ENOSYS;
+  return -1;
+}
+
+
+int
+gacl_valid(GACL *ap) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+gacl_valid_fd_np(int fd, 
+		 GACL_TYPE type, 
+		 GACL *ap) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+gacl_valid_file_np(const char *path,
+		   GACL_TYPE type,
+		   GACL *ap) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+gacl_valid_link_np(const char *path,
+		   GACL_TYPE type,
+		   GACL *ap) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+gacl_calc_mask(GACL *ap) {
+  errno = ENOSYS;
+  return -1;
+}
+
+

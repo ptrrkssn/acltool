@@ -100,29 +100,43 @@ ts_delta(struct timespec *x,
 }
 
 
-
-static struct perm2c {
+static struct gace_perm2c {
   int p;
   char c;
   char *s;
 } p2c[] = {
-	   { ACL_READ_DATA, 'r', "read_data" },
-	   { ACL_WRITE_DATA, 'w', "write_data" },
-	   { ACL_EXECUTE, 'x', "execute" },
-	   { ACL_APPEND_DATA, 'p', "append_data" },
-	   { ACL_DELETE_CHILD, 'D', "delete_child" },
-	   { ACL_DELETE, 'd', "delete" },
-	   { ACL_READ_ATTRIBUTES, 'a', "read_attributes" },
-	   { ACL_WRITE_ATTRIBUTES, 'A', "write_attributes" },
-	   { ACL_READ_NAMED_ATTRS, 'R', "read_xattrs" },
-	   { ACL_WRITE_NAMED_ATTRS, 'W', "write_xattrs" },
-	   { ACL_READ_ACL, 'c', "read_acl" }, 
-	   { ACL_WRITE_ACL, 'C', "write_acl" },
-	   { ACL_WRITE_OWNER, 'o', "write_owner" },
-	   { ACL_SYNCHRONIZE, 's', "synchronize" },
-	   { 0, 0 }
+		{ GACE_READ_DATA, 'r', "read_data" },
+		{ GACE_WRITE_DATA, 'w', "write_data" },
+		{ GACE_EXECUTE, 'x', "execute" },
+		{ GACE_APPEND_DATA, 'p', "append_data" },
+		{ GACE_DELETE, 'd', "delete" },
+		{ GACE_DELETE_CHILD, 'D', "delete_child" },
+		{ GACE_READ_ATTRIBUTES, 'a', "read_attributes" },
+		{ GACE_WRITE_ATTRIBUTES, 'A', "write_attributes" },
+		{ GACE_READ_NAMED_ATTRS, 'R', "read_xattrs" },
+		{ GACE_WRITE_NAMED_ATTRS, 'W', "write_xattrs" },
+		{ GACE_READ_ACL, 'c', "read_acl" },
+		{ GACE_WRITE_ACL, 'C', "write_acl" },
+		{ GACE_WRITE_OWNER, 'o', "write_owner" },
+		{ GACE_SYNCHRONIZE, 's', "synchronize" },
+		{ 0, 0 }
 };
 
+static struct gace_flag2c {
+  int f;
+  char c;
+} f2c[] = {
+		{ GACE_FLAG_FILE_INHERIT, 'f' },
+		{ GACE_FLAG_DIRECTORY_INHERIT, 'd' },
+		{ GACE_FLAG_INHERIT_ONLY, 'i' },
+		{ GACE_FLAG_NO_PROPAGATE_INHERIT, 'n' },
+		{ GACE_FLAG_SUCCESSFUL_ACCESS, 'S' },
+		{ GACE_FLAG_FAILED_ACCESS, 'F' },
+#ifdef GACE_FLAG_INHERITED
+		{ GACE_FLAG_INHERITED, 'I' },
+#endif
+		{ 0, 0 }
+};
 
 
 static struct perm2c_windows {
@@ -130,37 +144,23 @@ static struct perm2c_windows {
   char *c;
   char *s;
 } p2c_windows[] = {
-	   { ACL_READ_DATA,   "R", "read_data" },
-	   { ACL_WRITE_DATA,  "W", "write_data" },
-	   { ACL_EXECUTE,     "X", "execute" },
-	   { ACL_DELETE,      "D", "delete" },
-	   { ACL_WRITE_ACL,   "P", "write_acl" },
-	   { ACL_WRITE_OWNER, "O", "write_owner" },
-
-	   { ACL_READ_ATTRIBUTES,   "RA", "read_attributes" },
-	   { ACL_WRITE_ATTRIBUTES,  "WA", "write_attributes" },
-	   { ACL_DELETE_CHILD,      "DC", "delete_child" },
-	   { ACL_APPEND_DATA,       "AD", "append_data" },
-	   { ACL_READ_NAMED_ATTRS,  "REA", "read_xattrs" },
-	   { ACL_WRITE_NAMED_ATTRS, "WEA", "write_xattrs" },
-	   { ACL_SYNCHRONIZE,       "S",   "synchronize" },
-	   { ACL_READ_ACL, "AS", "read_acl" }, 
-	   { 0, 0, 0 }
+	   { ACL_READ_DATA,         "R",   "read_data"        },
+	   { ACL_WRITE_DATA,        "W",   "write_data"       },
+	   { ACL_EXECUTE,           "X",   "execute"          },
+	   { ACL_DELETE,            "D",   "delete"           },
+	   { ACL_WRITE_ACL,         "P",   "write_acl"        },
+	   { ACL_WRITE_OWNER,       "O",   "write_owner"      },
+	   { ACL_READ_ATTRIBUTES,   "RA",  "read_attributes"  },
+	   { ACL_WRITE_ATTRIBUTES,  "WA",  "write_attributes" },
+	   { ACL_DELETE_CHILD,      "DC",  "delete_child"     },
+	   { ACL_APPEND_DATA,       "AD",  "append_data"      },
+	   { ACL_READ_NAMED_ATTRS,  "REA", "read_xattrs"      },
+	   { ACL_WRITE_NAMED_ATTRS, "WEA", "write_xattrs"     },
+	   { ACL_SYNCHRONIZE,       "S",   "synchronize"      },
+	   { ACL_READ_ACL,          "AS",  "read_acl"         }, 
+	   { 0, NULL, NULL }
 };
 
-static struct flag2c {
-  int f;
-  char c;
-} f2c[] = {
-	   { ACL_ENTRY_FILE_INHERIT, 'f' },
-	   { ACL_ENTRY_DIRECTORY_INHERIT, 'd' },
-	   { ACL_ENTRY_INHERIT_ONLY, 'i' },
-	   { ACL_ENTRY_NO_PROPAGATE_INHERIT, 'n' },
-	   { ACL_ENTRY_SUCCESSFUL_ACCESS, 'S' },
-	   { ACL_ENTRY_FAILED_ACCESS, 'F' },
-	   { ACL_ENTRY_INHERITED, 'I' },
-	   { 0, 0 }
-};
 
 static struct flag2str_windows {
   int f;
@@ -168,12 +168,12 @@ static struct flag2str_windows {
 } f2c_windows[] = {
 	   { ACL_ENTRY_FILE_INHERIT,         "OI" },
 	   { ACL_ENTRY_DIRECTORY_INHERIT,    "CI" },
-	   { ACL_ENTRY_INHERITED,            "I" },
+	   { ACL_ENTRY_INHERITED,            "I"  },
 	   { ACL_ENTRY_NO_PROPAGATE_INHERIT, "NP" },
 	   { ACL_ENTRY_INHERIT_ONLY,         "IO" },
 #if 0
-	   { ACL_ENTRY_SUCCESSFUL_ACCESS, 'S' },
-	   { ACL_ENTRY_FAILED_ACCESS, 'F' },
+	   { ACL_ENTRY_SUCCESSFUL_ACCESS,    "S"  },
+	   { ACL_ENTRY_FAILED_ACCESS,        "F"  },
 #endif
 	   { 0, NULL }
 };
@@ -181,125 +181,7 @@ static struct flag2str_windows {
 
 
 
-#if 0
-int
-merge_permset(acl_permset_t d,
-	      acl_permset_t s,
-	      int f) {
-  int i, a, rc, ec = 0;
 
-  
-  if (f == 0)
-    acl_clear_perms(d);
-
-  for (i = 0; p2c[i].c; i++) {
-    a = acl_get_perm_np(s, p2c[i].p);
-    if (a && !acl_get_perm_np(d, p2c[i].p)) {
-      if (f > 0)
-	rc = acl_add_perm(d, p2c[i].p);
-      else if (f < 0)
-	rc = acl_delete_perm(d, p2c[i].p);
-      if (rc < 0)
-	return rc;
-
-      ec = 1;
-    }
-  }
-
-  return ec;
-}
-
-
-int
-merge_flagset(acl_flagset_t d,
-	      acl_flagset_t s,
-	      int f) {
-  int i, a, rc, ec = 0;
-
-
-  if (f == 0)
-    acl_clear_flags_np(d);
-
-  for (i = 0; f2c[i].c; i++) {
-    a = acl_get_flag_np(s, f2c[i].f);
-    if (a && !acl_get_flag_np(d, f2c[i].f)) {
-      if (f > 0)
-	rc = acl_add_flag_np(d, f2c[i].f);
-      else if (f < 0)
-	rc = acl_delete_flag_np(d, f2c[i].f);
-      if (rc < 0)
-	return rc;
-
-      ec = 1;
-    }
-  }
-
-  return ec;
-}
-
-
-int
-merge_acl(acl_t *a) {
-  acl_t na;
-  acl_entry_t ta, aev[ACL_MAX_ENTRIES];
-  int i, aec, n = 0, rc = -1;
-  int id = ACL_FIRST_ENTRY;
-
-
-  aec = 0;
-  while (aec < ACL_MAX_ENTRIES && (rc = acl_get_entry(*a, id, &ta)) == 1) {
-    for (i = 0; i < aec && gacl_entry_compare(&aev[i], &ta) != 0; i++)
-      ;
-    if (i < aec) {
-      /* Match found - merge ACE */
-      acl_permset_t ps_a, ps_b;
-      acl_flagset_t fs_a, fs_b;
-      
-      acl_get_permset(aev[i], &ps_a);
-      acl_get_permset(ta, &ps_b);
-      
-      acl_get_flagset_np(aev[i], &fs_a);
-      acl_get_flagset_np(ta, &fs_b);
-      
-      merge_permset(ps_a, ps_b, +1);
-      merge_flagset(fs_a, fs_b, +1);
-      ++n;
-    } else {
-      /* No match found - append ACE */
-      aev[aec++] = ta;
-    }
-    id = ACL_NEXT_ENTRY;
-  }
-
-  if (rc < 0)
-    return rc;
-
-  if (n == 0)
-    return 0;
-  
-  na = acl_init(aec);
-  if (!na)
-    return -1;
-
-  for (i = 0; i < aec; i++) {
-    ta = NULL;
-    if (acl_create_entry(&na, &ta) < 0) {
-      acl_free(na);
-      return -1;
-    }
-
-    if (acl_copy_entry(ta, aev[i]) < 0) {
-      acl_free(na);
-      return -1;
-    }
-  }
-
-  acl_free(*a);
-  *a = na;
-  return 1;
-}
-
-#endif
 
 
 
