@@ -18,17 +18,20 @@ CC=gcc
 OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o gacl.o $(XOBJS)
 LIBS=-lreadline $(XLIBS)
 
-usage:
-	@echo "Use: 'make linux', 'make freebsd' or 'make solaris'" ; exit 0
+auto:
+	@exec $(MAKE) `uname -s`
 
-solaris omnios:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
+help:
+	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, clean" ; exit 0
 
-linux:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+SunOS solaris omnios illumos:
+	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
 
-freebsd:
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
+Linux linux:
+	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+
+FreeBSD freebsd:
+	@exec $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
 
 all: acltool
 
@@ -44,16 +47,13 @@ commands.o:	commands.c commands.h misc.h strings.h
 basic.o:	basic.c    basic.h    commands.h
 aclcmds.o:	aclcmds.c  aclcmds.h  commands.h acltool.h strings.h
 
-# FreeBSD ACL emulation stuff for Linux & Solaris
 gacl.o:		gacl.c gacl.h
-linux.o:        linux.c gacl.h
-solaris.o:      solaris.c gacl.h
 
 
 acltool: $(OBJS)
 	$(CC) -o acltool $(OBJS) $(LIBS)
 
-clean:
+distclean clean:
 	-rm -f *~ *.o \#* core *.core acltool */*~
 
 push: 	clean
