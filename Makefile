@@ -19,8 +19,7 @@ OBJS=acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o string
 LIBS=-lreadline $(XLIBS)
 
 usage:
-	@echo "Use: 'make linux', 'make freebsd' or 'make solaris'
-	@exit 1
+	@echo "Use: 'make linux', 'make freebsd' or 'make solaris'" ; exit 0
 
 solaris:
 	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XOBJS="gacl.o" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
