@@ -1151,8 +1151,11 @@ gacl_entry_tag_to_text(GACE *ep,
   case GACE_TAG_USER:
     pp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getpwuid(ep->id);
     if (pp)
-      return snprintf(buf, bufsize, "user:%s", pp->pw_name);
-    return snprintf(buf, bufsize, "user:%d", ep->id);
+      return snprintf(buf, bufsize, "%s:%s",
+		      (flags & GACL_TEXT_COMPACT) ? "u" : "user", pp->pw_name);
+    else
+      return snprintf(buf, bufsize, "%s:%d",
+		      (flags & GACL_TEXT_COMPACT) ? "u" : "user", ep->id);
     
   case GACE_TAG_GROUP_OBJ:
     return snprintf(buf, bufsize, "group@");
@@ -1160,8 +1163,11 @@ gacl_entry_tag_to_text(GACE *ep,
   case GACE_TAG_GROUP:
     gp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getgrgid(ep->id);
     if (gp)
-      return snprintf(buf, bufsize, "group:%s", gp->gr_name);
-    return snprintf(buf, bufsize, "group:%d", ep->id);
+      return snprintf(buf, bufsize, "%s:%s",
+		      (flags & GACL_TEXT_COMPACT) ? "g" : "group", gp->gr_name);
+    else
+      return snprintf(buf, bufsize, "%s:%d",
+		      (flags & GACL_TEXT_COMPACT) ? "g" : "group", ep->id);
     
   case GACE_TAG_EVERYONE:
     return snprintf(buf, bufsize, "everyone@");
@@ -1343,9 +1349,15 @@ gacl_to_text_np(GACL *ap,
   if (!buf)
     return NULL;
 
-  for (i = 0; bufsize > 1 && ((rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1); i++) {
+  for (i = 0;
+       bufsize > 1 && ((rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1);
+       i++) {
     char es[80], *cp;
     ssize_t rc, len;
+    GACE_TAG et;
+    
+    if (gacl_get_tag_type(ep, &et) < 0)
+      goto Fail;
     
     rc = gacl_entry_to_text(ep, es, sizeof(es), flags);
     if (rc < 0)
@@ -1354,16 +1366,18 @@ gacl_to_text_np(GACL *ap,
     cp = strchr(es, ':');
     if (cp) {
       len = cp-es;
-      if (len > 0 && (strncmp(es, "user", len) == 0 ||
-		      strncmp(es, "group", len) == 0)) {
+      if (len > 0 && (et == GACE_TAG_USER || et == GACE_TAG_GROUP)) {
 	cp = strchr(cp+1, ':');
 	if (cp)
 	  len = cp-es;
       }
     } else
       len = 0;
-    
-    rc = snprintf(bp, bufsize, " %*s%s\n", (int) (22-len), "", es);
+
+    if (flags & GACL_TEXT_COMPACT) 
+      rc = snprintf(bp, bufsize, "%s%s", i > 0 ? "," : "", es);
+    else
+      rc = snprintf(bp, bufsize, " %*s%s\n", (int) (22-len), "", es);
     if (rc < 0)
       goto Fail;
 

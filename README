@@ -56,11 +56,13 @@ COMMANDS
   set-access            <acl> <path>+           Set ACL(s)
   edit-access           <path>+                 Edit ACL(s)
   find-access           <path>+                 Search ACL(s)
-
+  get-access            <var>=<path>+           Assign ACL(s) to variable(s)
 
   Acltool can either be used directly from the command line or by entering a CLI mode by starting 
   it without any arguments (sans any global options).
 
+  You can access environmental variables using ${NAME} (or $N if one-character names).
+  
   All commands and long option names can be abbreviated using the parts of the names. 
   Some examples of valid abbreviations:
 

@@ -493,7 +493,15 @@ static acl_t
 get_acl(const char *path, 
 	const struct stat *sp) {
   acl_t ap;
+  struct stat sbuf;
 
+
+  if (!sp) {
+    if (lstat(path, &sbuf) < 0)
+      return NULL;
+    
+    sp = &sbuf;
+  }
 
   if (S_ISLNK(sp->st_mode))
     ap = acl_get_link_np(path, ACL_TYPE_NFS4);
@@ -1023,6 +1031,53 @@ aclcmd_list(int argc,
   return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_print, NULL);
 }
 
+int
+aclcmd_get(int argc,
+	   char **argv,
+	   void *vp) {
+  int i;
+  size_t ns;
+  char *nv;
+  
+  
+  for (i = 1; i < argc; i++) {
+    acl_t ap;
+    char *pp, *as;
+
+    pp = strchr(argv[i], '=');
+    if (!pp) {
+      fprintf(stderr, "%s: Error: %s: Missing required '=' character\n", argv0, argv[i]);
+      return 1;
+    }
+    *pp++ = '\0';
+
+    ap = get_acl(pp, NULL);
+    if (!ap) {
+      fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, pp, strerror(errno));
+      return 1;
+    }
+
+    as = acl_to_text_np(ap, NULL, ACL_TEXT_COMPACT_NP);
+    if (!as) {
+      fprintf(stderr, "%s: Error: %s: Converting ACL to text: %s\n", argv0, pp, strerror(errno));
+      acl_free(ap);
+      return 1;
+    }
+
+    ns = strlen(argv[i])+1+strlen(as)+1;
+    nv = malloc(ns);
+    if (!nv) {
+      fprintf(stderr, "%s: Error: Malloc(%d): %s\n", argv0, ns, strerror(errno));
+    }
+    snprintf(nv, ns, "%s=%s", argv[i], as);
+    putenv(nv);
+    acl_free(as);
+    acl_free(ap);
+  }
+
+  return 0;
+}
+
 
 
 int
@@ -1200,6 +1255,7 @@ COMMAND acl_commands[] = {
   { "set-access",  	"<acl> <path>+",	aclcmd_set,	"Set ACL(s)" },
   { "edit-access",      "<path>+",		aclcmd_edit,	"Edit ACL(s)" },
   { "find-access",      "<path>+",		aclcmd_find,	"Search ACL(s)" },
+  { "get-access", 	"<var>=<path>+",	aclcmd_get,	"Get ACL into variable" },
 #if 0
   { "inherit-access",   "<path>+",		aclcmd_inherit,	"Propage ACL(s) inheritance" },
   { "check-access",     "<path>+",		aclcmd_check,	"Sanity-check ACL(s)" },

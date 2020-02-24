@@ -540,6 +540,7 @@ gacl_set_entry_type_np(GACE *ep,
 #define GACL_TEXT_VERBOSE      0x0010
 #define GACL_TEXT_NUMERIC_IDS  0x0020
 #define GACL_TEXT_APPEND_ID    0x0040
+#define GACL_TEXT_COMPACT      0x1000
 
 extern ssize_t
 gacl_entry_tag_to_text(GACE *ep,
@@ -672,7 +673,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_TEXT_VERBOSE          GACL_TEXT_VERBOSE
 #define ACL_TEXT_NUMERIC_IDS      GACL_TEXT_NUMERIC_IDS
 #define ACL_TEXT_APPEND_ID        GACL_TEXT_APPEND_ID
-
+#define ACL_TEXT_COMPACT_NP       GACL_TEXT_COMPACT
 #endif
 
 #define acl_init                  gacl_init
