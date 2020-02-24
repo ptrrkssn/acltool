@@ -673,8 +673,9 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_TEXT_VERBOSE          GACL_TEXT_VERBOSE
 #define ACL_TEXT_NUMERIC_IDS      GACL_TEXT_NUMERIC_IDS
 #define ACL_TEXT_APPEND_ID        GACL_TEXT_APPEND_ID
-#define ACL_TEXT_COMPACT_NP       GACL_TEXT_COMPACT
 #endif
+
+#define ACL_TEXT_COMPACT_NP       GACL_TEXT_COMPACT
 
 #define acl_init                  gacl_init
 #define acl_free                  gacl_free
