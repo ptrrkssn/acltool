@@ -50,7 +50,7 @@
 
 
 
-char *version = "1.2";
+char *version = "1.3";
 
 COMMANDS commands;
 
@@ -372,9 +372,14 @@ char **
 cmd_name_completion(const char *text,
 		    int start,
 		    int end) {
-  rl_attempted_completion_over = 1;
+  int i;
   
-  return rl_completion_matches(text, start == 0 ? cmd_name_generator : rl_filename_completion_function);
+  rl_attempted_completion_over = 1;
+
+  for (i = 0; i < start && isspace(rl_line_buffer[i]); i++)
+    ;
+  
+  return rl_completion_matches(text, i == start ? cmd_name_generator : rl_filename_completion_function);
 }
 
 
