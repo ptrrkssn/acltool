@@ -190,9 +190,9 @@ print_acl(FILE *fp,
 	  const struct stat *sp,
 	  CONFIG *cfgp) {
   acl_entry_t ae;
-  int i, is_trivial, d, len;
+  int i, is_trivial, len;
   uid_t *idp;
-  char *as, *cp;
+  char *as;
   char acebuf[2048], ubuf[64], gbuf[64], tbuf[80], *us, *gs;
   struct passwd *pp = NULL;
   struct group *gp = NULL;
@@ -249,33 +249,26 @@ print_acl(FILE *fp,
   case ACL_STYLE_CSV:
     /* One-liner, CSV-style */
 
-    fprintf(fp, "%s;", path);
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-      if (i)
-	putc(',', fp);
-      ace2str(ae, acebuf, sizeof(acebuf));
-      fprintf(fp, "%s", acebuf);
+    as = acl_to_text_np(a, NULL, ACL_TEXT_COMPACT_NP);
+    if (!as) {
+      fprintf(stderr, "%s: Error: %s: Unable to display ACL: %s\n", argv0, path, strerror(errno));
+      return 1;
     }
-    fprintf(fp, ";%d", sp->st_uid);
-    fprintf(fp, ";%d", sp->st_gid);
-    fprintf(fp, ";%s", us ? us : "-");
-    fprintf(fp, ";%s", gs ? gs : "-");
-    putc('\n', fp);
+    fprintf(fp, "%s;%s;%d;%d;%s;%s\n", path, as, sp->st_uid, sp->st_gid, us ? us : "-", gs ? gs : "-");
+    acl_free(as);
     break;
 
   case ACL_STYLE_BRIEF:
     /* One-liner */
 
-    fprintf(fp, "%-22s", path);
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-      ace2str(ae, acebuf, sizeof(acebuf));
-      cp = strchr(acebuf, ':');
-      if (cp-acebuf == 1)
-	cp = strchr(acebuf+2, ':');
-      d = 10-(cp-acebuf);
-      fprintf(fp, " %*s%s", d, "", acebuf);
+    as = acl_to_text_np(a, NULL, ACL_TEXT_COMPACT_NP);
+    if (!as) {
+      fprintf(stderr, "%s: Error: %s: Unable to display ACL: %s\n", argv0, path, strerror(errno));
+      return 1;
     }
-    putc('\n', fp);
+    
+    fprintf(fp, "%-24s  %s\n", path, as);
+    acl_free(as);
     break;
 
   case ACL_STYLE_VERBOSE:
@@ -512,7 +505,7 @@ get_acl(const char *path,
     return NULL;
   }
 
-  if (w_cfgp->f_sort) {
+  if (w_cfgp && w_cfgp->f_sort) {
     acl_t sap = acl_sort(ap);
     if (!sap) {
       fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
@@ -1067,10 +1060,15 @@ aclcmd_get(int argc,
     ns = strlen(argv[i])+1+strlen(as)+1;
     nv = malloc(ns);
     if (!nv) {
-      fprintf(stderr, "%s: Error: Malloc(%d): %s\n", argv0, (int) ns, strerror(errno));
+      fprintf(stderr, "%s: Error: %s: Malloc(%d): %s\n", argv0, argv[i], (int) ns, strerror(errno));
+      return 1;
     }
+    
     snprintf(nv, ns, "%s=%s", argv[i], as);
-    putenv(nv);
+    if (putenv(nv) < 0) {
+      fprintf(stderr, "%s: Error: %s: Putenv: %s\n", argv0, argv[i], strerror(errno));
+      return 1;
+    }
     acl_free(as);
     acl_free(ap);
   }
