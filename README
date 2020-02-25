@@ -94,7 +94,8 @@ ACL FORMAT SPECIFICATION
     =      Set the full permission and flag sets on matching ACE entries
 
     If no <opt> is specified then it works like "=" but adds a new entry in each ACL if
-    none was there before.
+    none was there before. For find-access '+' and '-' only checks the specified bits on matching
+    (tag & type) entries.
 
   <tag> tells the tag type of the ACE:
     owner@           The object "owner"

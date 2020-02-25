@@ -528,7 +528,7 @@ set_acl(const char *path,
 
 
   /* Skip set operation if old and new acl is the same */
-  if (oap && acl_equal(ap, oap) == 1)
+  if (oap && acl_match(ap, oap) == 1)
     return 0;
 
   rc = 0;
@@ -904,56 +904,35 @@ walker_find(const char *path,
 	    size_t level,
 	    void *vp) {
   acl_t ap, map = (acl_t) vp;
-  int i, j, nm;
+  int i, j;
   acl_entry_t ae, mae;
 
 
   ap = get_acl(path, sp);
   if (!ap) {
-    /* Silently ignore this one - not ACL set? */
+    /* Silently ignore this one - no ACL set? */
     return 0;
   }
 
-  nm = 0;
   for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-    acl_tag_t tt;
-    acl_entry_type_t et;
-    uid_t *idp;
-
-    acl_get_tag_type(ae, &tt);
-    acl_get_entry_type_np(ae, &et);
-    idp = acl_get_qualifier(ae);
-
     for (j = 0; acl_get_entry(map, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &mae) == 1; j++) {
-      acl_tag_t mtt;
-      acl_entry_type_t met;
-      uid_t *midp;
+      int rc;
       
-      acl_get_tag_type(mae, &mtt);
-      acl_get_entry_type_np(mae, &met);
-      midp = acl_get_qualifier(mae);
+      rc = acl_entry_match(ae, mae);
+      if (rc < 0)
+	return -1;
 
-      if (tt == mtt && et == met) {
-	if (tt == ACL_USER || tt == ACL_GROUP) {
-	  if (idp && midp && *idp == *midp) {
-	    ++nm;
-	    break;
-	  }
-	} else {
-	  ++nm;
-	  break;
-	}
+      if (rc > 0) {
+	/* Found a match */
+	if (w_cfgp->f_verbose)
+	  print_acl(stdout, ap, path, sp, w_cfgp);
+	else
+	  puts(path);
+	
+	w_c++;
+	return 0;
       }
     }
-  }
-
-  if (nm > 0) {
-    if (w_cfgp->f_verbose) {
-      print_acl(stdout, ap, path, sp, w_cfgp);
-      w_c++;
-    }
-    else
-      puts(path);
   }
 
   return 0;

@@ -342,8 +342,12 @@ extern GACL *
 gacl_dup(GACL *ap);
 
 extern int
-gacl_equal(GACL *ap,
-	   GACL *bp);
+gacl_match(GACL *ap,
+	   GACL *mp);
+
+extern int
+gacl_entry_match(GACE *aep,
+		 GACE *mep);
 
 extern GACL *
 gacl_sort(GACL *ap);
@@ -747,7 +751,8 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_init_entry            gacl_init_entry
 #define acl_add_entry_np          gacl_add_entry_np
 
-#define acl_equal                 gacl_equal
+#define acl_match                 gacl_match
+#define acl_entry_match           gacl_entry_match
 #define acl_sort                  gacl_sort
 #define acl_empty_permset         gacl_empty_permset
 #define acl_merge_permset         gacl_merge_permset

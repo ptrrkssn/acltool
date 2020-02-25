@@ -726,82 +726,134 @@ gacl_strip_np(GACL *ap,
 
 
 int
-gacl_equal(GACL *ap,
-	   GACL *bp) {
-  GACE *aep, *bep;
-  GACE_TAG att, btt;
-  GACE_PERMSET *apsp, *bpsp;
-  GACE_FLAGSET *afsp, *bfsp;
-  GACE_TYPE aet, bet;
-  int p, arc, brc;
+gacl_entry_match(GACE *aep,
+		 GACE *mep) {
+  GACE_TAG att, mtt;
+  GACE_PERMSET *apsp, *mpsp;
+  GACE_FLAGSET *afsp, *mfsp;
+  GACE_TYPE aet, met;
+  
+  
+  if (!aep || !mep) {
+    errno = EINVAL;
+    return -1;
+  }
 
   
-  if (ap->ac != bp->ac)
+  /* 1. ACE tag type (owner@, group@, everyone@, user:xx, group:xxx) */
+  if (gacl_get_tag_type(aep, &att) < 0)
+    return -1;
+  
+  if (gacl_get_tag_type(mep, &mtt) < 0)
+    return -1;
+
+  if (att != mtt)
     return 0;
 
-  if (ap->type != bp->type)
+  if (att == GACE_TAG_USER || att == GACE_TAG_GROUP) {
+    uid_t *qa = (uid_t *) gacl_get_qualifier(aep);
+    uid_t *qb = (uid_t *) gacl_get_qualifier(mep);
+    
+    if ((!qa && qb) || (qa && !qb) || (*qa != *qb))
+      return 0;
+  }
+  
+  /* 2. ACE entry type (allow, deny, audit, alarm) */
+  if (gacl_get_entry_type_np(aep, &aet) < 0)
+    return -1;
+  
+  if (gacl_get_entry_type_np(mep, &met) < 0)
+    return -1;
+  
+  if (aet != met)
+    return 0;
+
+  
+  /* 3. ACE permissions */
+  if (gacl_get_permset(aep, &apsp) < 0)
+    return -1;
+  
+  if (gacl_get_permset(mep, &mpsp) < 0)
+    return -1;
+
+  switch (mep->edit) {
+  case 0:
+  case '=':
+    if (*apsp != *mpsp)
+      return 0;
+    break;
+    
+  case '+': /* Match if all permissions in B is set in A */
+    if ((*apsp & *mpsp) != *mpsp)
+      return 0;
+    break;
+
+  case '-': /* Match if all permissions in B is unset in A */
+    if ((*apsp & *mpsp) != 0)
+      return 0;
+    break;
+
+  default:
+    errno = EINVAL;
+    return -1;
+  }
+  
+  /* 4. ACE flags */
+  if (gacl_get_flagset_np(aep, &afsp) < 0)
+    return -1;
+  
+  if (gacl_get_flagset_np(mep, &mfsp) < 0)
+    return -1;
+  
+  switch (mep->edit) {
+  case 0:
+  case '=':
+    if (*afsp != *mfsp)
+      return 0;
+    break;
+
+  case '+':
+    if ((*afsp & *mfsp) != *mfsp)
+      return 0;
+    break;
+
+  case '-':
+    if ((*afsp & *mfsp) != 0)
+      return 0;
+    break;
+
+  default:
+    errno = EINVAL;
+    return -1;
+  }
+  
+  return 1;
+}
+
+int
+gacl_match(GACL *ap,
+	   GACL *mp) {
+  GACE *aep, *mep;
+  int p, arc, mrc;
+
+  
+  if (ap->ac != mp->ac)
+    return 0;
+
+  if (ap->type != mp->type)
     return 0;
   
   p = GACL_FIRST_ENTRY;
-  while ((arc = gacl_get_entry(ap, p, &aep)) == 1 && (brc = gacl_get_entry(bp, p, &bep)) == 1) {
+  while ((arc = gacl_get_entry(ap, p, &aep)) == 1 && (mrc = gacl_get_entry(mp, p, &mep)) == 1) {
+    int rc;
+
     p = GACL_NEXT_ENTRY;
 
-    switch (ap->type) {
-    case GACL_TYPE_NFS4:
-      if (gacl_get_tag_type(aep, &att) < 0) {
-	return -1;
-      }
-      
-      if (gacl_get_tag_type(bep, &btt) < 0) {
-	return -1;
-      }
-      
-      if (att != btt)
-	return 0;
-      
-      if (gacl_get_permset(aep, &apsp) < 0) {
-	return -1;
-      }
-      
-      if (gacl_get_permset(bep, &bpsp) < 0) {
-	return -1;
-      }
-      
-      if (memcmp(apsp, bpsp, sizeof(*apsp)) != 0)
-	return 0;
-      
-      if (gacl_get_flagset_np(aep, &afsp) < 0) {
-	return -1;
-      }
-      
-      if (gacl_get_flagset_np(bep, &bfsp) < 0) {
-	return -1;
-      }
-      
-      if (memcmp(afsp, bfsp, sizeof(*afsp)) != 0)
-	return 0;
-      
-      if (gacl_get_entry_type_np(aep, &aet) < 0) {
-	return -1;
-      }
-      
-      if (gacl_get_entry_type_np(bep, &bet) < 0) {
-	return -1;
-      }
-      
-      if (aet != bet)
-	return 0;
-      break;
-
-    case GACL_TYPE_ACCESS:
-    case GACL_TYPE_DEFAULT:
-      /* Not yet implemented */
-    default:
-      errno = ENOSYS;
-      return -1;
-    }
+    rc = gacl_entry_match(aep, mep);
+    if (rc != 1)
+      return rc;
   }
-
+  
   return 1;
 }
 
