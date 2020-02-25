@@ -50,7 +50,7 @@
 
 
 
-char *version = "1.3";
+char *version = "1.4";
 
 COMMANDS commands;
 
@@ -252,7 +252,7 @@ cfg_parse(CONFIG *cfgp,
 
 void
 print_version(void) {
-  printf("[ACLTOOL, version %s]\n", version);
+  printf("[ACLTOOL, v%s - Copyright (c) 2020 Peter Eriksson <pen@lysator.liu.se>]\n", version);
 }
 
 int
@@ -260,8 +260,10 @@ cmd_version(int argc,
 	    char **argv,
 	    void *vp) {
   print_version();
+  puts("");
   puts("Author: Peter Eriksson <pen@lysator.liu.se>");
   puts("Built:  " __DATE__ " " __TIME__);
+  puts("Source: https://github.com/ptrrkssn/acltool");
   return 0;
 }
 
@@ -422,7 +424,14 @@ main(int argc,
   char *buf;
   char **av;
   int ai, ac, rc = 0;
+  char *aname;
   
+
+  aname = strrchr(argv[0], '/');
+  if (aname)
+    ++aname;
+  else
+    aname = argv[0];
 
   argv0 = argv[0];
 
@@ -430,14 +439,22 @@ main(int argc,
   cmd_register(&commands, 0, basic_commands);
   cmd_register(&commands, 0, acltool_commands);
   cmd_register(&commands, 0, acl_commands);
+
+  if (strcmp(aname, "acltool") != 0) {
+    argv[0] = s_dup(aname);
+    rc = run_cmd(argc, argv, &d_cfg, NULL);
+    return rc;
+  }
   
   ai = 0;
   if (cfg_parse(&d_cfg, &ai, argc, argv) != 0)
     exit(1);
 
   if (ai == argc) {
-    if (isatty(fileno(stdin)))
-      puts("INTERACTIVE MODE");
+    if (isatty(fileno(stdin))) {
+      print_version();
+      puts("\nINTERACTIVE MODE (type 'help' for information)");
+    }
     
     rl_attempted_completion_function = cmd_name_completion;
     
@@ -469,7 +486,7 @@ main(int argc,
 
     exit(rc);
   }
-  
+
   rc = run_cmd(argc-ai, argv+ai, &d_cfg, NULL);
   return rc;
 }

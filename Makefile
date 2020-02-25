@@ -1,5 +1,8 @@
 # Makefile for acltool
 
+DEST=/usr/local
+DESTBIN=$(DEST)/bin
+
 CFLAGS=-g -Wall
 CC=gcc
 
@@ -61,3 +64,7 @@ push: 	clean
 
 pull:	clean
 	git pull
+
+install:	acltool
+	cp acltool $(DESTBIN)
+
