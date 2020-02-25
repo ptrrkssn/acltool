@@ -1,0 +1,7 @@
+Some stuff that needs to be done (in no particular order):
+
+- Use Gnu autoconf instead of the current hack
+- Implement support for POSIX.1e ACLs
+- Create a test suite
+- Support saving ACLs to text files, and restore from text files
+- Support directory tree ACLs cloning

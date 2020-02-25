@@ -370,18 +370,54 @@ cmd_name_generator(const char *text,
   return NULL;
 }
 
+char *
+opt_name_generator(const char *text,
+			int state) {
+  static int ci;
+  const char *cp;
+  int t;
+  
+  
+  if (!state)
+    ci = 0;
+
+  while (options[ci].name) {
+    cp = options[ci].name;
+    t = options[ci].type;
+    ++ci;
+    
+    if (s_match(text+2, cp))
+      return s_cat("--", cp,
+		   (((t & OPTS_TYPE_MASK) != OPTS_TYPE_NONE &&
+		     !(t & OPTS_TYPE_OPT)) ? "=" : NULL),
+		   NULL);
+  }
+  
+  return NULL;
+}
+
 char **
 cmd_name_completion(const char *text,
 		    int start,
 		    int end) {
   int i;
+  char *(*cng)(const char *text, int state);
   
   rl_attempted_completion_over = 1;
 
-  for (i = 0; i < start && isspace(rl_line_buffer[i]); i++)
+  cng = cmd_name_generator;
+
+  for (i = 0; isspace(rl_line_buffer[i]); i++)
     ;
+
+  if (start > i) {
+    if (text[0] == '-' && text[1] == '-')
+      cng = opt_name_generator;
+    else
+      cng = rl_filename_completion_function;
+  }
   
-  return rl_completion_matches(text, i == start ? cmd_name_generator : rl_filename_completion_function);
+  return rl_completion_matches(text, cng);
 }
 
 
