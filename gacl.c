@@ -1186,21 +1186,26 @@ gacl_entry_permset_to_text(GACE *ep,
 			   int flags) {
   GACE_PERMSET *epsp;
   GACE_PERM p;
-  int a;
+  int a, n;
 
   
   if (gacl_get_permset(ep, &epsp) < 0)
     return -1;
-  
+
+  n = 0;
   for (p = 0; bufsize > 1 && gace_p2c[p].c; p++) {
     a = gacl_get_perm_np(epsp, gace_p2c[p].p);
     if (a < 0)
       return -1;
-    *buf++ = (a ? gace_p2c[p].c : '-');
-    bufsize--;
+    if (a || !(flags & GACL_TEXT_COMPACT)) {
+      *buf++ = (a ? gace_p2c[p].c : '-');
+      bufsize--;
+      n++;
+    }
   }
+  *buf = '\0';
 
-  return p;
+  return n;
 }
 
 
@@ -1211,21 +1216,26 @@ gacl_entry_flagset_to_text(GACE *ep,
 			   int flags) {
   GACE_FLAGSET *efsp;
   GACE_FLAG f;
-  int a;
+  int a, n;
 
   
   if (gacl_get_flagset_np(ep, &efsp) < 0)
     return -1;
-  
+
+  n = 0;
   for (f = 0; bufsize > 1 && gace_f2c[f].c; f++) {
     a = gacl_get_flag_np(efsp, gace_f2c[f].f);
     if (a < 0)
       return -1;
-    *buf++ = (a ? gace_f2c[f].c : '-');
-    bufsize--;
+    if (a || !(flags & GACL_TEXT_COMPACT)) {
+      *buf++ = (a ? gace_f2c[f].c : '-');
+      bufsize--;
+      n++;
+    }
   }
+  *buf = '\0';
 
-  return f;
+  return n;
 }
 
 
@@ -1285,28 +1295,33 @@ gacl_entry_to_text(GACE *ep,
   bp += rc;
   bufsize -= rc;
 
-  if (bufsize <= 1)
-    return -1;
-  *bp++ = ':';
-  bufsize--;
-
-  rc = gacl_entry_flagset_to_text(ep, bp, bufsize, flags);
-  if (rc < 0)
-    return -1;  
-  bp += rc;
-  bufsize -= rc;
-  
-  if (bufsize <= 1)
-    return -1;
-  *bp++ = ':';
-  bufsize--;
-  
-  rc = gacl_entry_type_to_text(ep, bp, bufsize, flags);
-  if (rc < 0)
-    return -1;
-  
-  bp += rc;
-  bufsize -= rc;
+  if ((ep->flags && ep->type != GACE_TYPE_ALLOW) || !(flags & GACL_TEXT_COMPACT)) {
+    if (bufsize <= 1)
+      return -1;
+    
+    *bp++ = ':';
+    bufsize--;
+    
+    rc = gacl_entry_flagset_to_text(ep, bp, bufsize, flags);
+    if (rc < 0)
+      return -1;  
+    bp += rc;
+    bufsize -= rc;
+    
+    if (bufsize <= 1)
+      return -1;
+    *bp++ = ':';
+    bufsize--;
+    
+    if (ep->type != GACE_TYPE_ALLOW || !(flags & GACL_TEXT_COMPACT)) {
+      rc = gacl_entry_type_to_text(ep, bp, bufsize, flags);
+      if (rc < 0)
+	return -1;
+      
+      bp += rc;
+      bufsize -= rc;
+    }
+  }
   
   if (flags & GACL_TEXT_APPEND_ID) {
     GACE_TAG et;
@@ -1340,7 +1355,7 @@ gacl_to_text_np(GACL *ap,
 		ssize_t *bsp,
 		int flags) {
   char *buf, *bp;
-  size_t bufsize = 1024;
+  size_t bufsize = 2048;
   int i, rc;
   GACE *ep;
 
@@ -1352,7 +1367,7 @@ gacl_to_text_np(GACL *ap,
   for (i = 0;
        bufsize > 1 && ((rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1);
        i++) {
-    char es[80], *cp;
+    char es[1024], *cp;
     ssize_t rc, len;
     GACE_TAG et;
     
@@ -1375,7 +1390,7 @@ gacl_to_text_np(GACL *ap,
       len = 0;
 
     if (flags & GACL_TEXT_COMPACT) 
-      rc = snprintf(bp, bufsize, "%s%s", i > 0 ? "," : "", es);
+      rc = snprintf(bp, bufsize, "%s%s", (i > 0 ? "," : ""), es);
     else
       rc = snprintf(bp, bufsize, " %*s%s\n", (int) (22-len), "", es);
     if (rc < 0)
