@@ -448,6 +448,10 @@ run_cmd(int argc,
   argv[argc] = NULL;
   
   rc = cmd_run(&commands, argc, argv, (void *) &cfg);
+  if (rc < 0) {
+    fprintf(stderr, "%s: Error: %s\n", argv[0], strerror(errno));
+    return 1;
+  }
   
   return rc;
 }
@@ -487,6 +491,9 @@ main(int argc,
     exit(1);
 
   if (ai == argc) {
+    char *stdin_path = NULL;
+    char *stdout_path = NULL;
+    
     if (isatty(fileno(stdin))) {
       print_version();
       puts("\nINTERACTIVE MODE (type 'help' for information)");
@@ -495,10 +502,42 @@ main(int argc,
     rl_attempted_completion_function = cmd_name_completion;
     
     while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
+      char *cp;
+
+      
       add_history(buf);
 
       while (*buf && isspace(*buf))
 	++buf;
+
+      stdout_path = strrchr(buf, '>');
+      stdin_path  = strrchr(buf, '<');
+      
+      if (stdout_path) {
+	*stdout_path++ = '\0';
+	for (cp = stdout_path; *cp && !isspace(*cp); ++cp)
+	  ;
+	*cp = '\0';
+      }
+      
+      if (stdin_path) {
+	*stdin_path++ = '\0';
+	for (cp = stdin_path; *cp && !isspace(*cp); ++cp)
+	  ;
+	*cp = '\0';
+      }
+      
+      if (stdout_path) {
+	fprintf(stderr, "stdout_path='%s'\n", stdout_path);
+	if (freopen(stdout_path, "w", stdout) == NULL)
+	  freopen("/dev/tty", "w", stdout);
+      }
+
+      if (stdin_path) {
+	fprintf(stderr, "stdin_path='%s'\n", stdin_path);
+	if (freopen(stdin_path, "w", stdin) == NULL)
+	  freopen("/dev/tty", "r", stdin);
+      }
       
       switch (*buf) {
       case '!':
@@ -518,6 +557,12 @@ main(int argc,
       }
       
       free(buf);
+
+      if (stdout_path)
+	freopen("/dev/tty", "w", stdout);
+
+      if (stdin_path)
+	freopen("/dev/tty", "r", stdin);
     }
 
     exit(rc);

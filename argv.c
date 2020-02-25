@@ -194,8 +194,12 @@ argv_strtok(const char **bp,
 	    esc = s_ndup(rp, n);
 	    rp += n;
 	  }
-	  else
-	    esc = s_ndup(rp, 1);
+	  else {
+	    for (n = 0; rp[n] && isalpha(rp[n]); ++n)
+	      ;
+	    esc = s_ndup(rp, n);
+	    rp += n-1;
+	  }
 	  
 	  cp = var_handler(esc, xtra);
 	  if (cp) {

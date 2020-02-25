@@ -986,9 +986,11 @@ _aclcmd_foreach(int argc,
     rc = ft_foreach(argv[i], handler, vp,
 		    cfgp->f_recurse ? -1 : cfgp->max_depth);
     if (rc) {
-      if (rc < 0)
+      if (rc < 0) {
 	fprintf(stderr, "%s: Error: %s: Accessing object: %s\n", 
 		argv0, argv[i], strerror(errno));
+	rc = 1;
+      }
       break;
     }
   }
@@ -1206,20 +1208,158 @@ aclcmd_edit(int argc,
   return rc;
 }
 
+static int
+walker_inherit(const char *path,
+	   const struct stat *sp,
+	   size_t base,
+	   size_t level,
+	   void *vp) {
+  DACL *a = (DACL *) vp;
+  acl_t ap = NULL;
+
+
+  printf("  walker_inherit: %s\n", path);
+  
+  if (!a) {
+    errno = EINVAL;
+    return -1;
+  }
+  
+  if (!a->da) {
+    acl_entry_t ep;
+    int p;
+    
+    ap = get_acl(path, sp);
+    if (!ap)
+      return -1;
+
+    a->da = acl_dup(ap);
+    if (!a->da)
+      goto Fail;
+    
+    for (p = ACL_FIRST_ENTRY; acl_get_entry(a->da, p, &ep) == 1; p = ACL_NEXT_ENTRY) {
+      acl_flagset_t fs;
+
+      if (acl_get_flagset_np(ep, &fs) < 0)
+	goto Fail;
+
+      if (S_ISDIR(sp->st_mode)) {
+	acl_add_flag_np(fs, ACL_ENTRY_FILE_INHERIT);
+	acl_add_flag_np(fs, ACL_ENTRY_DIRECTORY_INHERIT);
+      }
+      acl_delete_flag_np(fs, ACL_ENTRY_NO_PROPAGATE_INHERIT);
+      
+      if (acl_set_flagset_np(ep, fs) < 0)
+	goto Fail;
+    }
+
+    /* Update the ACL with FILE & DIR INHERIT (if a directory) */
+    if (set_acl(path, sp, a->da, ap) < 0) {
+      char *s = acl_to_text(a->da, NULL);
+      puts(s);
+      
+      fprintf(stderr, "set_acl(%s): %s\n", path, strerror(errno));
+      goto Fail;
+    }
+    
+    for (p = ACL_FIRST_ENTRY; acl_get_entry(a->da, p, &ep) == 1; p = ACL_NEXT_ENTRY) {
+      acl_flagset_t fs;
+
+      if (acl_get_flagset_np(ep, &fs) < 0)
+	goto Fail;
+
+      acl_delete_flag_np(fs, ACL_ENTRY_INHERIT_ONLY);
+      acl_add_flag_np(fs, ACL_ENTRY_INHERITED);
+      
+      if (acl_set_flagset_np(ep, fs) < 0)
+	goto Fail;
+    }
+
+    a->fa = acl_dup(a->da);
+    if (!a->fa)
+      goto Fail;
+    
+    if (_acl_filter_file(a->fa) < 0)
+      goto Fail;
+    
+    return 0;
+  } else {
+    acl_t oap = get_acl(path, sp);
+    int rc;
+
+    
+    if (!oap)
+      return -1;
+
+    if (S_ISDIR(sp->st_mode))
+      rc = set_acl(path, sp, a->da, oap);
+    else
+      rc = set_acl(path, sp, a->fa, oap);
+    if (rc < 0)
+      fprintf(stderr, "set_acl(%s): %s\n", path, strerror(errno));
+    
+    acl_free(oap);
+    return 0;
+  }
+
+  return 0;
+  
+ Fail:
+  if (a && a->da)
+    acl_free(a->da);
+  if (ap)
+    acl_free(ap);
+  return -1;
+}
+
+
 int
 aclcmd_inherit(int argc,
 	       char **argv,
-	       void *vp) {	       
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
+	       void *vp) {
+  int i, rc;
+
+  
+  w_cfgp = (CONFIG *) vp;
+  w_c = 0;
+
+  for (i = 1; i < argc; i++) {
+    DACL a;
+    
+    a.da = NULL;
+    a.fa = NULL;
+
+    printf("inherit %s:\n", argv[i]);
+    
+    rc = ft_foreach(argv[i], walker_inherit, (void *) &a,
+		    w_cfgp->f_recurse ? -1 : w_cfgp->max_depth);
+    
+    if (a.da)
+      acl_free(a.da);
+    if (a.fa)
+      acl_free(a.fa);
+  }
+
+  return rc;
 }
+
+
+static int
+walker_check(const char *path,
+	     const struct stat *sp,
+	     size_t base,
+	     size_t level,
+	     void *vp) {
+  errno = ENOSYS;
+  return -1;
+}
+
 
 int
 aclcmd_check(int argc,
 	     char **argv,
 	     void *vp) {
-  fprintf(stderr, "%s: Error: %s: Not yet implemented\n", argv0, argv[0]);
-  return 1;
+  return _aclcmd_foreach(argc-1, argv+1, (CONFIG *) vp, walker_check, NULL);
 }
 
 
@@ -1231,10 +1371,10 @@ COMMAND acl_commands[] = {
   { "delete-access",    "<path>+",		aclcmd_delete,	"Delete ACL(s)" },
   { "set-access",  	"<acl> <path>+",	aclcmd_set,	"Set ACL(s)" },
   { "edit-access",      "<path>+",		aclcmd_edit,	"Edit ACL(s)" },
-  { "find-access",      "<path>+",		aclcmd_find,	"Search ACL(s)" },
+  { "find-access",      "<acl> <path>+",	aclcmd_find,	"Search ACL(s)" },
   { "get-access", 	"<var>=<path>+",	aclcmd_get,	"Get ACL into variable" },
-#if 0
   { "inherit-access",   "<path>+",		aclcmd_inherit,	"Propage ACL(s) inheritance" },
+#if 0
   { "check-access",     "<path>+",		aclcmd_check,	"Sanity-check ACL(s)" },
 #endif
   { NULL,		NULL,			NULL,		NULL },

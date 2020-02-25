@@ -17,8 +17,11 @@ OPERATING SYSTEMS SUPPORTED (for now)
 
 BUILD INSTRUCTIONS
 
-  Just type 'make' in the source directory. It will automatically detect, freebsd, linux 
-  or solaris-based systems.
+  Just type 'make' in the source directory. It will automatically detect and build on:
+
+    - FreeBSD (tested on 11.3 & 12.1)
+    - Linux (tested on CentOS 7, Ubuntu 19 & Debian 9)
+    - Solaris-based systems (tested on OmniOS)
 
 
 USAGE
@@ -55,7 +58,7 @@ COMMANDS
   delete-access         <path>+                 Delete ACL(s)
   set-access            <acl> <path>+           Set ACL(s)
   edit-access           <path>+                 Edit ACL(s)
-  find-access           <path>+                 Search ACL(s)
+  find-access           <acl> <path>+           Search ACL(s)
   get-access            <var>=<path>+           Assign ACL(s) to variable(s)
 
   Acltool can either be used directly from the command line or by entering a CLI mode by starting 
@@ -70,6 +73,11 @@ COMMANDS
     edit-access, edit-a, edit, e-ac, edac
     set-access, set-acc, set, s-a, sac
 
+  Tab-completion in CLI mode also works for command names, long options and files.
+  
+  Command names may also be used in links to the "acltool" binary like "ln -s acltool lac" and
+  then be used as shortcuts to the commands.
+  
 
 ACL PRINT STYLES
   default         FreeBSD-style
@@ -136,39 +144,3 @@ ACL FORMAT SPECIFICATION
     audit	   Not used right now
     alarm	   Not used right now
 
-
-SOME THOUGHTS ABOUT CANONICAL SORT ORDER
-
-NFSv4/ZFS-ACLs doesn't really care about sort order, except that you probably always want
-to have the "deny" ACEs before the "allow" ones (recommendation: Stay away from deny ACEs).
-But there are two other models, Windows and Posix, that have opinions, and Windows is the
-most important...
-
-Windows systems wants ACLs to be sorted in a "canonical" order. This is what Microsoft 
-write about it:
-
-The preferred order of ACEs in a DACL is called the "canonical" order. For Windows 2000 
-and Windows Server 2003, the canonical order is the following:
- 
-  - All explicit ACEs are placed in a group before any inherited ACEs.
-  - Within the group of explicit ACEs, access-denied ACEs are placed before access-allowed ACEs.
-  - Within the inherited group, ACEs that are inherited from the child object's parent come first,
-    and then ACEs inherited from the grandparent, and so on up the tree of objects.
-  - After that, access-denied ACEs are placed before access-allowed ACEs.
-
-POSIX (from the aclsort() manual page in some Unixes):
-
-A call to aclsort will result in the contents of the buffer being sorted in the following order:
-
-  1. A user entry for the object owner
-  2. Additional user entries
-  3. A group entry for the object owning group
-  4. Additional group entries
-  5. A class entry for the file group class
-  6. An entry for other
-  7. Default user entry for the object owner
-  8. Default additional user entries
-  9. Default group entry for the object owning group
- 10. Default additional group entries
- 11. Default class entry
- 12. Default entry for other

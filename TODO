@@ -5,3 +5,6 @@ Some stuff that needs to be done (in no particular order):
 - Create a test suite
 - Support saving ACLs to text files, and restore from text files
 - Support directory tree ACLs cloning
+- Clear INHERITED bits on updated ACEs (unless we force it).
+- Investigate how the inherit-access command should work
+- How should the check-access command work?
