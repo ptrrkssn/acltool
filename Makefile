@@ -68,3 +68,6 @@ pull:	clean
 install:	acltool
 	cp acltool $(DESTBIN)
 
+check:	auto
+	./acltool lac t
+

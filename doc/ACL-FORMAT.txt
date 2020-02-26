@@ -1,0 +1,61 @@
+ACL/ACE FORMAT SPECIFICATION
+
+  ACLs used as arguments in this tool are specified as comma separated lists of ACE entries,
+  formatted like:
+
+    [<opt>]<tag>:<permissions>[:<flags>[:<type>]]
+
+  <opt> is used by the 'edit-access' and 'find-access' commands and ignored for others:
+    +      Add permission and flag bits on matching ACE entries
+    -      Delete permission and flag bits on matching ACE entries
+    =      Set the full permission and flag sets on matching ACE entries
+
+    If no <opt> is specified then it works like "=" but adds a new entry in each ACL if
+    none was there before. For find-access '+' and '-' only checks the specified bits on matching
+    (tag & type) entries.
+
+  <tag> tells the tag type of the ACE:
+    owner@           The object "owner"
+    group@           The object "group"
+    everyone@        The object "other"
+    [u|user]:<id>    A user name/uid
+    [g|group]:<id>   A group name/gid
+    <id>             A user or group (if unique)
+
+  <permissions> Describes the rights allowed or denied.
+    r / read_data         Read data
+    w / write_data        Write data
+    x / execute           Execute
+    p / append_data       Append data
+    d / delete 	          Delete
+    D / delete_child      Remove files/subdirs
+    a / read_attributes   Read Attributes
+    A / write_attributes  Write Attributes
+    R / read_xattrs	  Read Xattrs
+    W / write_xattrs	  Write Xattrs
+    c / read_acl	  Read ACLs
+    C / write_acl	  Write ACLs
+    o / write_owner	  Write Owner
+    s / synchronize	  Synchronize
+
+    all    / full_set 	  All the permissions above
+    modify / modify_set	  Same as full_set minus write_acl & write_owner
+    write  / write_set	  write_data, append_data, write_named_attrs, write_attributes
+    read   / read_set	  read_data, read_named_attrs, read_attributes, read_acl
+    empty  / empty_set	  None of the permissions
+    
+  <flags> Describes permission inheritance 
+    f 	   File inherit
+    d	   Directory inherit
+    i	   Inherit only
+    n	   No propagate inherit
+    S	   Successful access (not used)
+    F	   Failed access (not used)
+    I	   Inherited (ZFS only, can not be presented/modified via NFSv4)
+
+  <type> Describes the type of ACE entry:
+    allow	   Describes rights allowed
+    deny	   Describes rights denied
+    audit	   Not used right now
+    alarm	   Not used right now
+

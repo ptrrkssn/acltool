@@ -8,3 +8,4 @@ Some stuff that needs to be done (in no particular order):
 - Clear INHERITED bits on updated ACEs (unless we force it).
 - Investigate how the inherit-access command should work
 - How should the check-access command work?
+- Implement "long name" permissions/flags
