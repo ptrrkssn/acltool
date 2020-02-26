@@ -71,3 +71,4 @@ install:	acltool
 check:	auto
 	./acltool lac t
 
+distcheck: check
