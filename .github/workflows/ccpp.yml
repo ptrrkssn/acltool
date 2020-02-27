@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: sudo apt install libreadline-dev
+      run: test -f /usr/include/readline/readline.h || sudo apt install libreadline-dev
     - name: configure
       run: ./configure
     - name: make
