@@ -1848,7 +1848,7 @@ gacl_from_text(const char *buf) {
 
 #ifdef __linux__
 #include <arpa/inet.h>
-#include <attr/xattr.h>
+#include <sys/xattr.h>
 #include "gacl.h"
 #include "nfs4.h"
 
