@@ -88,6 +88,7 @@
 #undef acl_set_fd_np
 
 typedef enum gace_type {
+  GACE_TYPE_UNDEFINED = -1,
   GACE_TYPE_ALLOW = ACL_ENTRY_TYPE_ALLOW,
   GACE_TYPE_DENY  = ACL_ENTRY_TYPE_DENY,
   GACE_TYPE_AUDIT = ACL_ENTRY_TYPE_AUDIT,
@@ -145,6 +146,7 @@ typedef enum gace_type {
 
 /* Use Sun's definitions */
 typedef enum gace_type {
+  GACE_TYPE_UNDEFINED = -1,
   GACE_TYPE_ALLOW = ACE_ACCESS_ALLOWED_ACE_TYPE,
   GACE_TYPE_DENY  = ACE_ACCESS_DENIED_ACE_TYPE,
   GACE_TYPE_AUDIT = ACE_SYSTEM_AUDIT_ACE_TYPE,
@@ -195,6 +197,7 @@ typedef enum gace_type {
 #define GACL_MAX_ENTRIES 1024
 
 typedef enum gace_type {
+  GACE_TYPE_UNDEFINED = -1,
   GACE_TYPE_ALLOW = NFS4_ACE_ACCESS_ALLOWED_ACE_TYPE,
   GACE_TYPE_DENY  = NFS4_ACE_ACCESS_DENIED_ACE_TYPE,
   GACE_TYPE_AUDIT = NFS4_ACE_SYSTEM_AUDIT_ACE_TYPE,
@@ -305,8 +308,6 @@ typedef enum gace_tag {
 #define GACL_NEXT_ENTRY  1
 
 
-typedef char GACE_EDIT;
-
 typedef struct gace {
   GACE_TAG tag;
   uid_t id;
@@ -314,7 +315,6 @@ typedef struct gace {
   GACE_FLAGSET flags;
   GACE_TYPE type;
   GACL_BRAND brand;
-  GACE_EDIT edit;
 } GACE;
 
 
@@ -344,6 +344,11 @@ gacl_dup(GACL *ap);
 extern int
 gacl_match(GACL *ap,
 	   GACL *mp);
+
+extern int
+_gacl_entry_match(GACE *aep,
+		  GACE *mep,
+		  int how);
 
 extern int
 gacl_entry_match(GACE *aep,
@@ -585,6 +590,10 @@ extern char *
 gacl_to_text(GACL *ap,
 	     ssize_t *bsp);
 
+extern int
+gacl_entry_from_text(char *buf,
+		     GACE *ep);
+
 extern GACL *
 gacl_from_text(const char *buf);
 
@@ -633,6 +642,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_OTHER                 GACE_TAG_OTHER_OBJ
 #define ACL_EVERYONE              GACE_TAG_EVERYONE 
 
+#define ACL_ENTRY_TYPE_UNDEFINED  GACE_TYPE_UNDEFINED
 #define ACL_ENTRY_TYPE_ALLOW      GACE_TYPE_ALLOW
 #define ACL_ENTRY_TYPE_DENY       GACE_TYPE_DENY
 #define ACL_ENTRY_TYPE_AUDIT      GACE_TYPE_AUDIT
@@ -727,6 +737,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_delete_fd_np          gacl_delete_fd_np
 #define acl_delete_def_file       gacl_delete_def_file
 #define acl_delete_def_link_np    gacl_delete_def_link_np
+#define acl_entry_from_text       gacl_entry_from_text
 #define acl_from_text             gacl_from_text
 
 #endif
@@ -764,5 +775,8 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_entry_flagset_to_text gacl_entry_flagset_to_text
 #define acl_entry_to_text         gacl_entry_to_text
 
+#ifndef ACL_ENTRY_TYPE_UNDEFINED
+#define ACL_ENTRY_TYPE_UNDEFINED  GACE_TYPE_UNDEFINED
+#endif
 
 #endif

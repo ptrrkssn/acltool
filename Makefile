@@ -34,7 +34,7 @@ Linux linux:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 FreeBSD freebsd:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
+	@$(MAKE) CC="$(CC) -g" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
 
 all: acltool
 

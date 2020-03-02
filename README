@@ -97,10 +97,20 @@ MORE INFORMATION
 
 EXAMPLES
 
-  edit-access user:peter86:rwx:f:allow dir
-  edit-access +peter86:rwx:f:allow dir
-  edit-access -peter86:rwx:f:allow dir
-  edit-access =user:peter86:rwx:f:allow dir
+  edit-access -r user:peter86:rwx:f:allow dir
+    Recursively set the ACE on all objects
+
+  edit-access -r +peter86:rwx:f:allow dir
+    Recursively add permissions & flags "rwx:f" to all existing peter86:*:*:allow ACEs
+    
+  edit-access -r -peter86:rwx:f:allow dir
+    Recursively remove permission & flags "rwx:f" from all existing peter86:*:*:allow ACEs
+    
+  edit-access -r =user:peter86:rwx:f:allow dir
+    Recursively replace permission & flags "rwx:f" on all existing peter86:*:*:allow ACEs
+    
+  edit-access -r ^user:peter86:rwx:f:allow dir
+    Recursively set the ACE on all objects that does _not_ have a 'peter86:*:*:allow' ACE already
 
 
 Not Implemented Yet (format may change):

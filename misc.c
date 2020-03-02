@@ -321,6 +321,9 @@ flagset2str_icacls(acl_flagset_t fsp,
 const char *
 aet2str(const acl_entry_type_t aet) {
   switch (aet) {
+  case ACL_ENTRY_TYPE_UNDEFINED:
+    return NULL;
+    
   case ACL_ENTRY_TYPE_ALLOW:
     return "allow";
 
@@ -449,6 +452,9 @@ ace2str_samba(acl_entry_t ae,
   acl_get_entry_type_np(ae, &aet);
   
   switch (aet) {
+  case ACL_ENTRY_TYPE_UNDEFINED:
+    return NULL;
+    
   case ACL_ENTRY_TYPE_ALLOW:
     rc = snprintf(rbuf, rsize, "ALLOWED/");
     break;

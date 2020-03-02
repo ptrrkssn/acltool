@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -48,6 +49,90 @@
 
 static CONFIG *w_cfgp = NULL;
 static size_t w_c = 0;
+
+
+/* ACL change request */
+typedef struct ace_cr {
+  char *edit;
+  acl_entry_t ep;
+  struct ace_cr *next;
+} ACECR;
+
+
+ACECR *
+acecr_from_text(const char *buf) {
+  ACECR *head, *cur, **next;
+  char *bp, *tbuf, *es, *xp;
+
+
+  bp = tbuf = strdup(buf);
+  if (!tbuf)
+    return NULL;
+
+  head = NULL;
+
+  next = &head;
+  while ((es = strsep(&bp, ", \t\n\r")) != NULL) {
+    cur = malloc(sizeof(*cur));
+    if (!cur) {
+      goto Fail;
+    }
+
+    cur->next = NULL;
+    cur->ep = NULL;
+    
+    *next = cur;
+    next = &cur->next;
+    
+    if ((xp = strchr(es, ':')) != NULL) {
+      char c1, c2;
+      int p1, p2;
+      
+      c1 = c2 = 0;
+      if ((sscanf(es, "%u-%u%c%c", &p1, &p2, &c1, &c2) == 3 && c1 == 'd') ||
+	  (sscanf(es, "%u%c%c", &p1, &c1, &c2) == 3 && (c1 == 'a' || c1 == 'i') && c2 == ':') ||
+	  (sscanf(es, "%u%c%c", &p1, &c1, &c2) == 2 && c1 == 'd')) {
+	/* "sed" commands: [<pos>][<cmd>] */
+	if (c2 == ':')
+	  *xp++ = '\0';
+	
+	cur->edit = strdup(es);
+	
+	if (c2 == ':')
+	  es = xp;
+      } else {
+	/* [+-=^]ACE */
+	if (strchr("+-=^", *es)) {
+	  cur->edit = strndup(es, 1);
+	  ++es;
+	} else
+	  cur->edit = strdup("");
+      }
+      
+      cur->ep = malloc(sizeof(*(cur->ep)));
+      if (!cur->ep) {
+	free(cur);
+	goto Fail;
+      }
+      
+      if (gacl_entry_from_text(es, cur->ep) < 0) {
+	free(cur->ep);
+	free(cur);
+	goto Fail;
+      }
+    } else {
+      /* "sed" commands: [<pos>][<cmd>] */
+      cur->edit = strdup(es);
+    }
+  }
+
+  return head;
+
+ Fail:
+  free(tbuf);
+  errno = EINVAL;
+  return NULL;
+}
 
 
 int
@@ -762,10 +847,9 @@ walker_edit(const char *path,
 	    size_t base,
 	    size_t level,
 	    void *vp) {
-  int rc, i, j;
-  acl_t oap, ap, nap;
-  acl_entry_t nae;
-  DACL *a = (DACL *) vp;
+  int rc, j;
+  acl_t oap, ap;
+  ACECR *cr = (ACECR *) vp;
 
 
   oap = get_acl(path, sp);  
@@ -780,13 +864,7 @@ walker_edit(const char *path,
     return 1;
   }
 
-  if (S_ISDIR(sp->st_mode)) {
-    nap = a->da;
-  } else {
-    nap = a->fa;
-  }
-
-  for (i = 0; acl_get_entry(nap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &nae) == 1; i++) {
+  while (cr) {
     acl_entry_t oae;
     acl_tag_t ntt;
     acl_entry_type_t net;
@@ -794,87 +872,180 @@ walker_edit(const char *path,
     int nm;
     acl_permset_t nps;
     acl_flagset_t nfs;
+    int p1, p2, p;
+    char *es;
 
 
-    acl_get_tag_type(nae, &ntt);
-    acl_get_entry_type_np(nae, &net);
-    nip = acl_get_qualifier(nae);
+    es = cr->edit;
     
-    if (acl_get_permset(nae, &nps) < 0 ||
-	acl_get_flagset_np(nae, &nfs) < 0)
-      goto Fail;
+    do {
+      p1 = p2 = -1;
+      if (isdigit(*es)) {
+	if (sscanf(es, "%u-%u", &p1, &p2) == 2) {
+	  while (*es && isdigit(*es))
+	    ++es;
+	  if (*es == '-')
+	    ++es;
+	  while (*es && isdigit(*es))
+	    ++es;
+	  if(p2<p1) {
+	    int t;
+	    t = p1;
+	    p1 = p2;
+	    p2 = t;
+	  }
+	} else if (sscanf(es, "%u", &p1) == 1) {
+	  while (*es && isdigit(*es))
+	    ++es;
+	  p2 = p1;
+	}
+      }
+
+      switch (*es) {
+      case 'd':
+	/* Delete entry/entries */
+	for (p = p2; p >= p1; p--) {
+	  if (acl_delete_entry_np(ap, p) < 0)
+	    rc = -1;
+	}
+	p = p2;
+	break;
+	
+      case 'i':
+	p = p1;
+	acl_get_tag_type(cr->ep, &ntt);
+	acl_get_entry_type_np(cr->ep, &net);
+	nip = acl_get_qualifier(cr->ep);
     
-    nm = 0;
+	if (acl_get_permset(cr->ep, &nps) < 0 ||
+	    acl_get_flagset_np(cr->ep, &nfs) < 0)
+	  goto Fail;
+	
+	nm = 0;
+	goto ADD;
+	
+      case 'a':
+	p = p2;
+	acl_get_tag_type(cr->ep, &ntt);
+	acl_get_entry_type_np(cr->ep, &net);
+	nip = acl_get_qualifier(cr->ep);
+    
+	if (acl_get_permset(cr->ep, &nps) < 0 ||
+	    acl_get_flagset_np(cr->ep, &nfs) < 0)
+	  goto Fail;
+	
+	nm = 0;
+	goto ADD;
+	
+      case '+':
+      case '-':
+      case '=':
+      case '^':
+      case 0:
+	acl_get_tag_type(cr->ep, &ntt);
+	acl_get_entry_type_np(cr->ep, &net);
+	nip = acl_get_qualifier(cr->ep);
+    
+	if (acl_get_permset(cr->ep, &nps) < 0 ||
+	    acl_get_flagset_np(cr->ep, &nfs) < 0)
+	  goto Fail;
+	
+	nm = 0;
+	
+	for (j = 0; acl_get_entry(ap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
+	  acl_tag_t ott;
+	  acl_entry_type_t oet;
+	  acl_permset_t ops;
+	  acl_flagset_t ofs;
+	  uid_t *oip;
+	  
+	  
+	  acl_get_tag_type(oae, &ott);
+	  acl_get_entry_type_np(oae, &oet);
+	  oip = acl_get_qualifier(oae);
+	  
+	  if ((ott == ntt || ntt == ACL_UNDEFINED_TAG) && (oet == net || net == ACL_ENTRY_TYPE_UNDEFINED)) {
+	    if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !nip || *oip != *nip))
+	      continue;
+	    
+	    switch (*es) {
+	    case '^':
+	      goto Next;
+	      
+	    case '+':
+	      if (acl_get_permset(oae, &ops) < 0 ||
+		  acl_get_flagset_np(oae, &ofs) < 0)
+		goto Fail;
+	      
+	      acl_merge_permset(ops, nps, +1);
+	      acl_merge_flagset(ofs, nfs, +1);
+	      if (acl_set_permset(oae, ops) < 0 ||
+		  acl_set_flagset_np(oae, ofs) < 0)
+		goto Fail;
+	      break;
+	      
+	    case '-':
+	      if (acl_get_permset(oae, &ops) < 0 ||
+		  acl_get_flagset_np(oae, &ofs) < 0)
+		goto Fail;
+	      
+	      acl_merge_permset(ops, nps, -1);
+	      acl_merge_flagset(ofs, nfs, -1);
+	      
+	      if (acl_set_permset(oae, ops) < 0 ||
+		  acl_set_flagset_np(oae, ofs) < 0)
+		goto Fail;
+	      break;
 
-    for (j = 0; acl_get_entry(ap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &oae) == 1; j++) {
-      acl_tag_t ott;
-      acl_entry_type_t oet;
-      acl_permset_t ops;
-      acl_flagset_t ofs;
-      uid_t *oip;
-      
-
-      acl_get_tag_type(oae, &ott);
-      acl_get_entry_type_np(oae, &oet);
-      oip = acl_get_qualifier(oae);
-      
-      if (ott == ntt && oet == net) {
-	if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !nip || *oip != *nip))
-	  continue;
-
-	switch (nae->edit) {
-	case '+':
-	  if (acl_get_permset(oae, &ops) < 0 ||
-	      acl_get_flagset_np(oae, &ofs) < 0)
-	    goto Fail;
-
-	  acl_merge_permset(ops, nps, +1);
-	  acl_merge_flagset(ofs, nfs, +1);
-	  if (acl_set_permset(oae, ops) < 0 ||
-	      acl_set_flagset_np(oae, ofs) < 0)
-	    goto Fail;
-	  break;
-
-	case '-':
-	  if (acl_get_permset(oae, &ops) < 0 ||
-	      acl_get_flagset_np(oae, &ofs) < 0)
-	    goto Fail;
-
-	  acl_merge_permset(ops, nps, -1);
-	  acl_merge_flagset(ofs, nfs, -1);
-
-	  if (acl_set_permset(oae, ops) < 0 ||
-	      acl_set_flagset_np(oae, ofs) < 0)
-	    goto Fail;
-	  break;
-
-	default:
-	  if (acl_set_permset(oae, nps) < 0 ||
-	      acl_set_flagset_np(oae, nfs) < 0)
-	    goto Fail;
+	    case 'i':
+	    case 'a':
+	      break;
+	      
+	    default:
+	      if (acl_set_permset(oae, nps) < 0 ||
+		  acl_set_flagset_np(oae, nfs) < 0)
+		goto Fail;
+	    }
+	    
+	    ++nm;
+	  }
 	}
 
-	++nm;
+	if (nm == 0 && (!*es || *es == '^')) {
+      ADD:
+	  switch (*es) {
+	  case 'i':
+	    break;
+
+	  case 'a':
+	    p++;
+	    break;
+
+	  default:
+	    p = _acl_entry_pos(ap, ntt, net, nip);
+	  }
+	  
+	  printf("ADD: %s @ %d\n", es, p);
+	  acl_create_entry_np(&ap, &oae, p);
+	  
+	  if (acl_set_tag_type(oae, ntt) < 0 ||
+	      acl_set_permset(oae, nps) < 0 ||
+	      acl_set_flagset_np(oae, nfs) < 0 ||
+	      acl_set_entry_type_np(oae, net) < 0)
+	    goto Fail;
+	  
+	  if (ntt == ACL_USER || ntt == ACL_GROUP)
+	    acl_set_qualifier(oae, nip);
+	}
       }
-    }
-
-    if (nm == 0 && !nae->edit) {
-      int p;
-
-      p = _acl_entry_pos(ap, ntt, net, nip);
-      acl_create_entry_np(&ap, &oae, p);
-
-      if (acl_set_tag_type(oae, ntt) < 0 ||
-	  acl_set_permset(oae, nps) < 0 ||
-	  acl_set_flagset_np(oae, nfs) < 0 ||
-	  acl_set_entry_type_np(oae, net) < 0)
-	goto Fail;
-
-      if (ntt == ACL_USER || ntt == ACL_GROUP)
-	acl_set_qualifier(oae, nip);
-    }
+      
+  Next:
+      ++es;
+    } while (*es);
+    
+    cr = cr->next;
   }
-
+    
   gacl_clean(ap);
 
   rc = set_acl(path, sp, ap, oap);
@@ -897,6 +1068,8 @@ walker_edit(const char *path,
 }
 
 
+
+/* XXX: Change to use ACECR */
 static int
 walker_find(const char *path,
 	    const struct stat *sp,
@@ -1176,35 +1349,50 @@ aclcmd_edit(int argc,
 	    char **argv,
 	    void *vp) {	       
   int rc;
-  DACL a;
-
+  ACECR *cr;
 
   if (argc < 2) {
     fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
     return 1;
   }
 
+  cr = acecr_from_text(argv[1]);
+  if (cr) {
+    ACECR *cp = cr;
+    int i;
 
-  a.da = acl_from_text(argv[1]);
-  if (!a.da) {
-    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
+    i = 0;
+    puts("CHANGE REQUEST:");
+    while (cp) {
+      
+      printf("%2d: %s", i++, cp->edit);
+      if (cp->ep) {
+	char buf[1024];
+	gacl_entry_to_text(cp->ep, buf, sizeof(buf), 0);
+	printf(": %s", buf);
+      }
+      putchar('\n');
+      
+      cp = cp->next;
+    }
+  } else {
+    fprintf(stderr, "%s: Error: %s: Invalid change request\n", argv0, argv[1]);
     return 1;
   }
 
-  a.fa = acl_dup(a.da);
-  if (!a.fa) {
-    acl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Invalid dACL: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
+  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_edit, (void *) cr);
+
+  while (cr) {
+    ACECR *next = cr->next;
+
+    if (cr->ep)
+      free(cr->ep);
+    if (cr->edit)
+      free(cr->edit);
+    free(cr);
+    cr = next;
   }
-
-  _acl_filter_file(a.fa);
-
-  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_edit, (void *) &a);
-
-  acl_free(a.da);
-  acl_free(a.fa);
-
+  
   return rc;
 }
 
@@ -1218,8 +1406,6 @@ walker_inherit(const char *path,
   acl_t ap = NULL;
 
 
-  printf("  walker_inherit: %s\n", path);
-  
   if (!a) {
     errno = EINVAL;
     return -1;

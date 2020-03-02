@@ -726,8 +726,9 @@ gacl_strip_np(GACL *ap,
 
 
 int
-gacl_entry_match(GACE *aep,
-		 GACE *mep) {
+_gacl_entry_match(GACE *aep,
+		  GACE *mep,
+		  int how) {
   GACE_TAG att, mtt;
   GACE_PERMSET *apsp, *mpsp;
   GACE_FLAGSET *afsp, *mfsp;
@@ -776,9 +777,10 @@ gacl_entry_match(GACE *aep,
   if (gacl_get_permset(mep, &mpsp) < 0)
     return -1;
 
-  switch (mep->edit) {
+  switch (how) {
   case 0:
   case '=':
+  case '^':
     if (*apsp != *mpsp)
       return 0;
     break;
@@ -805,9 +807,10 @@ gacl_entry_match(GACE *aep,
   if (gacl_get_flagset_np(mep, &mfsp) < 0)
     return -1;
   
-  switch (mep->edit) {
+  switch (how) {
   case 0:
   case '=':
+  case '^':
     if (*afsp != *mfsp)
       return 0;
     break;
@@ -829,6 +832,13 @@ gacl_entry_match(GACE *aep,
   
   return 1;
 }
+
+int
+gacl_entry_match(GACE *aep,
+		 GACE *mep) {
+  return _gacl_entry_match(aep, mep, 0);
+}
+
 
 int
 gacl_match(GACL *ap,
@@ -1303,6 +1313,8 @@ gacl_entry_type_to_text(GACE *ep,
     return -1;
   
   switch (et) {
+  case GACE_TYPE_UNDEFINED:
+    return 0;
   case GACE_TYPE_ALLOW:
     return snprintf(buf, bufsize, "allow");
   case GACE_TYPE_DENY:
@@ -1637,20 +1649,12 @@ _gacl_flagset_from_text(const char *buf,
 
 
 int
-_gacl_entry_from_text(char *cp,
-		      GACE *ep,
-		      char *editchars) {
+gacl_entry_from_text(char *cp,
+		     GACE *ep) {
   char *np;
   int f_none;
 
 
-  if (editchars) {
-    if (strchr(editchars, *cp))
-      ep->edit = *cp++;
-    else
-      ep->edit = 0;
-  }
-    
   /* 1. Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ ) */
   np = strchr(cp, ':');
   if (!np) {
@@ -1831,7 +1835,7 @@ gacl_from_text(const char *buf) {
     if (gacl_create_entry_np(&ap, &ep, -1) < 0)
       goto Fail;
 
-    if (_gacl_entry_from_text(es, ep, "+-=") < 0)
+    if (gacl_entry_from_text(es, ep) < 0)
       goto Fail;
   }
 
