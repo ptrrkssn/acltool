@@ -613,8 +613,8 @@ gacl_merge(GACL *ap) {
   AGAIN:
     for (j = i+1; j < nap->ac && _gacl_entry_compare(&nap->av[i], &nap->av[j]) != 0; j++)
       ;
-    
-    if (i < nap->ac) {
+
+    if (j < nap->ac) {
       /* Match found - merge ACE */
       GACE_PERMSET *ps_a, *ps_b;
       GACE_FLAGSET *fs_a, *fs_b;
@@ -626,17 +626,24 @@ gacl_merge(GACL *ap) {
       if (gacl_get_flagset_np(&nap->av[i], &fs_a) < 0 ||
 	  gacl_get_flagset_np(&nap->av[j], &fs_b) < 0)
 	goto Fail;
-      
-      if (gacl_merge_permset(ps_a, ps_b, +1) < 0 ||
-	  gacl_merge_flagset(fs_a, fs_b, +1) < 0)
+
+      if (gacl_merge_permset(ps_a, ps_b, +1) < 0)
 	goto Fail;
 
+      if (gacl_merge_flagset(fs_a, fs_b, +1) < 0)
+	goto Fail;
+
+      acl_delete_flag_np(fs_a, GACE_FLAG_INHERITED);
+      
       if (gacl_set_permset(&nap->av[i], ps_a) < 0)
 	goto Fail;
       
-      if (gacl_delete_entry_np(ap, j) < 0)
+      if (gacl_set_flagset_np(&nap->av[i], fs_a) < 0)
 	goto Fail;
       
+      if (gacl_delete_entry_np(nap, j) < 0)
+	goto Fail;
+
       ++n;
       goto AGAIN;
     }

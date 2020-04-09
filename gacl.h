@@ -763,6 +763,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_add_entry_np          gacl_add_entry_np
 
 #define acl_match                 gacl_match
+#define acl_merge                 gacl_merge
 #define acl_entry_match           gacl_entry_match
 #define acl_sort                  gacl_sort
 #define acl_empty_permset         gacl_empty_permset

@@ -62,9 +62,11 @@ typedef struct ace_cr {
 ACECR *
 acecr_from_text(const char *buf) {
   ACECR *head, *cur, **next;
-  char *bp, *tbuf, *es, *xp;
+  char *bp, *tbuf, *es;
 
 
+  tbuf = NULL;
+  cur = NULL;
   bp = tbuf = strdup(buf);
   if (!tbuf)
     return NULL;
@@ -83,53 +85,52 @@ acecr_from_text(const char *buf) {
     
     *next = cur;
     next = &cur->next;
-    
-    if ((xp = strchr(es, ':')) != NULL) {
-      char c1, c2;
-      int p1, p2;
-      
-      c1 = c2 = 0;
-      if ((sscanf(es, "%u-%u%c%c", &p1, &p2, &c1, &c2) == 3 && c1 == 'd') ||
-	  (sscanf(es, "%u%c%c", &p1, &c1, &c2) == 3 && (c1 == 'a' || c1 == 'i') && c2 == ':') ||
-	  (sscanf(es, "%u%c%c", &p1, &c1, &c2) == 2 && c1 == 'd')) {
-	/* "sed" commands: [<pos>][<cmd>] */
-	if (c2 == ':')
-	  *xp++ = '\0';
-	
-	cur->edit = strdup(es);
-	
-	if (c2 == ':')
-	  es = xp;
-      } else {
-	/* [+-=^]ACE */
-	if (strchr("+-=^", *es)) {
-	  cur->edit = strndup(es, 1);
-	  ++es;
-	} else
-	  cur->edit = strdup("");
-      }
-      
-      cur->ep = malloc(sizeof(*(cur->ep)));
-      if (!cur->ep) {
-	free(cur);
+
+    if (*es == '{') {
+      ++es;
+      char *cp = strchr(es, '}');
+      if (!cp)
 	goto Fail;
-      }
-      
-      if (gacl_entry_from_text(es, cur->ep) < 0) {
-	free(cur->ep);
-	free(cur);
-	goto Fail;
-      }
-    } else {
-      /* "sed" commands: [<pos>][<cmd>] */
+
+      *cp++ = '\0';
       cur->edit = strdup(es);
-    }
+      es = cp;
+    } else if (*es == '/') {
+      char *cp = strchr(es+1, '/');
+      if (!cp)
+	goto Fail;
+      
+      cur->edit = strndup(es, cp-es+1);
+      es = cp+1;
+    } else if (strchr("+-=^", *es)) {
+      cur->edit = strndup(es, 1);
+      ++es;
+    } else
+      cur->edit = strdup("");
+      
+    if (!cur->edit)
+      goto Fail;
+    
+    cur->ep = malloc(sizeof(*(cur->ep)));
+    if (!cur->ep)
+      goto Fail;
+    
+    if (gacl_entry_from_text(es, cur->ep) < 0)
+      goto Fail;
   }
 
   return head;
 
  Fail:
-  free(tbuf);
+  if (tbuf)
+    free(tbuf);
+  if (cur) {
+    if (cur->edit)
+      free(cur->edit);
+    if (cur->ep)
+      free(cur->ep);
+    free(cur);
+  }
   errno = EINVAL;
   return NULL;
 }
@@ -612,6 +613,16 @@ set_acl(const char *path,
   int rc;
 
 
+  if (w_cfgp && w_cfgp->f_merge) {
+    acl_t map = acl_merge(ap);
+    if (!map) {
+      fprintf(stderr, "%s: Error: %s: Merging ACL: %s\n", argv0, path, strerror(errno));
+      return -1;
+    }
+    acl_free(ap);
+    ap = map;
+  }
+  
   /* Skip set operation if old and new acl is the same */
   if (oap && acl_match(ap, oap) == 1)
     return 0;
@@ -624,9 +635,14 @@ set_acl(const char *path,
       rc = acl_set_file(path, ACL_TYPE_NFS4, ap);
   }
 
-  if (rc < 0)
+  if (rc < 0) {
+    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
     return rc;
+  }
 
+  if (w_cfgp->f_verbose)
+    printf("%s: ACL Updated%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+  
   return 1;
 }
 
@@ -664,13 +680,13 @@ walker_strip(const char *path,
   acl_free(na);
   acl_free(ap);
 
-  if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+  if (rc < 0)
     return 1;
-  }
 
+#if 0
   if (w_cfgp->f_verbose)
     printf("%s: ACL Stripped%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+#endif
   
   return 0;
 }
@@ -728,14 +744,14 @@ walker_sort(const char *path,
   acl_free(na);
   acl_free(ap);
 
-  if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+  if (rc < 0)
     return 1;
-  }
 
+#if 0
   if (w_cfgp->f_verbose)
     printf("%s: ACL Sorted%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
-
+#endif
+  
   return 0;
 }
 
@@ -790,15 +806,13 @@ walker_set(const char *path,
       rc = set_acl(path, sp, a->da, NULL);
     else
       rc = set_acl(path, sp, a->fa, NULL);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+    if (rc < 0)
       return 1;
-    }
   }
-  
+#if 0  
   if (w_cfgp->f_verbose)
     printf("%s: ACL Set%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
-  
+#endif  
   return 0;
 }
 
@@ -902,6 +916,10 @@ walker_edit(const char *path,
       }
 
       switch (*es) {
+      case '/':
+	fprintf(stderr, "%s: Error: %s: Not Implemented: %s\n", argv0, es, strerror(errno));
+	return 1;
+	
       case 'd':
 	/* Delete entry/entries */
 	for (p = p2; p >= p1; p--) {
@@ -1050,12 +1068,14 @@ walker_edit(const char *path,
 
   rc = set_acl(path, sp, ap, oap);
   if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
     goto Fail;
   }
 
+#if 0
   if (w_cfgp->f_verbose && rc > 0)
     printf("%s: ACL Updated%s\n", path, (w_cfgp->f_noupdate ? " (NOT)" : ""));
+#endif
+  
   if (w_cfgp->f_verbose > 1)
     print_acl(stdout, ap, path, sp, w_cfgp);
   
@@ -1326,6 +1346,192 @@ aclcmd_set(int argc,
   return rc;
 }
 
+
+#define MAXRENAMELIST 1024
+
+typedef struct {
+  int c;
+  struct {
+    int type;
+    gid_t old;
+    gid_t new;
+  } v[MAXRENAMELIST];
+} RENAMELIST;
+
+static int
+walker_rename(const char *path,
+	      const struct stat *sp,
+	      size_t base,
+	      size_t level,
+	      void *vp) {
+  int rc, i, j;
+  RENAMELIST *r = (RENAMELIST *) vp;
+  acl_t ap;
+  acl_entry_t ae;
+  int f_updated = 0;
+
+  
+  ap = get_acl(path, sp);
+  if (!ap) {
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
+    return 1;
+  }
+
+  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    acl_tag_t tt;
+    uid_t *oip = NULL;
+    
+    acl_get_tag_type(ae, &tt);
+    if (tt == ACL_USER || tt == ACL_GROUP)
+      oip = acl_get_qualifier(ae);
+    
+    for (j = 0; j < r->c; j++) {
+      if (tt == r->v[j].type && oip && *oip == r->v[j].old) {
+	acl_free(oip);
+	acl_set_qualifier(ae, &r->v[j].new);
+	oip = acl_get_qualifier(ae);
+	f_updated = 1;
+      }
+    }
+    
+    if (oip)
+      acl_free(oip);
+  }
+  
+  if (f_updated) {
+    if (!w_cfgp->f_noupdate) {
+      rc = set_acl(path, sp, ap, NULL);
+      if (rc < 0) {
+	return 1;
+      }
+    }
+  }
+  
+  return 0;
+}
+
+
+int
+str2renamelist(char *str,
+	       RENAMELIST *r) {
+  char *s1, *s2;
+  struct passwd *p_old, *p_new;
+  struct group *g_old, *g_new;
+  
+  r->c = 0;
+
+  str = strtok(str, ",");
+  while (str) {
+    s1 = s2 = NULL;
+    
+    s1 = strchr(str, ':');
+    if (!s1)
+      return -1;
+    
+    *s1++ = '\0';
+    s2 = strchr(s1, ':');
+    if (s2) {
+      *s2++ = '\0';
+      if (strcasecmp(str, "g") == 0 ||
+	  strcasecmp(str, "group") == 0) {
+	
+	g_old = getgrnam(s1);
+	if (g_old)
+	  r->v[r->c].old = g_old->gr_gid;
+	else if (sscanf(s1, "%d", &r->v[r->c].old) != 1)
+	  return -1;
+	
+	g_new = getgrnam(s2);
+	if (g_new)
+	  r->v[r->c].new = g_new->gr_gid;
+	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
+	  return -1;
+	
+	r->v[r->c++].type = ACL_GROUP;
+	
+      } else if (strcasecmp(str, "u") == 0 ||
+		 strcasecmp(str, "user") == 0) {
+	
+	p_old = getpwnam(s1);
+	if (p_old)
+	  r->v[r->c].old = p_old->pw_uid;
+	else if (sscanf(s1, "%d", &r->v[r->c].old) != 1)
+	  return -1;
+	
+        p_new = getpwnam(s2);
+	if (!p_new)
+	  r->v[r->c].new = p_new->pw_uid;
+	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
+	  return -1;
+	
+	r->v[r->c++].type = ACL_USER;
+      }
+    } else {
+      s2 = s1;
+      s1 = str;
+      uid_t id;
+      
+      p_old = getpwnam(s1);
+      g_old = getgrnam(s1);
+      if (p_old && g_old)
+	return -1;
+      if (!p_old && !g_old) {
+	if (sscanf(s1, "%d", &id) == 1)
+	  r->v[r->c].old = id;
+	else
+	  return -1;
+      } else
+	r->v[r->c].old = (p_old ? p_old->pw_uid : g_old->gr_gid);
+      
+      p_new = getpwnam(s2);
+      g_new = getgrnam(s2);
+      if (p_new && g_new)
+	return -1;
+      if (!p_new && !g_new) {
+	if ((p_old || g_old) && sscanf(s2, "%d", &id) == 1)
+	  r->v[r->c].new = id;
+	else
+	  return -1;
+      } else
+      
+      if ((p_old && g_new) || (g_old && p_new))
+	return -1;
+      
+      r->v[r->c].new = (p_new ? p_new->pw_uid : g_new->gr_gid);
+      
+      r->v[r->c++].type = p_old ? ACL_USER : ACL_GROUP;
+    }
+    
+    str = strtok(NULL, ",");
+  }
+
+  return 0;
+}
+
+int
+aclcmd_rename(int argc,
+	      char **argv,
+	      void *vp) {
+  int rc;
+  RENAMELIST r;
+
+  
+  if (argc < 2) {
+    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
+    return 1;
+  }
+
+  if (str2renamelist(argv[1], &r) < 0) {
+    fprintf(stderr, "%s: Error: %s: Invalid renamelist: %s\n", argv[0], argv[1], strerror(errno));
+    return 1;
+  }
+
+  rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_rename, (void *) &r);
+
+  return rc;
+}
+
+
 int
 aclcmd_find(int argc,
 	    char **argv,	
@@ -1350,21 +1556,27 @@ aclcmd_edit(int argc,
 	    void *vp) {	       
   int rc;
   ACECR *cr;
+  CONFIG *cfgp = (CONFIG *) vp;
 
+  
   if (argc < 2) {
     fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
     return 1;
   }
 
   cr = acecr_from_text(argv[1]);
-  if (cr) {
+  if (!cr) {
+    fprintf(stderr, "%s: Error: %s: Invalid change request\n", argv0, argv[1]);
+    return 1;
+  }
+
+  if (cfgp && cfgp->f_verbose) {
     ACECR *cp = cr;
     int i;
 
     i = 0;
     puts("CHANGE REQUEST:");
     while (cp) {
-      
       printf("%2d: %s", i++, cp->edit);
       if (cp->ep) {
 	char buf[1024];
@@ -1375,9 +1587,6 @@ aclcmd_edit(int argc,
       
       cp = cp->next;
     }
-  } else {
-    fprintf(stderr, "%s: Error: %s: Invalid change request\n", argv0, argv[1]);
-    return 1;
   }
 
   rc = _aclcmd_foreach(argc-2, argv+2, (CONFIG *) vp, walker_edit, (void *) cr);
@@ -1441,6 +1650,7 @@ walker_inherit(const char *path,
 
     /* Update the ACL with FILE & DIR INHERIT (if a directory) */
     if (set_acl(path, sp, a->da, ap) < 0) {
+      /* XXX TODO: FIXME */
       char *s = acl_to_text(a->da, NULL);
       puts(s);
       
@@ -1482,7 +1692,7 @@ walker_inherit(const char *path,
     else
       rc = set_acl(path, sp, a->fa, oap);
     if (rc < 0)
-      fprintf(stderr, "set_acl(%s): %s\n", path, strerror(errno));
+      return rc;
     
     acl_free(oap);
     return 0;
@@ -1558,6 +1768,7 @@ COMMAND acl_commands[] = {
   { "set-access",  	"<acl> <path>+",	aclcmd_set,	"Set ACL(s)" },
   { "edit-access",      "<path>+",		aclcmd_edit,	"Edit ACL(s)" },
   { "find-access",      "<acl> <path>+",	aclcmd_find,	"Search ACL(s)" },
+  { "rename-access",    "<change> <path>+",     aclcmd_rename,  "Rename ACL entries" },
   { "get-access", 	"<var>=<path>+",	aclcmd_get,	"Get ACL into variable" },
   { "inherit-access",   "<path>+",		aclcmd_inherit,	"Propage ACL(s) inheritance" },
 #if 0
