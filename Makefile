@@ -21,7 +21,7 @@ CC=gcc
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
 LIBS=-lreadline $(XLIBS)
 
-auto:
+auto build:
 	@$(MAKE) `uname -s`
 
 help:
