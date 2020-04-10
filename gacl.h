@@ -770,6 +770,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define acl_merge_permset         gacl_merge_permset
 #define acl_empty_flagset         gacl_empty_flagset
 #define acl_merge_flagset         gacl_merge_flagset
+#define acl_delete_flag_np        gacl_delete_flag_np
 
 #define acl_entry_tag_to_text     gacl_entry_tag_to_text
 #define acl_entry_permset_to_text gacl_entry_permset_to_text
