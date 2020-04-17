@@ -59,6 +59,7 @@ typedef struct config {
   int f_merge;
   int f_recurse;
   int f_noupdate;
+  mode_t f_filetype;
   ACL_STYLE f_style;
   
   int max_depth;

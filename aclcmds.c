@@ -1179,7 +1179,7 @@ _aclcmd_foreach(int argc,
   
   for (i = 0; rc == 0 && i < argc; i++) {
     rc = ft_foreach(argv[i], handler, vp,
-		    cfgp->f_recurse ? -1 : cfgp->max_depth);
+		    cfgp->f_recurse ? -1 : cfgp->max_depth, cfgp->f_filetype);
     if (rc) {
       if (rc < 0) {
 	fprintf(stderr, "%s: Error: %s: Accessing object: %s\n", 
@@ -1727,10 +1727,12 @@ aclcmd_inherit(int argc,
     a.da = NULL;
     a.fa = NULL;
 
+#if 0
     printf("inherit %s:\n", argv[i]);
+#endif
     
     rc = ft_foreach(argv[i], walker_inherit, (void *) &a,
-		    w_cfgp->f_recurse ? -1 : w_cfgp->max_depth);
+		    w_cfgp->f_recurse ? -1 : w_cfgp->max_depth, w_cfgp->f_filetype);
     
     if (a.da)
       acl_free(a.da);

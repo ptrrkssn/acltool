@@ -38,6 +38,7 @@ OPTIONS
   -m / --merge          -       Enable merging
   -r / --recurse        -       Enable recursion
   -d / --depth          [<n>]   Increase/decrease max depth
+  -t / --type           <t>     File type(s) to operate on
   -S / --style          <s>     Select ACL print style
   -n / --no-update      -       Disable modification
 
@@ -78,7 +79,18 @@ COMMANDS
   
   Command names may also be used in links to the "acltool" binary like "ln -s acltool lac" and
   then be used as shortcuts to the commands.
-  
+
+
+FILE TYPES
+  f = Regular file
+  d = Directory
+  b = Block device
+  c = Character device
+  l = Symbolic link
+  p = Pipe (FIFO)
+  s = Socket
+  w = Whiteout (FreeBSD only)
+
 
 ACL PRINT STYLES
   default         FreeBSD-style
@@ -97,6 +109,9 @@ MORE INFORMATION
 
 
 EXAMPLES
+
+  lac-access -r -t sf .
+    Recursively display Access list for sockets and normal files
 
   edit-access -r user:peter86:rwx:f:allow dir
     Recursively set the ACE on all objects

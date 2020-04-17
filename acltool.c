@@ -185,13 +185,92 @@ set_style(const char *name,
   return 0;
 }
 
+#define UPDATE(v,t) if (f_add) {*v |= t;} else { *v &= ~t; }
+
+int
+str2filetype(const char *str,
+	     mode_t *f_filetype) {
+  int f_add = 1;
+
+  
+  *f_filetype = 0;
+  
+  for (; *str; ++str)
+    switch (*str) {
+    case '+':
+      f_add = 1;
+      break;
+      
+    case '-':
+      f_add = 0;
+      break;
+      
+    case 'f':
+      UPDATE(f_filetype, S_IFREG);
+      break;
+      
+    case 'd':
+      UPDATE(f_filetype, S_IFDIR);
+      break;
+      
+    case 'b':
+      UPDATE(f_filetype, S_IFBLK);
+      break;
+      
+    case 'c':
+      UPDATE(f_filetype, S_IFCHR);
+      break;
+      
+    case 'l':
+      UPDATE(f_filetype, S_IFLNK);
+      break;
+      
+    case 'p':
+      UPDATE(f_filetype, S_IFIFO);
+      break;
+      
+    case 's':
+      UPDATE(f_filetype, S_IFSOCK);
+      break;
+      
+#ifdef S_IFWHT
+    case 'w':
+      UPDATE(f_filetype, S_IFWHT);
+      break;
+#endif
+    default:
+      return -1;
+    }
+
+  return (*f_filetype ? 1 : 0);
+}
+
+int
+set_filetype(const char *name,
+	     const char *value,
+	     unsigned int type,
+	     void *vp,
+	     void *xp,
+	     const char *a0) {
+  CONFIG *cp = (CONFIG *) xp;
+  
+  
+  if (value) {
+    if (str2filetype(value, &cp->f_filetype) != 1)
+      return -1;
+  } else
+    return -1;
+  
+  return 0;
+}
+
 int
 set_no_update(const char *name,
-	      const char *value,
-	      unsigned int type,
-	      void *vp,
-	      void *xp,
-	      const char *a0) {
+              const char *value,
+              unsigned int type,
+              void *vp,
+              void *xp,
+              const char *a0) {
   CONFIG *cp = (CONFIG *) xp;
 
   cp->f_noupdate = 1;
@@ -199,6 +278,7 @@ set_no_update(const char *name,
 }
 
 extern OPTION options[];
+
 
 int
 show_help(const char *name,
@@ -227,6 +307,7 @@ OPTION options[] =
    { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   "Enable recursion" },
    { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     "Increase/decrease max depth" },
    { "style",     'S', OPTS_TYPE_STR,                set_style,     "Select ACL print style" },
+   { "type",      't', OPTS_TYPE_STR,                set_filetype,  "File types to operate on" },
    { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, "Disable modification" },
    { NULL,        -1,  0,                            NULL,          NULL },
   };

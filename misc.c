@@ -836,7 +836,8 @@ _ft_foreach(const char *path,
 			  void *vp),
 	    void *vp,
 	    size_t curlevel,
-	    size_t maxlevel) {
+	    size_t maxlevel,
+	    mode_t filetypes) {
   FTCB ftcb;
   FTDCB *ftdcb;
   DIR *dp;
@@ -845,8 +846,10 @@ _ft_foreach(const char *path,
   struct stat sb;
   size_t plen;
 
-
-  rc = walker(path, stat, 0, curlevel, vp);
+  if (!filetypes || (stat->st_mode & filetypes))
+    rc = walker(path, stat, 0, curlevel, vp);
+  else
+    rc = 0;
   if (rc < 0)
     return rc;
 
@@ -901,7 +904,10 @@ _ft_foreach(const char *path,
       ftcb.lastp = &ftdcb->next;
     }
     else {
-      rc = walker(fpath, &sb, 0, curlevel, vp);
+      if (!filetypes || (sb.st_mode & filetypes))
+	rc = walker(fpath, &sb, 0, curlevel, vp);
+      else
+	rc = 0;
       free(fpath);
       if (rc)
 	goto End;
@@ -912,7 +918,7 @@ _ft_foreach(const char *path,
   dp = NULL;
   
   for (ftdcb = ftcb.head; ftdcb; ftdcb = ftdcb->next) {
-    rc = _ft_foreach(ftdcb->path, &ftdcb->stat, walker, vp, curlevel, maxlevel);
+    rc = _ft_foreach(ftdcb->path, &ftdcb->stat, walker, vp, curlevel, maxlevel, filetypes);
     if (rc)
       break;
   }
@@ -926,20 +932,21 @@ _ft_foreach(const char *path,
 
 int
 ft_foreach(const char *path,
-	    int (*walker)(const char *path,
-			  const struct stat *stat,
-			  size_t base,
-			  size_t level,
-			  void *vp),
-	    void *vp,
-	    size_t maxlevel) {
+	   int (*walker)(const char *path,
+			 const struct stat *stat,
+			 size_t base,
+			 size_t level,
+			 void *vp),
+	   void *vp,
+	   size_t maxlevel,
+	   mode_t filetypes) {
   struct stat stat;
 
   
   if (lstat(path, &stat) < 0)
     return -1;
   
-  return _ft_foreach(path, &stat, walker, vp, 0, maxlevel);
+  return _ft_foreach(path, &stat, walker, vp, 0, maxlevel, filetypes);
 }
 
 

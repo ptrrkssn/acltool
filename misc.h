@@ -87,7 +87,8 @@ ft_foreach(const char *path,
 			 size_t level,
 			 void *vp),
 	   void *vp,
-	   size_t maxlevel);
+	   size_t maxlevel,
+	   mode_t filetypes);
 
 extern int
 str2style(const char *str,
