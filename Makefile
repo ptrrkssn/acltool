@@ -3,23 +3,11 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
+#CC=gcc
 CFLAGS=-g -Wall
-CC=gcc
-
-## FreeBSD:
-# XOBJS=
-# XLIBS=
-
-## Solaris:
-# XOBJS=gacl.o
-# XLIBS=-L/usr/local/lib -R/usr/local/lib -lcurses
-
-## Linux:
-# XOBJS=gacl.o
-# XLIBS=
 
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
-LIBS=-lreadline $(XLIBS)
+LIBS=$(XLDFLAGS) -lreadline $(XLIBS) 
 
 auto build:
 	@$(MAKE) `uname -s`
@@ -34,7 +22,7 @@ Linux linux:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 FreeBSD freebsd:
-	@$(MAKE) CC="$(CC) -g" CFLAGS="$(CFLAGS)" XLIBS="-lncurses" all
+	@$(MAKE) CC="$(CC) -g" CFLAGS="-I/usr/local/include $(CFLAGS)" XLDFLAGS="-L/usr/local/lib -R/usr/local/lib" XLIBS="-lncurses" all
 
 all: acltool
 

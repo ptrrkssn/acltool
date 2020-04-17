@@ -1042,8 +1042,10 @@ walker_edit(const char *path,
 	  default:
 	    p = _acl_entry_pos(ap, ntt, net, nip);
 	  }
-	  
+
+#if 0
 	  printf("ADD: %s @ %d\n", es, p);
+#endif
 	  acl_create_entry_np(&ap, &oae, p);
 	  
 	  if (acl_set_tag_type(oae, ntt) < 0 ||
@@ -1570,7 +1572,7 @@ aclcmd_edit(int argc,
     return 1;
   }
 
-  if (cfgp && cfgp->f_verbose) {
+  if (cfgp && cfgp->f_verbose > 1) {
     ACECR *cp = cr;
     int i;
 
