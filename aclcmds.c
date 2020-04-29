@@ -982,8 +982,16 @@ walker_edit(const char *path,
 	  acl_get_entry_type_np(oae, &oet);
 	  oip = acl_get_qualifier(oae);
 	  
+	  if (acl_get_permset(oae, &ops) < 0 ||
+	      acl_get_flagset_np(oae, &ofs) < 0)
+	    goto Fail;
+	  
 	  if ((ott == ntt || ntt == ACL_UNDEFINED_TAG) && (oet == net || net == ACL_ENTRY_TYPE_UNDEFINED)) {
 	    if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !nip || *oip != *nip))
+	      continue;
+
+	    /* Skip if flagset isn't matching */
+	    if (*nfs && (*ofs & *nfs) == 0)
 	      continue;
 	    
 	    switch (*es) {
@@ -991,10 +999,6 @@ walker_edit(const char *path,
 	      goto Next;
 	      
 	    case '+':
-	      if (acl_get_permset(oae, &ops) < 0 ||
-		  acl_get_flagset_np(oae, &ofs) < 0)
-		goto Fail;
-	      
 	      acl_merge_permset(ops, nps, +1);
 	      acl_merge_flagset(ofs, nfs, +1);
 	      if (acl_set_permset(oae, ops) < 0 ||
@@ -1003,10 +1007,6 @@ walker_edit(const char *path,
 	      break;
 	      
 	    case '-':
-	      if (acl_get_permset(oae, &ops) < 0 ||
-		  acl_get_flagset_np(oae, &ofs) < 0)
-		goto Fail;
-	      
 	      acl_merge_permset(ops, nps, -1);
 	      acl_merge_flagset(ofs, nfs, -1);
 	      
