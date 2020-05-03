@@ -44,34 +44,122 @@
 
 
 int
-opts_print(OPTION *opts,
-	   FILE *fp) {
+opts_print(FILE *fp,
+	   OPTION *opts,
+	   ...) {
   int i;
+  OPTION *optlist;
+  va_list ap;
 
-
+  
   fprintf(fp, "OPTIONS:\n");
-  for (i = 0; opts[i].name; i++)
-    fprintf(fp, "  -%c / --%-10s\t%s\t%s\n",
-	    opts[i].flag,
-	    opts[i].name,
-	    "-",
-	    opts[i].help);
+  
+  va_start(ap, opts);
+  optlist = opts;
+  while (optlist) {
+    for (i = 0; optlist[i].name; i++)
+      fprintf(fp, "  -%c / --%-10s\t%s\t%s\n",
+	      optlist[i].flag,
+	      optlist[i].name,
+	      "-",
+	      optlist[i].help);
+    optlist = va_arg(ap, OPTION *);
+  }
+  va_end(ap);
   
   return 0;
 }
 
+
 int
-opts_parse_argv(OPTION *opts,
-		int argc,
+opts_set_value(OPTION *op,
+	       const char *value,
+	       const char *argv0) {
+  const char *svp;
+  int d;
+
+  
+  if (!op) {
+    errno = ENOSYS;
+    return -1;
+  }
+
+  svp = NULL;
+  switch (op->type & OPTS_TYPE_MASK) {
+  case OPTS_TYPE_NONE:
+    if (value) {
+      errno = E2BIG; /* Value specified where none should be */
+      return -1;
+    }
+    if (op->dvp && !op->handler)
+      ++*(int *)(op->dvp);
+    break;
+
+  case OPTS_TYPE_INT:
+    if (value) {
+      if (sscanf(value, "%d", &d) != 1) {
+	errno = EINVAL; /* Invalid integer */
+	return -1;
+      }
+      svp = (const void *) &d;
+      if (op->dvp && !op->handler)
+	*(int *)(op->dvp) = d;
+    } else if (!(op->type & OPTS_TYPE_OPT)) {
+      errno = ENOENT; /* Required value missing */
+      return -1;
+    }
+    break;
+    
+  case OPTS_TYPE_UINT:
+    if (value) {
+      if (sscanf(value, "%d", &d) != 1 || d < 0) {
+	errno = EINVAL;
+	return -1;
+      }
+      svp = (const void *) &d;
+      if (op->dvp && !op->handler)
+	*(unsigned int *)(op->dvp) = d;
+    } else if (!(op->type & OPTS_TYPE_OPT)) {
+      errno = ENOENT; /* Required value missing */
+      return -1;
+    }
+    break;
+    
+  case OPTS_TYPE_STR:
+    if (!value && !(op->type & OPTS_TYPE_OPT)) {
+      errno = ENOENT;
+      return -1;
+    }
+    svp = (const void *) value;
+    if (op->dvp && !op->handler)
+      *(char **)(op->dvp) = strdup(value);
+    break;
+
+  default:
+    errno = ENOSYS;
+    return -1;
+  }
+  
+  if (op->handler)
+    return op->handler(op->name, value, op->type, svp, op->dvp, argv0);
+
+  return 0;
+}
+
+	       
+int
+opts_parse_argv(int argc,
 		char **argv,
-		void *xp) {
-  int i, j, k, nm, rc, d;
+		OPTION *opts,
+		...) {
+  int i, j, k, nm, rc;
   char *name;
   char *value;
-  void *vp;
-  OPTION *op;
-  
-  
+  const void *svp;
+  OPTION *op, *optlist;
+  va_list ap;
+
+
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (argv[i][1] == '-') {
       /* Long option (--xploit) */
@@ -90,13 +178,19 @@ opts_parse_argv(OPTION *opts,
       
       nm = 0;
       op = NULL;
-      for (k = 0; opts[k].name; k++) {
-	if (opts[k].name && s_match(name, opts[k].name)) {
-	  op = &opts[k];
-	  ++nm;
+      va_start(ap, opts);
+      optlist = opts;
+      while (optlist) {
+	for (k = 0; optlist[k].name; k++) {
+	  if (optlist[k].name && s_match(name, optlist[k].name)) {
+	    op = &optlist[k];
+	    ++nm;
+	  }
 	}
-      }
 
+	optlist = va_arg(ap, OPTION *);
+      }
+      va_end(ap);
       free(name);
 
       if (nm < 1 || !op) {
@@ -108,117 +202,67 @@ opts_parse_argv(OPTION *opts,
 	return -1;
       }
 
-      vp = NULL;
-      switch (op->type & OPTS_TYPE_MASK) {
-      case OPTS_TYPE_NONE:
-	if (value) {
-	  fprintf(stderr, "%s: Error: %s: Value specified\n", argv[0], argv[i]);
-	  return -1;
-	}
-	break;
-
-      case OPTS_TYPE_INT:
-	if (value) {
-	  if (sscanf(value, "%d", &d) != 1) {
-	    fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
-	    return -1;
-	  }
-	  vp = (void *) &d;
-	} else if (!(op->type & OPTS_TYPE_OPT)) {
-	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	  return -1;
-	}
-	break;
-	
-      case OPTS_TYPE_UINT:
-	if (value) {
-	  if (sscanf(value, "%d", &d) != 1 || d < 0) {
-	    fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
-	    return -1;
-	  }
-	  vp = (void *) &d;
-	} else if (!(op->type & OPTS_TYPE_OPT)) {
-	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	  return -1;
-	}
-	break;
-
-      case OPTS_TYPE_STR:
-	if (!value && !(op->type & OPTS_TYPE_OPT)) {
-	  fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	  return -1;
-	}
-	vp = (void *) value;
-	break;
-      }
-      
-      rc = op->handler(op->name, value, op->type, vp, xp, argv[0]);
-      if (rc)
-	return rc;
+      rc = opts_set_value(op, value, argv[0]);
     } else {
       /* Short option (-x) */
-      
+
       if (!argv[i][1]) {
 	++i;
 	goto EndArg;
       }
       
       for (j = 1; argv[i][j]; j++) {
-	OPTION *op = NULL;
+	op = NULL;
+	nm = 0;
 	
-	for (k = 0; opts[k].handler; k++) {
-	  if (opts[k].flag && argv[i][j] == opts[k].flag) {
-	    op = &opts[k];
-	    break;
+	va_start(ap, opts);
+	optlist = opts;
+	while (optlist) {
+	  for (k = 0; optlist[k].name; k++) {
+	    if (optlist[k].flag && argv[i][j] == optlist[k].flag) {
+	      op = &optlist[k];
+	      ++nm;
+	    }
 	  }
+
+	  optlist = va_arg(ap, OPTION *);
 	}
+	va_end(ap);
 	
-	if (!op) {
+	if (nm < 1 || !op) {
 	  fprintf(stderr, "%s: Error: -%c: Invalid option\n", argv[0], argv[i][j]);
+	  return -1;
+	}
+	if (nm > 1) {
+	  fprintf(stderr, "%s: Error: -%c: Multiple options matches\n", argv[0], argv[i][j]);
 	  return -1;
 	}
 
 	value = NULL;
-	vp = NULL;
-	
+	svp = NULL;
 	switch (op->type & OPTS_TYPE_MASK) {
 	case OPTS_TYPE_NONE:
+	  opts_set_value(op, NULL, argv[0]);
 	  break;
 
 	case OPTS_TYPE_INT:
+	  value = NULL;
 	  if (isdigit(argv[i][j+1]) || (argv[i][j+1] == '-' && isdigit(argv[i][j+2])))
 	    value = argv[i]+j+1;
 	  else if (argv[i+1] && (isdigit(argv[i+1][0]) || (argv[i+1][0] == '-' && isdigit(argv[i+1][1]))))
 	    value = argv[++i];
 	  
-	  if (value) {
-	    if (sscanf(value, "%d", &d) != 1) {
-	      fprintf(stderr, "%s: Error: %s: Invalid integer value\n", argv[0], argv[i]);
-	      return -1;
-	    }
-	    vp = (void *) &d;
-	  } else if (!(op->type & OPTS_TYPE_OPT)) {
-	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	    return -1;
-	  }
+	  opts_set_value(op, value, argv[0]);
 	  break;
 	  
 	case OPTS_TYPE_UINT:
+	  value = NULL;
 	  if (isdigit(argv[i][j+1]))
 	    value = argv[i]+j+1;
 	  else if (argv[i+1] && isdigit(argv[i+1][0]))
 	    value = argv[++i];
-	  
-	  if (value) {
-	    if (sscanf(value, "%d", &d) != 1 || d < 0) {
-	      fprintf(stderr, "%s: Error: %s: Invalid unsigned integer value\n", argv[0], argv[i]);
-	      return -1;
-	    }
-	    vp = (void *) &d;
-	  } else if (!(op->type & OPTS_TYPE_OPT)) {
-	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	    return -1;
-	  }
+
+	  rc = opts_set_value(op, value, argv[0]);
 	  break;
 
 	case OPTS_TYPE_STR:
@@ -226,11 +270,8 @@ opts_parse_argv(OPTION *opts,
 	    value = argv[i]+j+1;
 	  else if (argv[i+1])
 	    value = argv[++i];
-	  if (!value && !(op->type & OPTS_TYPE_OPT)) {
-	    fprintf(stderr, "%s: Error: %s: Missing required value\n", argv[0], argv[i]);
-	    return -1;
-	  }
-	  vp = (void *) value;
+
+	  rc = opts_set_value(op, value, argv[0]);
 	  break;
 	  
 	default:
@@ -239,10 +280,6 @@ opts_parse_argv(OPTION *opts,
 	  return -1;
 	}
 	
-	rc = op->handler(op->name, value, op->type, vp, xp, argv[0]);
-	if (rc)
-	  return rc;
-
 	if (value)
 	  goto NextArg;
       }
@@ -261,11 +298,9 @@ int
 opts_set2(OPTION *opts,
 	  const char *name,
 	  const char *value,
-	  void *xp,
-	  const char *a0) {
-  int nm, k, d;
+	  const char *argv0) {
+  int nm, k;
   OPTION *op;
-  void *vp;
 
   
   nm = 0;
@@ -276,7 +311,7 @@ opts_set2(OPTION *opts,
       ++nm;
     }
   }
-  
+
   if (nm < 1 || !op) {
     errno = ENOENT;
     return -1;
@@ -285,48 +320,14 @@ opts_set2(OPTION *opts,
     errno = E2BIG;
     return -1;
   }
-  
-  vp = NULL;
-  switch (op->type & OPTS_TYPE_MASK) {
-  case OPTS_TYPE_NONE:
-    if (value) {
-      errno = EINVAL;
-      return -1;
-    }
-    break;
-    
-  case OPTS_TYPE_INT:
-    if (value) {
-      if (sscanf(value, "%d", &d) != 1) {
-	errno = EINVAL;
-	return -1;
-      }
-      vp = (void *) &d;
-    }
-    break;
-    
-  case OPTS_TYPE_UINT:
-    if (value) {
-      if (sscanf(value, "%d", &d) != 1 || d < 0) {
-	errno = EINVAL;
-	return -1;
-      }
-      vp = (void *) &d;
-    }
-    break;
-    
-  case OPTS_TYPE_STR:
-    vp = (void *) value;
-  }
-  
-  return op->handler(op->name, value, op->type, vp, xp, a0);
+
+  return opts_set_value(op, value, argv0);
 }
 
 
 int
 opts_set(OPTION *opts,
 	 const char *varval,
-	 void *xp,
 	 const char *a0) {
   char *name;
   char *value;
@@ -338,7 +339,7 @@ opts_set(OPTION *opts,
   if (value)
     *value++ = '\0';
 
-  rc = opts_set2(opts, name, value, xp, a0);
+  rc = opts_set2(opts, name, value, a0);
   free(name);
 
   return rc;
@@ -351,26 +352,28 @@ int
 test_handler(const char *name,
 	     const char *vs,
 	     unsigned int type,
-	     void *vp,
-	     void *xp,
+	     const void *svp,
+	     void *dvp,
 	     const char *a0) {
-  FILE *fp = (FILE *) xp;
-  
-  fprintf(fp, "%s: Setting %s to %s\n", a0, name, vs ? vs : "<NULL>");
+  printf("%s: Setting %s to %s\n", a0, name, vs ? vs : "<NULL>");
   if ((type & OPTS_TYPE_MASK) == OPTS_TYPE_INT)
-    printf("int=%d\n", * (int *) vp);
+    printf("int=%d\n", * (const int *) svp);
 	    
   return 0;
 }
 
+int ival = 0;
+unsigned int uval = 0;
+char *sval = NULL;
+
 OPTION ov[] =
   {
-   { "none",       'n', OPTS_TYPE_NONE, test_handler, "No value" },
-   { "int-value",  'i', OPTS_TYPE_INT,  test_handler, "Int value" },
-   { "int-rest",   'r', OPTS_TYPE_INT,  test_handler, "Int value 2" },
-   { "uint-value", 'u', OPTS_TYPE_UINT, test_handler, "Unsigned Int value" },
-   { "str-value",  's', OPTS_TYPE_STR,  test_handler, "String value" },
-   { NULL, 0, 0, NULL, NULL },
+   { "none",       'n', OPTS_TYPE_NONE, test_handler, NULL,  "No value" },
+   { "int-value",  'i', OPTS_TYPE_INT,  NULL,         &ival, "Int value" },
+   { "int-rest",   'r', OPTS_TYPE_INT,  test_handler, NULL,  "Int value 2" },
+   { "uint-value", 'u', OPTS_TYPE_UINT, test_handler, &uval, "Unsigned Int value" },
+   { "str-value",  's', OPTS_TYPE_STR,  test_handler, &sval, "String value" },
+   { NULL, 0, 0, NULL, NULL, NULL },
   };
   
 int
@@ -378,16 +381,17 @@ main(int argc,
      char **argv) {
   int i, rc;
 
-  i = opts_parse_argv(&ov[0], argc, argv, (void *) stdout);
+  i = opts_parse_argv(argc, argv, ov, NULL);
   if (i < 0)
     exit(1);
 
   for (; i < argc; i++) {
     printf("#%d = %s\n", i, argv[i]);
-    rc = opts_set(&ov[0], argv[i], (void *) stdout);
+    rc = opts_set(&ov[0], argv[i], argv[0]);
     printf("rc=%d\n", rc);
   }
 
+  printf("ival=%d\n", ival);
   exit(0);
 }
 #endif

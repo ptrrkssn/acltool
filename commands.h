@@ -34,33 +34,35 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H 1
 
+#include "opts.h"
 
 typedef struct command {
   const char *name;
+  int (*handler)(int argc, char **argv);
+  OPTION *options;
   const char *args;
-  int (*handler)(int argc, char **argv, void *vp);
   const char *help;
 } COMMAND;
 
 
-#define CMDS_MAX 256
+#define MAXCMDS 1024
 
 typedef struct commands {
-  size_t cc;
-  COMMAND *cv[CMDS_MAX];
+  int c;
+  COMMAND *v[MAXCMDS];
 } COMMANDS;
 
 
-extern void
+extern int
 cmd_init(COMMANDS *cp);
 
 extern int
-cmd_register(COMMANDS *cp, int c, COMMAND v[]);
+cmd_register(COMMANDS *cp, COMMAND **v);
 
 extern int
-cmd_run(COMMANDS *cp, int argc, char **argv, void *vp);
+cmd_run(COMMANDS *cp, int argc, char **argv);
 
 extern int
-_cmd_help(COMMANDS *cp, const char *name);
+cmd_help(COMMANDS *cp, const char *name, FILE *fp, int p_opts);
 
 #endif

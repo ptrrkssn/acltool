@@ -1,5 +1,5 @@
 /*
- * basic.c - Basic CLI commands
+ * common.h
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,11 +31,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BASIC_H
-#define BASIC_H 1
+#ifndef CMD_COMMON_H
+#define CMD_COMMON_H
 
-#include "commands.h"
+extern acl_t 
+get_acl(const char *path, 
+	const struct stat *sp);
 
-extern COMMAND *basic_commands[];
+extern int
+print_ace(acl_t ap,
+	  int p,
+	  int verbose);
+
+extern int
+set_acl(const char *path,
+	const struct stat *sp,
+	acl_t ap,
+	acl_t oap);
+
+extern int
+str2filetype(const char *str,
+	     mode_t *f_filetype);
+
+
+extern int
+print_acl(FILE *fp,
+	  acl_t a,
+	  const char *path,
+	  const struct stat *sp);
+
+
+extern int
+str2style(const char *str,
+	  ACL_STYLE *sp);
+
+extern const char *
+style2str(ACL_STYLE s);
+
+extern char *
+mode2str(mode_t m);
+
+extern int
+aclcmd_foreach(int argc,
+	       char **argv,
+	       int (*handler)(const char *path,
+			      const struct stat *sp,
+			      size_t base,
+			      size_t level,
+			      void *vp),
+	       void *vp);
+
+extern char *
+mode2typestr(mode_t m);
 
 #endif

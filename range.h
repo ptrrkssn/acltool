@@ -1,7 +1,7 @@
 /*
- * basic.c - Basic CLI commands
+ * range.h - Range handling code
  *
- * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
+ * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
  * All rights reserved.
  * 
@@ -31,11 +31,47 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BASIC_H
-#define BASIC_H 1
+#ifndef RANGE_H
+#define RANGE_H 1
 
-#include "commands.h"
+#include <stdio.h>
+#include <limits.h>
 
-extern COMMAND *basic_commands[];
+typedef struct range {
+  int min;
+  int max;
+  struct range *next;
+} RANGE;
+
+#define RANGE_NONE (INT_MIN)
+#define RANGE_MAX  (INT_MAX-1)
+#define RANGE_END  (INT_MAX)
+
+extern int
+range_len(RANGE *rp);
+
+extern int
+range_first(RANGE *rp, int *p);
+
+extern int
+range_last(RANGE *rp, int *p);
+
+extern int
+range_next(RANGE *rp, int *pp);
+
+extern int
+range_prev(RANGE *rp, int *pp);
+
+extern int
+range_add(RANGE **rp, int p1, int p2);
+
+extern int
+range_addn(RANGE **rp, int p, int len);
+
+extern int
+range_adds(RANGE **rp, const char **sp);
+
+extern int
+range_print(RANGE *rp, FILE *fp);
 
 #endif

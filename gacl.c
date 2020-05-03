@@ -286,6 +286,30 @@ gacl_copy_entry(GACE *dep,
 }
 
 int
+_gacl_entries(GACL *ap) {
+  return ap->ac;
+}
+
+int
+_gacl_get_entry(GACL *ap,
+		int pos,
+		GACE **epp) {
+  if (!ap || pos < 0 || pos > ap->ac) {
+    errno = EINVAL;
+    return -1;
+  }
+  
+  ap->ap = pos;
+
+  if (ap->ap >= ap->ac) {
+    return 0;
+  }
+
+  *epp = &ap->av[ap->ap++];
+  return 1;
+}
+
+int
 gacl_get_entry(GACL *ap,
 	       int eid,
 	       GACE **epp) {
@@ -1219,9 +1243,14 @@ gacl_entry_tag_to_text(GACE *ep,
     
   case GACE_TAG_USER:
     pp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getpwuid(ep->id);
-    if (pp)
-      return snprintf(buf, bufsize, "%s:%s",
-		      (flags & GACL_TEXT_COMPACT) ? "u" : "user", pp->pw_name);
+    if (pp) {
+      gp = getgrgid(ep->id);
+      if (gp || (flags & GACL_TEXT_STANDARD))
+	return snprintf(buf, bufsize, "%s:%s",
+			(flags & GACL_TEXT_COMPACT) ? "u" : "user", pp->pw_name);
+      else
+	return snprintf(buf, bufsize, "%s", pp->pw_name);
+    }
     else
       return snprintf(buf, bufsize, "%s:%d",
 		      (flags & GACL_TEXT_COMPACT) ? "u" : "user", ep->id);
@@ -1231,9 +1260,14 @@ gacl_entry_tag_to_text(GACE *ep,
     
   case GACE_TAG_GROUP:
     gp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getgrgid(ep->id);
-    if (gp)
-      return snprintf(buf, bufsize, "%s:%s",
-		      (flags & GACL_TEXT_COMPACT) ? "g" : "group", gp->gr_name);
+    if (gp) {
+      pp = getpwuid(ep->id);
+      if (pp || (flags & GACL_TEXT_STANDARD))
+	return snprintf(buf, bufsize, "%s:%s",
+			(flags & GACL_TEXT_COMPACT) ? "g" : "group", gp->gr_name);
+      else
+	return snprintf(buf, bufsize, "%s", gp->gr_name);
+    }
     else
       return snprintf(buf, bufsize, "%s:%d",
 		      (flags & GACL_TEXT_COMPACT) ? "g" : "group", ep->id);
@@ -1264,8 +1298,10 @@ gacl_entry_permset_to_text(GACE *ep,
   n = 0;
   for (p = 0; bufsize > 1 && gace_p2c[p].c; p++) {
     a = gacl_get_perm_np(epsp, gace_p2c[p].p);
-    if (a < 0)
+    if (a < 0) {
+      *buf = 0;
       return -1;
+    }
     if (a || !(flags & GACL_TEXT_COMPACT)) {
       *buf++ = (a ? gace_p2c[p].c : '-');
       bufsize--;
@@ -1345,7 +1381,7 @@ gacl_entry_to_text(GACE *ep,
 		   int flags) {
   char *bp;
   ssize_t rc;
-  
+  GACE_FLAGSET *efsp;
   
   bp = buf;
   
@@ -1358,6 +1394,7 @@ gacl_entry_to_text(GACE *ep,
   if (bufsize <= 1)
     return -1;
   *bp++ = ':';
+  *bp = '\0';
   bufsize--;
 
   rc = gacl_entry_permset_to_text(ep, bp, bufsize, flags);
@@ -1366,11 +1403,14 @@ gacl_entry_to_text(GACE *ep,
   bp += rc;
   bufsize -= rc;
 
-  if ((ep->flags && ep->type != GACE_TYPE_ALLOW) || !(flags & GACL_TEXT_COMPACT)) {
+  if ((ep->flags && ep->type != GACE_TYPE_ALLOW) ||
+      !(flags & GACL_TEXT_COMPACT) ||
+      (gacl_get_flagset_np(ep, &efsp) == 0 && !gacl_empty_flagset(efsp))) {
     if (bufsize <= 1)
       return -1;
     
     *bp++ = ':';
+    *bp = '\0';
     bufsize--;
     
     rc = gacl_entry_flagset_to_text(ep, bp, bufsize, flags);
@@ -1381,16 +1421,20 @@ gacl_entry_to_text(GACE *ep,
     
     if (bufsize <= 1)
       return -1;
-    *bp++ = ':';
-    bufsize--;
     
-    if (ep->type != GACE_TYPE_ALLOW || !(flags & GACL_TEXT_COMPACT)) {
-      rc = gacl_entry_type_to_text(ep, bp, bufsize, flags);
-      if (rc < 0)
-	return -1;
+    if ((ep->flags && ep->type != GACE_TYPE_ALLOW) || !(flags & GACL_TEXT_COMPACT)) {
+      *bp++ = ':';
+      *bp = '\0';
+      bufsize--;
       
-      bp += rc;
-      bufsize -= rc;
+      if (ep->type != GACE_TYPE_ALLOW || !(flags & GACL_TEXT_COMPACT)) {
+	rc = gacl_entry_type_to_text(ep, bp, bufsize, flags);
+	if (rc < 0)
+	  return -1;
+	
+	bp += rc;
+	bufsize -= rc;
+      }
     }
   }
   
@@ -1429,7 +1473,8 @@ gacl_to_text_np(GACL *ap,
   size_t bufsize = 2048;
   int i, rc;
   GACE *ep;
-
+  int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 22 : 40);
+  
   
   bp = buf = malloc(bufsize);
   if (!buf)
@@ -1445,7 +1490,7 @@ gacl_to_text_np(GACL *ap,
     if (gacl_get_tag_type(ep, &et) < 0)
       goto Fail;
     
-    rc = gacl_entry_to_text(ep, es, sizeof(es), flags);
+    rc = gacl_entry_to_text(ep, es, sizeof(es), flags|GACL_TEXT_STANDARD);
     if (rc < 0)
       goto Fail;
 
@@ -1463,7 +1508,7 @@ gacl_to_text_np(GACL *ap,
     if (flags & GACL_TEXT_COMPACT) 
       rc = snprintf(bp, bufsize, "%s%s", (i > 0 ? "," : ""), es);
     else
-      rc = snprintf(bp, bufsize, " %*s%s\n", (int) (22-len), "", es);
+      rc = snprintf(bp, bufsize, " %*s%s\n", (int) (tagwidth-len), "", es);
     if (rc < 0)
       goto Fail;
 
@@ -1655,12 +1700,35 @@ _gacl_flagset_from_text(const char *buf,
 }
 
 
+
 int
-gacl_entry_from_text(char *cp,
-		     GACE *ep) {
+_gacl_entry_from_text(char *cp,
+		      GACE *ep,
+		      GACE_EDIT_FLAGS *editflags) {
   char *np;
   int f_none;
 
+  
+  if (editflags) {
+    *editflags = 0;
+    
+    switch (*cp) {
+    case '+':
+      *editflags |= GACE_EDIT_TAG_ADD;
+      ++cp;
+      break;
+      
+    case '-':
+      *editflags |= GACE_EDIT_TAG_SUB;
+      ++cp;
+      break;
+
+    case '*':
+      *editflags |= GACE_EDIT_TAG_ALL;
+      ++cp;
+      break;
+    }
+  }
 
   /* 1. Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ ) */
   np = strchr(cp, ':');
@@ -1765,7 +1833,6 @@ gacl_entry_from_text(char *cp,
 
   }
 
-
   /* 2. Get permset */
   cp = np;
   np = strchr(cp, ':');
@@ -1774,25 +1841,77 @@ gacl_entry_from_text(char *cp,
   
   f_none = (strcasecmp(cp, "none") == 0);
 
+  if (editflags && cp)
+    switch (*cp) {
+    case '+':
+      *editflags |= GACE_EDIT_PERM_ADD;
+      ++cp;
+      break;
+    case '-':
+      *editflags |= GACE_EDIT_PERM_SUB;
+      ++cp;
+      break;
+    case '*':
+      *editflags |= GACE_EDIT_PERM_ALL;
+      ++cp;
+      break;
+    }
+  
   if (_gacl_permset_from_text(cp, &ep->perms) < 0)
     return -1;
   cp = np;
 
 
   /* 3. Get flagset */
-  if (cp) {
+  if (cp && (strcmp(cp, "allow") != 0 &&
+	     strcmp(cp, "deny") != 0 &&
+	     strcmp(cp, "audit") != 0 &&
+	     strcmp(cp, "alarm") != 0)) {
+    if (editflags)
+      switch (*cp) {
+      case '+':
+	*editflags |= GACE_EDIT_FLAG_ADD;
+	++cp;
+	break;
+      case '-':
+	*editflags |= GACE_EDIT_FLAG_SUB;
+	++cp;
+	break;
+      case '*':
+	*editflags |= GACE_EDIT_FLAG_ALL;
+	++cp;
+	break;
+      }
+    
     np = strchr(cp, ':');
     if (np)
       *np++ = '\0';
     /* Parse flags in cp */
     if (_gacl_flagset_from_text(cp, &ep->flags) < 0)
       return -1;
-  } else
+  } else {
     ep->flags = 0;
+  }
 
   cp = np;
   /* 4. Get type (allow, deny, alarm, audit) */
   if (cp) {
+    if (editflags)
+      switch (*cp) {
+      case '+':
+	*editflags |= GACE_EDIT_TYPE_ADD;
+	++cp;
+	break;
+      case '-':
+	*editflags |= GACE_EDIT_TYPE_SUB;
+	++cp;
+	break;
+      case '*':
+	*editflags |= GACE_EDIT_TYPE_ALL;
+	++cp;
+	break;
+      }
+    
     np = strchr(cp, ':');
     if (np) {
       errno = EINVAL;
@@ -1819,6 +1938,13 @@ gacl_entry_from_text(char *cp,
   }
 
   return 0;
+}
+
+
+int
+gacl_entry_from_text(char *cp,
+		     GACE *ep) {
+  return _gacl_entry_from_text(cp, ep, NULL);
 }
 
 

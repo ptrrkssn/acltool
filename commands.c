@@ -1,5 +1,5 @@
 /*
- * aclcmds.c - ACL commands
+ * commands.c - ACL commands
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -41,47 +41,70 @@
 #include "commands.h"
 
 
-void
-cmd_init(COMMANDS *cp) {
-  cp->cc = 0;
+static COMMANDS global_commands;
+
+
+int
+cmd_init(COMMANDS *cmdlist) {
+  if (!cmdlist)
+    cmdlist = &global_commands;
+  
+  cmdlist->c = 0;
+  return 0;
+}
+
+
+static int
+_cmp_cmdname(const void *a, const void *b) {
+  COMMAND *ca, *cb;
+
+  ca = *(COMMAND **) a;
+  cb = *(COMMAND **) b;
+  return strcmp(ca->name, cb->name);
 }
 
 
 int
-cmd_register(COMMANDS *cp,
-	     int cc,
-	     COMMAND cv[]) {
-  int i;
-
+cmd_register(COMMANDS *cmdlist,
+	     COMMAND **cpp) {
+  if (!cpp)
+    return -1;
   
-  for (i = 0; cc ? i < cc : cv[i].name != NULL; i++) {
-    if (cp->cc >= CMDS_MAX)
+  if (!cmdlist)
+    cmdlist = &global_commands;
+  
+  for (; *cpp; ++cpp) {
+    if (cmdlist->c >= MAXCMDS)
       return -1;
-
-    cp->cv[cp->cc++] = &cv[i];
+    
+    cmdlist->v[cmdlist->c++] = *cpp;
   }
 
-  return cp->cc;
+  qsort(&cmdlist->v[0], cmdlist->c, sizeof(cmdlist->v[0]), _cmp_cmdname);
+  return 0;
 }
 
 
 int
-_cmd_help(COMMANDS *cmds,
-	  const char *name) {
-  int i, nm;
-  COMMAND *cp;
+cmd_help(COMMANDS *cmdlist,
+	 const char *name,
+	 FILE *fp,
+	 int p_opts) {
+  int nm, i;
 
-  
-  puts("COMMANDS:");
   
   if (name) {
-    cp = NULL;
+    COMMAND *cp = NULL;
     nm = 0;
 
-    for (i = 0; i < cmds->cc; i++) {
-      if (s_match(name, cmds->cv[i]->name)) {
-	cp = cmds->cv[i];
-	printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+    for (i = 0; i < cmdlist->c; i++) {
+      cp = cmdlist->v[i];
+      if (s_match(name, cp->name)) {
+	if (!nm)
+	  fprintf(fp, "COMMANDS:\n");
+	fprintf(fp, "  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+	if (p_opts)
+	  opts_print(fp, global_options, cp->options, NULL);
 	++nm;
       }
     }
@@ -92,10 +115,13 @@ _cmd_help(COMMANDS *cmds,
     }
     
   } else {
-    
-    for (i = 0; i < cmds->cc; i++) {
-      cp = cmds->cv[i];
-      printf("  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
+
+    fprintf(fp, "COMMANDS:\n");
+    for (i = 0; i < cmdlist->c; i++) {
+      COMMAND *cp;
+      
+      cp = cmdlist->v[i];
+      fprintf(fp, "  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
     }
   }
   
@@ -103,12 +129,12 @@ _cmd_help(COMMANDS *cmds,
 }
 
 
+
 int
-cmd_run(COMMANDS *cmds,
+cmd_run(COMMANDS *cmdlist,
 	int argc,
-	char *argv[],
-	void *vp) {
-  int i, nm;
+	char *argv[]) {
+  int i, j, nm;
   COMMAND *scp;
 
 
@@ -116,15 +142,14 @@ cmd_run(COMMANDS *cmds,
     return 0;
   
   if (strcmp(argv[0], "?") == 0)
-    return _cmd_help(cmds, argv[1]);
+    return cmd_help(cmdlist, argv[1], stdout, 0);
   else if (argv[1] && strcmp(argv[1], "?") == 0)
-    return _cmd_help(cmds, argv[0]);
+    return cmd_help(cmdlist, argv[0], stdout, 1);
   
   nm = 0;
   scp = NULL;
-  for (i = 0; i < cmds->cc; i++) {
-    COMMAND *cp = cmds->cv[i];
-    
+  for (i = 0; i < cmdlist->c; i++) {
+    COMMAND *cp = cmdlist->v[i];
     if (s_match(argv[0], cp->name)) {
       scp = cp;
       ++nm;
@@ -141,7 +166,15 @@ cmd_run(COMMANDS *cmds,
     return -1;
   }
 
-  
-  return (*scp->handler)(argc, argv, vp);
+  i = opts_parse_argv(argc, argv, global_options, scp->options, NULL);
+  if (i < 0)
+    return 1;
+  for (j = 1; i < argc; i++, j++)
+    argv[j] = argv[i];
+  argv[j] = NULL;
+  argc = j;
+
+  return (*scp->handler)(argc, argv);
 }
+
 

@@ -46,7 +46,7 @@
 #include "strings.h"
 #include "misc.h"
 #include "opts.h"
-
+#include "common.h"
 
 
 
@@ -55,6 +55,7 @@ struct command;
 typedef struct config {
   int f_debug;
   int f_verbose;
+  int f_print;
   int f_sort;
   int f_merge;
   int f_recurse;
@@ -67,5 +68,14 @@ typedef struct config {
 
 
 extern char *argv0;
+
+extern OPTION global_options[];
+
+/* Default configuration loaded from config file and global command line */
+extern CONFIG default_config;
+
+/* Per-command active configuration */
+extern CONFIG config;
+
 
 #endif

@@ -6,7 +6,8 @@ DESTBIN=$(DEST)/bin
 #CC=gcc
 CFLAGS=-g -Wall
 
-OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o $(XOBJS)
+CMDOBJS=common.o cmd_edit_access.o
+OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o $(XOBJS) $(CMDOBJS)
 LIBS=$(XLDFLAGS) -lreadline $(XLIBS) 
 
 auto build:

@@ -279,3 +279,21 @@ argv_destroy(char **argv) {
   
   free(argv);
 }
+
+void
+argv_print(int argc,
+	   char **argv,
+	   FILE *fp) {
+  int i;
+
+  
+  fprintf(fp, "argc=%d", argc);
+  for (i = 0; i < argc; i++) {
+    fprintf(fp, ", argv[%d]=", i);
+    if (argv[i])
+      fprintf(fp, "'%s'", argv[i]);
+    else
+      fprintf(fp, "NULL");
+  }
+  putc('\n', fp);
+}

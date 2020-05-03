@@ -36,7 +36,7 @@
 
 #include "commands.h"
 
-extern COMMAND acl_commands[];
+extern COMMAND *acl_commands[];
 
 typedef enum acl_style {
 			ACL_STYLE_DEFAULT = 0,

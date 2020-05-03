@@ -57,4 +57,10 @@ argv_create(const char *command,
 extern void
 argv_destroy(char **argv);
 
+extern void
+argv_print(int argc,
+	   char **argv,
+	   FILE *fp);
+
+
 #endif

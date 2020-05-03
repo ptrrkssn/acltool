@@ -35,6 +35,7 @@
 #define OPTS_H 1
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #define OPTS_TYPE_NONE 0x0000
 #define OPTS_TYPE_UINT 0x0001
@@ -50,30 +51,36 @@ typedef struct option {
   const char *name;
   char flag;
   unsigned int type;
-  int (*handler)(const char *name, const char *vs, unsigned int type, void *vp, void *xp, const char *argv0);
+  int (*handler)(const char *name,
+		 const char *vs,
+		 unsigned int type,
+		 const void *svp,
+		 void *dvp,
+		 const char *argv0);
+  void *dvp;
   const char *help;
 } OPTION;
 
-extern int
-opts_print(OPTION *opts,
-	   FILE *fp);
 
 extern int
-opts_parse_argv(OPTION *opts,
-		int argc,
+opts_print(FILE *fp,
+	   OPTION *opts,
+	   ...);
+
+extern int
+opts_parse_argv(int argc,
 		char **argv,
-		void *xp);
+		OPTION *opts,
+		...);
 
 extern int
 opts_set2(OPTION *opts,
 	  const char *name,
 	  const char *value,
-	  void *xp,
 	  const char *argv0);
 
 extern int
 opts_set(OPTION *opts,
 	 const char *varval,
-	 void *xp,
 	 const char *argv0);
 #endif

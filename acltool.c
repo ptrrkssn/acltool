@@ -48,15 +48,13 @@
 
 #include "acltool.h"
 
-
-
+char *argv0 = "acltool";
 char *version = "1.6.1";
 
 COMMANDS commands;
 
-char *argv0 = "acltool";
-
-CONFIG d_cfg = { 0, 0, 0, 0, 0, 0 };
+CONFIG default_config = { 0, 0, 0, 0, 0, 0 };
+CONFIG config = { 0, 0, 0, 0, 0, 0 };
 
 
 
@@ -64,15 +62,13 @@ int
 set_debug(const char *name,
 	  const char *value,
 	  unsigned int type,
-	  void *vp,
-	  void *xp,
+	  const void *svp,
+	  void *dvp,
 	  const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-
-  if (vp)
-    cp->f_debug = * (int *) vp;
+  if (svp)
+    config.f_debug = * (int *) svp;
   else
-    cp->f_debug++;
+    config.f_debug++;
 
   return 0;
 }
@@ -81,15 +77,28 @@ int
 set_verbose(const char *name,
 	    const char *value,
 	    unsigned int type,
-	    void *vp,
-	    void *xp,
+	    const void *svp,
+	    void *dvp,
 	    const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-  
-  if (vp)
-    cp->f_verbose = * (int *) vp;
+  if (svp)
+    config.f_verbose = * (int *) svp;
   else
-    cp->f_verbose++;
+    config.f_verbose++;
+  
+  return 0;
+}
+
+int
+set_print(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  const void *svp,
+	  void *dvp,
+	  const char *a0) {
+  if (svp)
+    config.f_print = * (int *) svp;
+  else
+    config.f_print++;
   
   return 0;
 }
@@ -98,12 +107,10 @@ int
 set_sort(const char *name,
 	 const char *value,
 	 unsigned int type,
-	 void *vp,
-	 void *xp,
+	 const void *svp,
+	 void *dvp,
 	 const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-  
-  cp->f_sort++;
+  config.f_sort++;
   
   return 0;
 }
@@ -112,12 +119,10 @@ int
 set_merge(const char *name,
 	  const char *value,
 	  unsigned int type,
-	  void *vp,
-	  void *xp,
+	  const void *svp,
+	  void *dvp,
 	  const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-  
-  cp->f_merge++;
+  config.f_merge++;
   
   return 0;
 }
@@ -126,22 +131,19 @@ int
 set_recurse(const char *name,
 	    const char *value,
 	    unsigned int type,
-	    void *vp,
-	    void *xp,
+	    const void *svp,
+	    void *dvp,
 	    const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-
-  
-  if (vp) {
-    int v = * (int *) vp;
+  if (svp) {
+    int v = * (int *) svp;
     
     if (v < -1)
       v = -1;
     
-    cp->max_depth = v;
+    config.max_depth = v;
   }
   else
-    cp->max_depth = -1;
+    config.max_depth = -1;
   
   return 0;
 }
@@ -150,18 +152,16 @@ int
 set_depth(const char *name,
 	  const char *value,
 	  unsigned int type,
-	  void *vp,
-	  void *xp,
+	  const void *svp,
+	  void *dvp,
 	  const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-  
-  if (vp) {
-    int v = * (int *) vp;
+  if (svp) {
+    int v = * (int *) svp;
     
-    cp->max_depth += v;
+    config.max_depth += v;
   }
   else
-    cp->max_depth++;
+    config.max_depth++;
   
   return 0;
 }
@@ -170,93 +170,27 @@ int
 set_style(const char *name,
 	  const char *value,
 	  unsigned int type,
-	  void *vp,
-	  void *xp,
+	  const void *svp,
+	  void *dvp,
 	  const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-
-  
   if (value) {
-    if (str2style(value, &cp->f_style) != 1)
+    if (str2style(value, &config.f_style) != 1)
       return -1;
   } else
-    cp->f_style++;
+    config.f_style++;
   
   return 0;
-}
-
-#define UPDATE(v,t) if (f_add) {*v |= t;} else { *v &= ~t; }
-
-int
-str2filetype(const char *str,
-	     mode_t *f_filetype) {
-  int f_add = 1;
-
-  
-  *f_filetype = 0;
-  
-  for (; *str; ++str)
-    switch (*str) {
-    case '+':
-      f_add = 1;
-      break;
-      
-    case '-':
-      f_add = 0;
-      break;
-      
-    case 'f':
-      UPDATE(f_filetype, S_IFREG);
-      break;
-      
-    case 'd':
-      UPDATE(f_filetype, S_IFDIR);
-      break;
-      
-    case 'b':
-      UPDATE(f_filetype, S_IFBLK);
-      break;
-      
-    case 'c':
-      UPDATE(f_filetype, S_IFCHR);
-      break;
-      
-    case 'l':
-      UPDATE(f_filetype, S_IFLNK);
-      break;
-      
-    case 'p':
-      UPDATE(f_filetype, S_IFIFO);
-      break;
-      
-    case 's':
-      UPDATE(f_filetype, S_IFSOCK);
-      break;
-      
-#ifdef S_IFWHT
-    case 'w':
-      UPDATE(f_filetype, S_IFWHT);
-      break;
-#endif
-    default:
-      return -1;
-    }
-
-  return (*f_filetype ? 1 : 0);
 }
 
 int
 set_filetype(const char *name,
 	     const char *value,
 	     unsigned int type,
-	     void *vp,
-	     void *xp,
+	     const void *svp,
+	     void *dvp,
 	     const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-  
-  
   if (value) {
-    if (str2filetype(value, &cp->f_filetype) != 1)
+    if (str2filetype(value, &config.f_filetype) != 1)
       return -1;
   } else
     return -1;
@@ -268,48 +202,43 @@ int
 set_no_update(const char *name,
               const char *value,
               unsigned int type,
-              void *vp,
-              void *xp,
+              const void *svp,
+              void *dvp,
               const char *a0) {
-  CONFIG *cp = (CONFIG *) xp;
-
-  cp->f_noupdate = 1;
+  config.f_noupdate = 1;
   return 0;
 }
 
-extern OPTION options[];
+extern OPTION global_options[];
 
 
 int
 show_help(const char *name,
 	  const char *value,
 	  unsigned int type,
-	  void *vp,
-	  void *xp,
+	  const void *svp,
+	  void *dvp,
 	  const char *a0) {
-  printf("USAGE:\n  %s [<options>] [<command>]\n\n", a0);
-  
-  opts_print(&options[0], stdout);
-
-  puts("\nUse 'help' to get more information about the available commands");
+  cmd_help(&commands, a0, stdout, 1);
   return -1;
 }
 
 
 
-OPTION options[] =
+OPTION global_options[] =
   {
-   { "help",      'h', OPTS_TYPE_NONE,               show_help,     "Display usage" },
-   { "debug",     'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     "Debug level" },
-   { "verbose",   'v', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_verbose,   "Verbosity level" },
-   { "sort",      's', OPTS_TYPE_NONE,               set_sort,      "Enable sorting" },
-   { "merge",     'm', OPTS_TYPE_NONE,               set_merge,     "Enable merging" },
-   { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   "Enable recursion" },
-   { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     "Increase/decrease max depth" },
-   { "style",     'S', OPTS_TYPE_STR,                set_style,     "Select ACL print style" },
-   { "type",      't', OPTS_TYPE_STR,                set_filetype,  "File types to operate on" },
-   { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, "Disable modification" },
-   { NULL,        -1,  0,                            NULL,          NULL },
+   { "help",      'h', OPTS_TYPE_NONE,               show_help,     NULL, "Display usage" },
+   { "debug",     'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     NULL, "Debug level" },
+   { "verbose",   'v', OPTS_TYPE_NONE,               set_verbose,   NULL, "Verbosity level" },
+   { "print",     'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
+   { "sort",      's', OPTS_TYPE_NONE,               set_sort,      NULL, "Enable sorting" },
+   { "merge",     'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Enable merging" },
+   { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
+   { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
+   { "style",     'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
+   { "type",      't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
+   { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
+   { NULL,        -1,  0,                            NULL,          NULL, NULL },
   };
 
 
@@ -322,7 +251,7 @@ cfg_parse(CONFIG *cfgp,
   int rc;
 
   
-  rc = opts_parse_argv(&options[0], argc, argv, cfgp);
+  rc = opts_parse_argv(argc, argv, &global_options[0], NULL);
   if (rc < 0)
     return rc;
   
@@ -336,10 +265,10 @@ print_version(void) {
   printf("[ACLTOOL, v%s - Copyright (c) 2020 Peter Eriksson <pen@lysator.liu.se>]\n", version);
 }
 
+
 int
-cmd_version(int argc,
-	    char **argv,
-	    void *vp) {
+version_cmd(int argc,
+	    char **argv) {
   print_version();
   puts("");
   puts("Author: Peter Eriksson <pen@lysator.liu.se>");
@@ -348,52 +277,51 @@ cmd_version(int argc,
   return 0;
 }
 
+
 int
-cmd_config(int argc,
-	   char **argv,
-	   void *vp) {
+config_cmd(int argc,
+	   char **argv) {
   int rc = 0;
-  CONFIG *cfgp = (CONFIG *) vp;
 
   
   if (argc == 1) {
     puts("CONFIGURATION:");
-    printf("  Debug Level:        %d\n", cfgp->f_debug);
-    printf("  Verbosity Level:    %d\n", cfgp->f_verbose);
-    if (cfgp->max_depth < 0)
+    printf("  Debug Level:        %d\n", config.f_debug);
+    printf("  Verbosity Level:    %d\n", config.f_verbose);
+    printf("  Print Level:        %d\n", config.f_print);
+    if (config.max_depth < 0)
       printf("  Recurse Max Depth:  No Limit\n");
     else
-      printf("  Recurse Max Depth:  %d\n", cfgp->max_depth);
-    printf("  Update:             %s\n", cfgp->f_noupdate ? "No" : "Yes");
-    printf("  Style:              %s\n", style2str(cfgp->f_style));
+      printf("  Recurse Max Depth:  %d\n", config.max_depth);
+    printf("  Update:             %s\n", config.f_noupdate ? "No" : "Yes");
+    printf("  Style:              %s\n", style2str(config.f_style));
   } else {
     int i;
 
     
     for (i = 1; i < argc; i++) {
-      rc = opts_set(options, argv[i], vp, argv[0]);
+      rc = opts_set(global_options, argv[i], argv[0]);
       if (rc)
 	return rc;
     }
   }
 
-  d_cfg = *cfgp;
+  default_config = config;
   return rc;
 }
 
 
 int
-cmd_help(int argc,
-	 char **argv,
-	 void *vp) {
+help_cmd(int argc,
+	 char **argv) {
   int i, rc = 0;
 
-  
+
   if (argc == 1) {
-    rc =_cmd_help(&commands, NULL);
+    rc = cmd_help(&commands, NULL, stdout, 0);
 
     putchar('\n');
-    opts_print(&options[0], stdout);
+    opts_print(stdout, &global_options[0], NULL);
     
     puts("\nDETAILS:");
     puts("  All options & commands may be abbreviated as long as they are unique.");
@@ -411,7 +339,7 @@ cmd_help(int argc,
     puts("  You may access environment variables using ${NAME}.");
   } else {
     for (i = 1; i < argc; i++) {
-      rc = _cmd_help(&commands, argv[i]);
+      rc = cmd_help(&commands, argv[i], stdout, 1);
       if (rc < 0)
 	break;
     }
@@ -421,12 +349,21 @@ cmd_help(int argc,
 }
 
 
-COMMAND acltool_commands[] = {
-  { "version",  "",                	cmd_version,    "Display program version" },
-  { "config", 	"[<opt>[=<val>]]*",	cmd_config,	"Print/update default configuration" },
-  { "help",     "[<command>]*",         cmd_help,       "Display usage information" },
-  { NULL,	NULL,			NULL,		NULL },
-};
+COMMAND version_command = 
+  { "version",  version_cmd,	NULL, "",                	"Display program version" };
+
+COMMAND config_command =
+  { "config", 	config_cmd,	NULL, "[<opt>[=<val>]]*",	"Print/update default configuration" };
+
+COMMAND help_command = 
+  { "help",     help_cmd,	NULL, "[<command>]*",      	"Display usage information" };
+  
+COMMAND *acltool_commands[] =
+  {
+   &version_command,
+   &config_command,
+   &help_command,
+  };
 
 
   
@@ -440,8 +377,8 @@ cmd_name_generator(const char *text,
   if (!state)
     ci = 0;
 
-  while (ci < commands.cc) {
-    cp = commands.cv[ci];
+  while (ci < commands.c) {
+    cp = commands.v[ci];
     ++ci;
     
     if (s_match(text, cp->name))
@@ -453,7 +390,7 @@ cmd_name_generator(const char *text,
 
 char *
 opt_name_generator(const char *text,
-			int state) {
+		   int state) {
   static int ci;
   const char *cp;
   int t;
@@ -462,9 +399,10 @@ opt_name_generator(const char *text,
   if (!state)
     ci = 0;
 
-  while (options[ci].name) {
-    cp = options[ci].name;
-    t = options[ci].type;
+  /* XXX TODO: Handle command options too - not just global ones */
+  while (global_options[ci].name) {
+    cp = global_options[ci].name;
+    t = global_options[ci].type;
     ++ci;
     
     if (s_match(text+2, cp))
@@ -505,30 +443,12 @@ cmd_name_completion(const char *text,
 
 int
 run_cmd(int argc,
-	char **argv,
-	CONFIG *cp,
-	void (*freef)(void *p)) {
-  CONFIG cfg;
-  int ai, rc, i;
+	char **argv) {
+  int rc;
   
-  
-  cfg = *cp;
-  
-  ai = 0;
-  if (cfg_parse(&cfg, &ai, argc, argv) != 0)
-    return -1;
 
-  while (--ai) {
-    if (freef)
-      freef(argv[1]);
-    for (i = 1; i < argc-1; i++) {
-      argv[i] = argv[i+1];
-    }
-    --argc;
-  }
-  argv[argc] = NULL;
-  
-  rc = cmd_run(&commands, argc, argv, (void *) &cfg);
+  config = default_config;
+  rc = cmd_run(&commands, argc, argv);
   if (rc < 0) {
     fprintf(stderr, "%s: Error: %s\n", argv[0], strerror(errno));
     return 1;
@@ -544,8 +464,10 @@ main(int argc,
 {
   char *buf;
   char **av;
-  int ai, ac, rc = 0;
+  int ac, rc = 0;
   char *aname;
+  int i, j;
+    
   
 
   aname = strrchr(argv[0], '/');
@@ -554,24 +476,31 @@ main(int argc,
   else
     aname = argv[0];
 
-  argv0 = argv[0];
+  argv0 = strdup(argv[0]);
 
-  cmd_init(&commands);
-  cmd_register(&commands, 0, basic_commands);
-  cmd_register(&commands, 0, acltool_commands);
-  cmd_register(&commands, 0, acl_commands);
+  cmd_register(&commands, basic_commands);
+  cmd_register(&commands, acltool_commands);
+  cmd_register(&commands, acl_commands);
 
   if (strcmp(aname, "acltool") != 0) {
+    /* Shortcut to acl-cmd */
     argv[0] = s_dup(aname);
-    rc = run_cmd(argc, argv, &d_cfg, NULL);
+    
+    rc = run_cmd(argc, argv);
     return rc;
   }
-  
-  ai = 0;
-  if (cfg_parse(&d_cfg, &ai, argc, argv) != 0)
-    exit(1);
 
-  if (ai == argc) {
+  i = opts_parse_argv(argc, argv, global_options, NULL);
+  if (i < 0)
+    return 1;
+  
+  default_config = config;
+  for (j = 1; i < argc; i++, j++)
+    argv[j] = argv[i];
+  argv[j] = NULL;
+  argc = j;
+  
+  if (argc == 1) {
     char *stdin_path = NULL;
     char *stdout_path = NULL;
     
@@ -631,7 +560,7 @@ main(int argc,
       default:
 	ac = argv_create(buf, NULL, NULL, &av);
 	if (ac > 0) {
-	  rc = run_cmd(ac, av, &d_cfg, free);
+	  rc = run_cmd(ac, av);
 	}
 	
 	argv_destroy(av);
@@ -649,6 +578,5 @@ main(int argc,
     exit(rc);
   }
 
-  rc = run_cmd(argc-ai, argv+ai, &d_cfg, NULL);
-  return rc;
+  return run_cmd(argc-1, argv+1);
 }

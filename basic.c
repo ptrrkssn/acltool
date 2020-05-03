@@ -41,9 +41,8 @@
 #include "basic.h"
 
 int
-cmd_echo(int argc,
-	 char **argv,
-	 void *vp) {
+echo_cmd(int argc,
+	 char **argv) {
   int i;
 
   
@@ -58,9 +57,8 @@ cmd_echo(int argc,
 
 
 int
-cmd_pwd(int argc,
-	char **argv,
-	void *vp) {
+pwd_cmd(int argc,
+	char **argv) {
   char buf[2048];
 
   if (getcwd(buf, sizeof(buf)))
@@ -70,9 +68,8 @@ cmd_pwd(int argc,
 }
 
 int
-cmd_cd(int argc,
-       char **argv,
-       void *vp) {
+cd_cmd(int argc,
+       char **argv) {
   int i, rc;
   
 
@@ -109,9 +106,8 @@ cmd_cd(int argc,
 
 
 int
-cmd_exit(int argc,
-	 char **argv,
-	 void *vp) {
+exit_cmd(int argc,
+	 char **argv) {
   int ec = 0;
 
   
@@ -127,13 +123,25 @@ cmd_exit(int argc,
 
 
 
+COMMAND exit_command =
+  { "exit", 	exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
+
+COMMAND echo_command =
+  { "echo", 	echo_cmd,	NULL, "[<str>]*",	"Print some text" };
+
+COMMAND cd_command =
+  { "cd", 	cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
+
+COMMAND pwd_command =
+  { "pwd", 	pwd_cmd,	NULL, "",		"Print working directory" };
 
 
-COMMAND basic_commands[] = {
-  { "exit", 	"[<code>]",	cmd_exit,	"Exit (with exit code)" },
-  { "echo", 	"[<str>]*",	cmd_echo,	"Print some text" },
-  { "cd", 	"[<path>]*",	cmd_cd,		"Change working directory" },
-  { "pwd", 	"",		cmd_pwd,	"Print working directory" },
-  { NULL,	NULL,		NULL,		NULL },
-};
+COMMAND *basic_commands[] =
+  {
+   &exit_command,
+   &echo_command,
+   &cd_command,
+   &pwd_command,
+   NULL,
+  };
 

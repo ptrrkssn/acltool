@@ -399,6 +399,14 @@ gacl_copy_entry(GACE *dep,
 
 
 extern int
+_gacl_entries(GACL *ap);
+
+extern int
+_gacl_get_entry(GACL *ap,
+		int pos,
+		GACE **epp);
+
+extern int
 gacl_get_entry(GACL *ap,
 	       int eid,
 	       GACE **epp);
@@ -550,6 +558,7 @@ gacl_set_entry_type_np(GACE *ep,
 #define GACL_TEXT_NUMERIC_IDS  0x0020
 #define GACL_TEXT_APPEND_ID    0x0040
 #define GACL_TEXT_COMPACT      0x1000
+#define GACL_TEXT_STANDARD     0x2000
 
 extern ssize_t
 gacl_entry_tag_to_text(GACE *ep,
@@ -589,6 +598,38 @@ gacl_to_text_np(GACL *ap,
 extern char *
 gacl_to_text(GACL *ap,
 	     ssize_t *bsp);
+
+
+typedef unsigned long GACE_EDIT_FLAGS;
+
+#define GACE_EDIT_TAG_MASK  0x00000003
+#define GACE_EDIT_TAG_NONE  0x00000000
+#define GACE_EDIT_TAG_ADD   0x00000001
+#define GACE_EDIT_TAG_SUB   0x00000002
+#define GACE_EDIT_TAG_ALL   0x00000003
+
+#define GACE_EDIT_PERM_MASK 0x00000030
+#define GACE_EDIT_PERM_NONE 0x00000000
+#define GACE_EDIT_PERM_ADD  0x00000010
+#define GACE_EDIT_PERM_SUB  0x00000020
+#define GACE_EDIT_PERM_ALL  0x00000030
+
+#define GACE_EDIT_FLAG_MASK 0x00000300
+#define GACE_EDIT_FLAG_NONE 0x00000000
+#define GACE_EDIT_FLAG_ADD  0x00000100
+#define GACE_EDIT_FLAG_SUB  0x00000200
+#define GACE_EDIT_FLAG_ALL  0x00000300
+
+#define GACE_EDIT_TYPE_MASK 0x00003000
+#define GACE_EDIT_TYPE_NONE 0x00000000
+#define GACE_EDIT_TYPE_ADD  0x00001000
+#define GACE_EDIT_TYPE_SUB  0x00002000
+#define GACE_EDIT_TYPE_ALL  0x00003000
+
+extern int
+_gacl_entry_from_text(char *cp,
+		      GACE *ep,
+		      GACE_EDIT_FLAGS *edit);
 
 extern int
 gacl_entry_from_text(char *buf,
@@ -690,6 +731,7 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #endif
 
 #define ACL_TEXT_COMPACT_NP       GACL_TEXT_COMPACT
+#define ACL_TEXT_STANDARD_NP      GACL_TEXT_STANDARD
 
 #define acl_init                  gacl_init
 #define acl_free                  gacl_free
