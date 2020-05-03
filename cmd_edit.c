@@ -94,6 +94,7 @@ acecr_from_text(ACECR **head,
   ACECR *cur, **next;
   char *bp, *tbuf, *ep;
   char *es;
+
   
   tbuf = NULL;
   bp = tbuf = strdup(buf);
@@ -217,6 +218,129 @@ acecr_from_text(ACECR **head,
 }
 
 
+static int
+acecr_from_simple_text(ACECR **head,
+		       const char *buf) {
+  ACECR *cur, **next;
+  char *tbuf, *ep;
+  char *es;
+  char *ftp;
+
+
+  if (!buf)
+    return -1;
+
+  while (isspace(*buf))
+    ++buf;
+
+  if (!*buf)
+    return -1;
+  
+  es = tbuf = strdup(buf);
+  if (!tbuf)
+    return -1;
+
+  /* Locate end of program list */
+  next = head;
+  for (cur = *head; cur; cur = cur->next)
+    next = &cur->next;
+
+  cur = malloc(sizeof(*cur));
+  if (!cur)
+    goto Fail;
+
+  cur->next = NULL;
+
+  /* Get @<filetype> matchlist */
+  ftp = strchr(es, '@');
+  if (ftp) {
+    *ftp++ = '\0';
+    str2filetype(ftp, &cur->match.ftypes);
+  }
+
+  cur->range = NULL;
+
+  ep = NULL;
+  if (*es == '/') {
+    ++es;
+    /* Locate end of match */
+    ep = strchr(es, '/');
+    if (ep)
+      *ep++ = '\0';
+  }
+  
+  cur->match.ep = malloc(sizeof(*(cur->match.ep)));
+  if (!cur->match.ep)
+    goto Fail;
+  
+  if (_gacl_entry_from_text(es, cur->match.ep, &cur->match.flags) < 0)
+    goto Fail;
+
+  if (ep) {
+    es = ep;
+  
+    /* Locate end of change */
+    ep = strchr(es, '/');
+    if (ep)
+      *ep++ = '\0';
+    
+    cur->change.ep = malloc(sizeof(*(cur->change.ep)));
+    if (!cur->change.ep)
+      goto Fail;
+    
+    if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0)
+      goto Fail;
+    
+    if (ep)
+      cur->modifiers = strdup(ep);
+  } else {
+    /* Simple change - only update permissions on matching ACEs */
+    acl_permset_t ps;
+    
+    cur->change.ep = malloc(sizeof(*(cur->change.ep)));
+    if (!cur->change.ep)
+      goto Fail;
+    
+    *(cur->change.ep) = *(cur->match.ep);
+    cur->change.flags = cur->match.flags;
+
+    switch (cur->match.flags & GACE_EDIT_TAG_MASK) {
+    case GACE_EDIT_TAG_ADD:
+    case GACE_EDIT_TAG_ALL:
+      acl_get_permset(cur->match.ep, &ps);
+      acl_clear_perms(ps);
+      acl_set_permset(cur->match.ep, ps);
+      acl_free(ps);
+      cur->match.flags &= ~GACE_EDIT_PERM_MASK;
+      cur->match.flags |= GACE_EDIT_PERM_ALL;
+      break;
+    case GACE_EDIT_TAG_SUB:
+      puts("SUB");
+    }
+  }
+
+  cur->cmd = 's';
+    
+  *next = cur;
+  next = &cur->next;
+  return 0;
+
+ Fail:
+  if (tbuf)
+    free(tbuf);
+  if (cur) {
+    if (cur->match.ep)
+      free(cur->match.ep);
+    if (cur->change.ep)
+      free(cur->change.ep);
+    if (cur->modifiers)
+      free(cur->modifiers);
+    free(cur);
+  }
+  
+  errno = EINVAL;
+  return -1;
+}
 
 
 
@@ -377,10 +501,10 @@ cmd_edit_ace(ACECR *cr,
 	  
   /* Update the tag type */
   switch (cr->change.flags & GACE_EDIT_TAG_MASK) {
-  case GACE_EDIT_TAG_ADD:
   case GACE_EDIT_TAG_SUB:
     goto Fail;
     
+  case GACE_EDIT_TAG_ADD:
   case GACE_EDIT_TAG_NONE:
     acl_set_tag_type(oae, ntt);
     if (nip)
@@ -427,16 +551,16 @@ cmd_edit_ace(ACECR *cr,
   
   /* Update the type */
   switch (cr->change.flags & GACE_EDIT_TYPE_MASK) {
-  case GACE_EDIT_TYPE_ADD:
   case GACE_EDIT_TYPE_SUB:
     goto Fail;
     
+  case GACE_EDIT_TYPE_ADD:
   case GACE_EDIT_TAG_NONE:
     acl_set_entry_type_np(oae, net);
     break;
   }
 
-  return 0;
+  return 1;
 
  Fail:
   return -1;
@@ -472,7 +596,8 @@ walker_edit(const char *path,
   for (rc = 0; rc == 0 && cr; cr = cr->next) {
     acl_entry_t nae;
     int p1, p;
-
+    int nm = 0;
+    
     /* Make sure this change request is valid for this file type */
     if (cr->match.ftypes && (sp->st_mode & cr->match.ftypes) == 0)
       continue;
@@ -566,10 +691,13 @@ walker_edit(const char *path,
 	    break;
 	  }
 	    
-	  if (cmd_edit_ace(cr, ae) < 0) {
+	  rc = cmd_edit_ace(cr, ae);
+	  if (rc < 0) {
 	    rc = -1;
 	    break;
 	  }
+	  if (rc == 1)
+	    ++nm;
 	  
 	  if (p >= nap->ac-1)
 	    break;
@@ -578,10 +706,23 @@ walker_edit(const char *path,
 	acl_entry_t ae;
 	
 	for (j = 0; acl_get_entry(nap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; j++) {
-	  if (cmd_edit_ace(cr, ae) < 0) {
+	  rc = cmd_edit_ace(cr, ae);
+	  if (rc < 0) {
 	    rc = -1;
 	    break;
 	  }
+	  if (rc == 1)
+	    ++nm;
+	}
+      }
+      if (nm == 0 && cr->change.flags & GACE_EDIT_TAG_ADD) {
+	if (acl_create_entry_np(&nap, &nae, pos) < 0) {
+	  fprintf(stderr, "Unable to create ACE at %d\n", pos);
+	  rc = -1;
+	}
+	else if (acl_copy_entry(nae, cr->change.ep) < 0) {
+	  fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
+	  rc = -1;
 	}
       }
       break;
@@ -669,7 +810,7 @@ edit_cmd(int argc,
 
   i = 1;
   if (!edit_cr && argc > 2)
-    acecr_from_text(&edit_cr, argv[i++]);
+    acecr_from_simple_text(&edit_cr, argv[i++]);
   
   if (!edit_cr) {
     fprintf(stderr, "%s: Error: Invalid/no change request\n", argv0);

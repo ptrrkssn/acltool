@@ -4,9 +4,9 @@ DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
 #CC=gcc
-CFLAGS=-g -Wall
+CFLAGS=-O -g -Wall
 
-CMDOBJS=common.o cmd_edit_access.o
+CMDOBJS=common.o cmd_edit.o
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o $(XOBJS) $(CMDOBJS)
 LIBS=$(XLDFLAGS) -lreadline $(XLIBS) 
 
