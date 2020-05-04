@@ -152,10 +152,9 @@ opts_parse_argv(int argc,
 		char **argv,
 		OPTION *opts,
 		...) {
-  int i, j, k, nm, rc;
+  int i, j, k, nm;
   char *name;
   char *value;
-  const void *svp;
   OPTION *op, *optlist;
   va_list ap;
 
@@ -202,7 +201,7 @@ opts_parse_argv(int argc,
 	return -1;
       }
 
-      rc = opts_set_value(op, value, argv[0]);
+      opts_set_value(op, value, argv[0]);
     } else {
       /* Short option (-x) */
 
@@ -239,7 +238,6 @@ opts_parse_argv(int argc,
 	}
 
 	value = NULL;
-	svp = NULL;
 	switch (op->type & OPTS_TYPE_MASK) {
 	case OPTS_TYPE_NONE:
 	  opts_set_value(op, NULL, argv[0]);
@@ -262,7 +260,7 @@ opts_parse_argv(int argc,
 	  else if (argv[i+1] && isdigit(argv[i+1][0]))
 	    value = argv[++i];
 
-	  rc = opts_set_value(op, value, argv[0]);
+	  opts_set_value(op, value, argv[0]);
 	  break;
 
 	case OPTS_TYPE_STR:
@@ -271,7 +269,7 @@ opts_parse_argv(int argc,
 	  else if (argv[i+1])
 	    value = argv[++i];
 
-	  rc = opts_set_value(op, value, argv[0]);
+	  opts_set_value(op, value, argv[0]);
 	  break;
 	  
 	default:

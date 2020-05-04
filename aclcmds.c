@@ -966,7 +966,7 @@ walker_inherit(const char *path,
 int
 inherit_cmd(int argc,
 	    char **argv) {
-  int i, rc;
+  int i, rc = 0;
 
   
   w_c = 0;

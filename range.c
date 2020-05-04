@@ -207,7 +207,7 @@ int
 range_add(RANGE **rpp,
 	  int p1,
 	  int p2) {
-  RANGE *rp, *prp;
+  RANGE *rp;
 
 
   if (!rpp)
@@ -220,7 +220,6 @@ range_add(RANGE **rpp,
     p1 = t;
   }
   
-  prp = NULL;
 
   /* Locate where to insert/append */
   for (rp = *rpp; rp; rp = rp->next) {

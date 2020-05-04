@@ -553,13 +553,13 @@ main(int argc,
       if (stdout_path) {
 	fprintf(stderr, "stdout_path='%s'\n", stdout_path);
 	if (freopen(stdout_path, "w", stdout) == NULL)
-	  freopen("/dev/tty", "w", stdout);
+	  stdout = freopen("/dev/tty", "w", stdout);
       }
 
       if (stdin_path) {
 	fprintf(stderr, "stdin_path='%s'\n", stdin_path);
 	if (freopen(stdin_path, "w", stdin) == NULL)
-	  freopen("/dev/tty", "r", stdin);
+	  stdin = freopen("/dev/tty", "r", stdin);
       }
       
       switch (*buf) {
@@ -582,10 +582,10 @@ main(int argc,
       free(buf);
 
       if (stdout_path)
-	freopen("/dev/tty", "w", stdout);
+	stdout = freopen("/dev/tty", "w", stdout);
 
       if (stdin_path)
-	freopen("/dev/tty", "r", stdin);
+	stdin = freopen("/dev/tty", "r", stdin);
     }
 
     exit(rc);

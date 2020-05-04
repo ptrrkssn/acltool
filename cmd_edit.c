@@ -497,7 +497,6 @@ cmd_edit_ace(ACECR *cr,
   /* Matching ACE */
   acl_tag_t mtt;
   acl_entry_type_t met;
-  uid_t *mip;
   acl_permset_t mps;
   acl_flagset_t mfs;
   
@@ -513,13 +512,14 @@ cmd_edit_ace(ACECR *cr,
   acl_entry_type_t oet;
   acl_permset_t ops;
   acl_flagset_t ofs;
-  uid_t *oip;
 	  
   
   /* Get match ACE */
   acl_get_tag_type(cr->match.ep, &mtt);
   acl_get_entry_type_np(cr->match.ep, &met);
+#if 0
   mip = acl_get_qualifier(cr->match.ep);
+#endif
   
   if (acl_get_permset(cr->match.ep, &mps) < 0 ||
       acl_get_flagset_np(cr->match.ep, &mfs) < 0)
@@ -537,7 +537,9 @@ cmd_edit_ace(ACECR *cr,
   /* Get current ACE */
   acl_get_tag_type(oae, &ott);
   acl_get_entry_type_np(oae, &oet);
+#if 0
   oip = acl_get_qualifier(oae);
+#endif
 	  
   if (acl_get_permset(oae, &ops) < 0 ||
       acl_get_flagset_np(oae, &ofs) < 0)

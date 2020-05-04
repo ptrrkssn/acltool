@@ -162,6 +162,7 @@ gacl_merge_permset(GACE_PERMSET *d,
   for (i = 0; gace_p2c[i].c; i++) {
     a = gacl_get_perm_np(s, gace_p2c[i].p);
     if (a) {
+      rc = 0;
       if (f > 0)
 	rc = gacl_add_perm(d, gace_p2c[i].p);
       else if (f < 0)
@@ -216,6 +217,7 @@ gacl_merge_flagset(GACE_FLAGSET *d,
   for (i = 0; gace_f2c[i].c; i++) {
     a = gacl_get_flag_np(s, gace_f2c[i].f);
     if (a) {
+      rc = 0;
       if (f > 0)
 	rc = gacl_add_flag_np(d, gace_f2c[i].f);
       else if (f < 0)
