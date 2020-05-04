@@ -122,6 +122,9 @@ set_acl(const char *path,
     acl_free(ap);
     ap = map;
   }
+
+  if (config.f_print > 1)
+    print_acl(stdout, ap, path, sp);
   
   /* Skip set operation if old and new acl is the same */
   if (oap && acl_match(ap, oap) == 1)
@@ -140,6 +143,9 @@ set_acl(const char *path,
     return rc;
   }
 
+  if (config.f_print == 1)
+    print_acl(stdout, ap, path, sp);
+  
   if (config.f_verbose)
     printf("%s: ACL Updated%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
   
@@ -208,6 +214,51 @@ str2filetype(const char *str,
 }
 
 
+static int
+primos_print_perms(FILE *fp,
+		   const char *s) {
+  int c;
+  int ns = 0;
+  
+  
+  while ((c = *s++) != '\0') {
+    if (c == '-')
+      ++ns;
+    else
+      putc(c, fp);
+  }
+
+  while (ns-- > 0)
+    putc(' ', fp);
+  return 0;
+}
+static int
+primos_print_flags(FILE *fp,
+		   const char *s) {
+  int c;
+  int ns = 0;
+  int np = 0;
+
+  while ((c = *s++) != '\0') {
+    if (c == '-')
+      ++ns;
+    else {
+      if (np++ == 0)
+	putc('(', fp);
+      putc(c, fp);
+    }
+  }
+
+  if (np == 0)
+    ns += 2;
+  else
+    putc(')', fp);
+  while (ns-- > 0)
+    putc(' ', fp);
+  return 0;
+}
+
+
 int
 print_acl(FILE *fp,
 	  acl_t a,
@@ -248,7 +299,7 @@ print_acl(FILE *fp,
   
   switch (config.f_style) {
   case ACL_STYLE_DEFAULT:
-    as = acl_to_text_np(a, NULL, (config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : ACL_TEXT_STANDARD_NP));
+    as = acl_to_text_np(a, NULL, (config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
@@ -269,6 +320,20 @@ print_acl(FILE *fp,
     else
       fprintf(fp, "# group: %s\n", gs);
     
+    fputs(as, fp);
+    acl_free(as);
+    break;
+
+  case ACL_STYLE_STANDARD:
+    as = acl_to_text_np(a, NULL, ACL_TEXT_STANDARD_NP|(config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
+    if (!as) {
+      fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
+      return 1;
+    }
+
+    fprintf(fp, "# file: %s\n", path);
+    fprintf(fp, "# owner: %s\n", us);
+    fprintf(fp, "# group: %s\n", gs);
     fputs(as, fp);
     acl_free(as);
     break;
@@ -392,12 +457,13 @@ print_acl(FILE *fp,
       ace2str(ae, acebuf, sizeof(acebuf));
 
       perms = strchr(acebuf, ':');
-      *perms = '\0';
-      if (tt == ACL_USER || tt == ACL_GROUP) {
-	*perms++ = ':';
-	perms = strchr(perms, ':');
-      } else
-	++perms;
+      if (!perms) {
+	fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
+	return 1;
+      }
+      
+      if (tt == ACL_USER || tt == ACL_GROUP)
+	perms = strchr(++perms, ':');
       *perms++ = '\0';
 
       flags = strchr(perms, ':');
@@ -406,7 +472,12 @@ print_acl(FILE *fp,
       type  = strchr(flags, ':');
       *type++ = '\0';
 
-      fprintf(fp, "\t%15s:  %-13s  %-7s  %-5s", acebuf, perms, flags, type);
+      fprintf(fp, "\t%30s:  ", acebuf);
+      primos_print_perms(fp, perms);
+      fprintf(fp, "  ");
+      primos_print_flags(fp, flags);
+      if (strcmp(type, "allow") != 0)
+	fprintf(fp, "  %-5s", type);
       switch (tt) {
       case ACL_USER_OBJ:
 	if (us) {
@@ -467,7 +538,7 @@ print_acl(FILE *fp,
       cp = strrchr(acebuf, '\t');
       if (*cp) {
 	*cp++ = '\0';
-	fprintf(fp, "%-50s\t# %s\n", acebuf, cp);
+	fprintf(fp, "%-60s\t# %s\n", acebuf, cp);
       } else
 	fprintf(fp, "%s\n", acebuf);
     }
@@ -502,6 +573,8 @@ str2style(const char *str,
   
   if (strcasecmp(str, "default") == 0)
     *sp = ACL_STYLE_DEFAULT;
+  else if (strcasecmp(str, "standard") == 0)
+    *sp = ACL_STYLE_STANDARD;
   else if (strcasecmp(str, "brief") == 0)
     *sp = ACL_STYLE_BRIEF;
   else if (strcasecmp(str, "verbose") == 0)
@@ -527,6 +600,8 @@ style2str(ACL_STYLE s) {
   switch (s) {
   case ACL_STYLE_DEFAULT:
     return "Default";
+  case ACL_STYLE_STANDARD:
+    return "Standard";
   case ACL_STYLE_BRIEF:
     return "Brief";
   case ACL_STYLE_VERBOSE:

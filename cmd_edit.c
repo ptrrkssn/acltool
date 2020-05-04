@@ -119,8 +119,7 @@ acecr_from_text(ACECR **head,
     if (!cur) {
       goto Fail;
     }
-
-    cur->next = NULL;
+    memset(cur, 0, sizeof(*cur));
     
     ftp = strchr(es, '@');
     if (ftp) {
@@ -128,7 +127,6 @@ acecr_from_text(ACECR **head,
       str2filetype(ftp, &cur->match.ftypes);
     }
 
-    cur->range = NULL;
     range_adds(&cur->range, (const char **) &es);
 
     while (isspace(*es))
@@ -222,9 +220,7 @@ static int
 acecr_from_simple_text(ACECR **head,
 		       const char *buf) {
   ACECR *cur, **next;
-  char *tbuf, *ep;
-  char *es;
-  char *ftp;
+  char *tbuf, *ep, *bp, *es, *ftp;
 
 
   if (!buf)
@@ -236,7 +232,7 @@ acecr_from_simple_text(ACECR **head,
   if (!*buf)
     return -1;
   
-  es = tbuf = strdup(buf);
+  bp = tbuf = strdup(buf);
   if (!tbuf)
     return -1;
 
@@ -244,85 +240,97 @@ acecr_from_simple_text(ACECR **head,
   next = head;
   for (cur = *head; cur; cur = cur->next)
     next = &cur->next;
-
-  cur = malloc(sizeof(*cur));
-  if (!cur)
-    goto Fail;
-
-  cur->next = NULL;
-
-  /* Get @<filetype> matchlist */
-  ftp = strchr(es, '@');
-  if (ftp) {
-    *ftp++ = '\0';
-    str2filetype(ftp, &cur->match.ftypes);
-  }
-
-  cur->range = NULL;
-
-  ep = NULL;
-  if (*es == '/') {
-    ++es;
-    /* Locate end of match */
-    ep = strchr(es, '/');
-    if (ep)
-      *ep++ = '\0';
-  }
   
-  cur->match.ep = malloc(sizeof(*(cur->match.ep)));
-  if (!cur->match.ep)
-    goto Fail;
-  
-  if (_gacl_entry_from_text(es, cur->match.ep, &cur->match.flags) < 0)
-    goto Fail;
-
-  if (ep) {
-    es = ep;
-  
-    /* Locate end of change */
-    ep = strchr(es, '/');
-    if (ep)
-      *ep++ = '\0';
-    
-    cur->change.ep = malloc(sizeof(*(cur->change.ep)));
-    if (!cur->change.ep)
+  while ((es = strsep(&bp, ",;")) != NULL) {
+    cur = malloc(sizeof(*cur));
+    if (!cur)
       goto Fail;
+    memset(cur, 0, sizeof(*cur));
     
-    if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0)
-      goto Fail;
-    
-    if (ep)
-      cur->modifiers = strdup(ep);
-  } else {
-    /* Simple change - only update permissions on matching ACEs */
-    acl_permset_t ps;
-    
-    cur->change.ep = malloc(sizeof(*(cur->change.ep)));
-    if (!cur->change.ep)
-      goto Fail;
-    
-    *(cur->change.ep) = *(cur->match.ep);
-    cur->change.flags = cur->match.flags;
-
-    switch (cur->match.flags & GACE_EDIT_TAG_MASK) {
-    case GACE_EDIT_TAG_ADD:
-    case GACE_EDIT_TAG_ALL:
-      acl_get_permset(cur->match.ep, &ps);
-      acl_clear_perms(ps);
-      acl_set_permset(cur->match.ep, ps);
-      acl_free(ps);
-      cur->match.flags &= ~GACE_EDIT_PERM_MASK;
-      cur->match.flags |= GACE_EDIT_PERM_ALL;
-      break;
-    case GACE_EDIT_TAG_SUB:
-      puts("SUB");
+    /* Get @<filetype> matchlist */
+    ftp = strchr(es, '@');
+    if (ftp) {
+      *ftp++ = '\0';
+      str2filetype(ftp, &cur->match.ftypes);
     }
-  }
-
-  cur->cmd = 's';
     
-  *next = cur;
-  next = &cur->next;
+    ep = NULL;
+    if (*es == '/') {
+      ++es;
+      /* Locate end of match */
+      ep = strchr(es, '/');
+      if (ep)
+	*ep++ = '\0';
+    }
+    
+    cur->match.ep = malloc(sizeof(*(cur->match.ep)));
+    if (!cur->match.ep)
+      goto Fail;
+    
+    if (_gacl_entry_from_text(es, cur->match.ep, &cur->match.flags) < 0)
+      goto Fail;
+    
+    if (ep) {
+      /* Matched change - only update matching ACEs
+       *
+       * acl=<tag>:<perms>[:<flags>][:<type>]]
+       * change=/<acl>/<acl>/[<modifiers>]
+       *
+       * format: <change>[,<change]*
+       */
+      es = ep;
+      
+      /* Locate end of change */
+      ep = strchr(es, '/');
+      if (ep)
+	*ep++ = '\0';
+      
+      cur->change.ep = malloc(sizeof(*(cur->change.ep)));
+      if (!cur->change.ep)
+	goto Fail;
+      
+      if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0)
+	goto Fail;
+      
+      if (ep)
+	cur->modifiers = strdup(ep);
+    } else {
+      /* Simple change - only update permissions on matching ACEs
+       *
+       * acl=<tag>:<perms>[:<flags>][:<type>]]
+       *
+       * format: <acl>[,<acl>]*
+       */
+      acl_permset_t ps;
+      
+      cur->change.ep = malloc(sizeof(*(cur->change.ep)));
+      if (!cur->change.ep)
+	goto Fail;
+      
+      *(cur->change.ep) = *(cur->match.ep);
+      cur->change.flags = cur->match.flags;
+      
+      switch (cur->match.flags & GACE_EDIT_TAG_MASK) {
+      case GACE_EDIT_TAG_ADD:
+      case GACE_EDIT_TAG_ALL:
+	acl_get_permset(cur->match.ep, &ps);
+	acl_clear_perms(ps);
+	acl_set_permset(cur->match.ep, ps);
+	acl_free(ps);
+	cur->match.flags &= ~GACE_EDIT_PERM_MASK;
+	cur->match.flags |= GACE_EDIT_PERM_ALL;
+	break;
+      case GACE_EDIT_TAG_SUB:
+	puts("SUB");
+      }
+    }
+
+    cur->cmd = 's';
+    
+    *next = cur;
+    next = &cur->next;
+  }
+  
   return 0;
 
  Fail:

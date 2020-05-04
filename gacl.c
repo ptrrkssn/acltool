@@ -1473,8 +1473,8 @@ gacl_to_text_np(GACL *ap,
   size_t bufsize = 2048;
   int i, rc;
   GACE *ep;
-  int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 22 : 40);
-  
+  int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 18 : 40);
+
   
   bp = buf = malloc(bufsize);
   if (!buf)
@@ -1508,7 +1508,10 @@ gacl_to_text_np(GACL *ap,
     if (flags & GACL_TEXT_COMPACT) 
       rc = snprintf(bp, bufsize, "%s%s", (i > 0 ? "," : ""), es);
     else
-      rc = snprintf(bp, bufsize, " %*s%s\n", (int) (tagwidth-len), "", es);
+      if (tagwidth > len)
+	rc = snprintf(bp, bufsize, "%*s%s\n", (int) (tagwidth-len), "", es);
+      else
+	rc = snprintf(bp, bufsize, "%s\n", es);
     if (rc < 0)
       goto Fail;
 

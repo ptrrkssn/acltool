@@ -347,7 +347,7 @@ opts_set(OPTION *opts,
 
 
 
-#if DEBUG
+#ifdef TEST
 int
 test_handler(const char *name,
 	     const char *vs,

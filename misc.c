@@ -171,8 +171,10 @@ static struct flag2str_windows {
 	   { ACL_ENTRY_INHERITED,            "I"  },
 	   { ACL_ENTRY_NO_PROPAGATE_INHERIT, "NP" },
 	   { ACL_ENTRY_INHERIT_ONLY,         "IO" },
-#if 0
+#ifdef ACL_ENTRY_SUCCESSFUL_ACCESS
 	   { ACL_ENTRY_SUCCESSFUL_ACCESS,    "S"  },
+#endif
+#ifdef ACL_ENTRY_FAILED_ACCESS
 	   { ACL_ENTRY_FAILED_ACCESS,        "F"  },
 #endif
 	   { 0, NULL }
@@ -376,10 +378,13 @@ ace2str_samba(acl_entry_t ae,
       return NULL;
 
     pp = getpwuid(*(uid_t *) qp);
-    if (pp)
-      rc = snprintf(res, rsize, "ACL:%s:", pp->pw_name);
-    else
-      rc = snprintf(res, rsize, "ACL:%u:", * (uid_t *) qp);
+    if (pp) {
+      gp = getgrnam(pp->pw_name);
+      rc = snprintf(res, rsize, "ACL:%s%s:", pp->pw_name, gp ? "(user)" : "");
+    } else {
+      gp = getgrgid(*(gid_t *) qp);
+      rc = snprintf(res, rsize, "ACL:%u%s:", * (uid_t *) qp, gp ? "(user)" : "");
+    }
     acl_free(qp);
     break;
     
@@ -389,13 +394,13 @@ ace2str_samba(acl_entry_t ae,
       return NULL;
 
     gp = getgrgid(*(gid_t *) qp);
-    if (gp) {
-      if (getpwnam(gp->gr_name))
-	rc = snprintf(res, rsize, "ACL:GROUP=%s:", gp->gr_name);
-      else
-	rc = snprintf(res, rsize, "ACL:%s:", gp->gr_name);
-    } else
-      rc = snprintf(res, rsize, "ACL:GID=%u:", * (gid_t *) qp);
+    if (gp) { 
+      pp = getpwnam(gp->gr_name);
+      rc = snprintf(res, rsize, "ACL:%s%s:", gp->gr_name, pp ? "(group)" : "");
+    } else {
+      pp = getpwuid(*(uid_t *) qp);
+      rc = snprintf(res, rsize, "ACL:%u%s:", * (gid_t *) qp, pp ? "(group)" : "");
+    }
     acl_free(qp);
     break;
     
@@ -418,7 +423,7 @@ ace2str_samba(acl_entry_t ae,
       rc = snprintf(res, rsize, "ACL:GID=%u:", sp->st_gid);
     break;
 
-#if 0
+#ifdef ACL_MASK
   case ACL_MASK:
     rc = snprintf(res, rsize, "ACL:%s:", "mask@");
     break;
@@ -481,21 +486,6 @@ ace2str_samba(acl_entry_t ae,
   rbuf += rc;
   rsize -= rc;
 
-#if 0
-  rbuf[0] = '(';
-  ++rbuf;
-  --rsize;
-  
-  flagset2str(afs, rbuf);
-  rc = strlen(rbuf);
-  rbuf += rc;
-  rsize -= rc;
-
-  rbuf[0] = ')';
-  ++rbuf;
-  --rsize;
-#endif
-  
   rbuf[0] = '/';
   ++rbuf;
   --rsize;
@@ -596,7 +586,7 @@ ace2str_icacls(acl_entry_t ae,
       rc = snprintf(res, rsize, "GID=%u:", sp->st_gid);
     break;
 
-#if 0
+#ifdef ACL_MASK
   case ACL_MASK:
     rc = snprintf(res, rsize, "%s:", "mask@");
     break;

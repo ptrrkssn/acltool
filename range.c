@@ -384,7 +384,7 @@ range_print(RANGE *rp, FILE *fp) {
 }
 
 
-#if 0
+#ifdef TEST
 int
 main(int argc,
      char **argv) {

@@ -31,8 +31,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CMD_COMMON_H
-#define CMD_COMMON_H
+#ifndef COMMON_H
+#define COMMON_H
+
+typedef enum acl_style
+  {
+   ACL_STYLE_DEFAULT  = 0x00,
+   ACL_STYLE_STANDARD = 0x01,
+   ACL_STYLE_BRIEF    = 0x02,
+   ACL_STYLE_VERBOSE  = 0x03,
+   ACL_STYLE_CSV      = 0x10,
+   ACL_STYLE_SAMBA    = 0x20,
+   ACL_STYLE_ICACLS   = 0x30,
+   ACL_STYLE_SOLARIS  = 0x40,
+   ACL_STYLE_PRIMOS   = 0x50,
+  } ACL_STYLE;
+
 
 extern acl_t 
 get_acl(const char *path, 

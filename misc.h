@@ -90,11 +90,5 @@ ft_foreach(const char *path,
 	   size_t maxlevel,
 	   mode_t filetypes);
 
-extern int
-str2style(const char *str,
-	  ACL_STYLE *sp);
-
-extern const char *
-style2str(ACL_STYLE s);
 
 #endif
