@@ -60,6 +60,7 @@ _cmp_cmdname(const void *a, const void *b) {
 
   ca = *(COMMAND **) a;
   cb = *(COMMAND **) b;
+
   return strcmp(ca->name, cb->name);
 }
 

@@ -51,7 +51,7 @@
 char *argv0 = "acltool";
 char *version = "1.6.1";
 
-COMMANDS commands;
+COMMANDS commands = { 0 };
 
 CONFIG default_config = { 0, 0, 0, 0, 0, 0 };
 CONFIG config = { 0, 0, 0, 0, 0, 0 };
@@ -376,6 +376,7 @@ COMMAND *acltool_commands[] =
    &version_command,
    &config_command,
    &help_command,
+   NULL,
   };
 
 
@@ -553,13 +554,15 @@ main(int argc,
       if (stdout_path) {
 	fprintf(stderr, "stdout_path='%s'\n", stdout_path);
 	if (freopen(stdout_path, "w", stdout) == NULL)
-	  stdout = freopen("/dev/tty", "w", stdout);
+	  if (freopen("/dev/tty", "w", stdout) == NULL)
+	    exit(1);
       }
 
       if (stdin_path) {
 	fprintf(stderr, "stdin_path='%s'\n", stdin_path);
 	if (freopen(stdin_path, "w", stdin) == NULL)
-	  stdin = freopen("/dev/tty", "r", stdin);
+	  if (freopen("/dev/tty", "r", stdin) == NULL)
+	    exit(1);
       }
       
       switch (*buf) {
@@ -582,10 +585,12 @@ main(int argc,
       free(buf);
 
       if (stdout_path)
-	stdout = freopen("/dev/tty", "w", stdout);
+	if (freopen("/dev/tty", "w", stdout) == NULL)
+	  exit(1);
 
       if (stdin_path)
-	stdin = freopen("/dev/tty", "r", stdin);
+	if (freopen("/dev/tty", "r", stdin) == NULL)
+	  exit(1);
     }
 
     exit(rc);
