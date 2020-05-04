@@ -1,7 +1,7 @@
 ACLTOOL
 
-  This is a tool to manage ACLs - listing, creating, editing, searching, stripping, sorting
-  and removing redundant entries and more.
+  This is a tool to manage ACLs - listing, creating, editing,
+  searching, stripping, sorting and removing redundant entries and more.
 
 AUTHOR
 
@@ -17,7 +17,8 @@ OPERATING SYSTEMS SUPPORTED (for now)
 
 BUILD INSTRUCTIONS
 
-  Just type 'make' in the source directory. It will automatically detect and build on:
+  Just type 'make' in the source directory. It will automatically
+  detect and build on:
 
     - FreeBSD (tested on 11.3 & 12.1)
     - Linux (tested on CentOS 7, Ubuntu 19 & Debian 9)
@@ -26,60 +27,28 @@ BUILD INSTRUCTIONS
 
 USAGE
 
-  acltool [<global-options>] [<command> [<options>] [<arguments>]]
+  See the manual page for detailed usage information.
 
+  Acltool can either be used directly from the command line or by
+  entering a CLI mode by starting it without any arguments (sans
+  any global options).
 
-OPTIONS
-
-  -h / --help           -       Display usage
-  -D / --debug          [<n>]   Debug level
-  -v / --verbose        [<n>]   Verbosity level
-  -p / --print          [<n>]   Print (ACL) level
-  -s / --sort           -       Enable sorting
-  -m / --merge          -       Enable merging
-  -r / --recurse        -       Enable recursion
-  -d / --depth          [<n>]   Increase/decrease max depth
-  -t / --type           <t>     File type(s) to operate on
-  -S / --style          <s>     Select ACL print style
-  -n / --no-update      -       Disable modification
-
-
-COMMANDS
-
-  exit                  [<code>]                Exit (with exit code)
-  echo                  [<str>]*                Print some text
-  cd                    [<path>]*               Change working directory
-  pwd                   -                       Print working directory
-  version               -                       Display program version
-  config                [<opt>[=<val>]]*        Print/update default configuration
-  help                  [<command>]*            Display usage information
-  list-access           <path>+                 List ACL(s)
-  strip-access          <path>+                 Strip ACL(s)
-  sort-access           <path>+                 Sort ACL(s)
-  copy-access           <src> <dst>+            Copy ACL(s)
-  delete-access         <path>+                 Delete ACL(s)
-  set-access            <acl> <path>+           Set ACL(s)
-  edit-access           <path>+                 Edit ACL(s)
-  find-access           <acl> <path>+           Search ACL(s)
-  get-access            <var>=<path>+           Assign ACL(s) to variable(s)
-  rename-access         <changes> <path>+       Rename ACL entries (change users/groups)
-
-  Acltool can either be used directly from the command line or by entering a CLI mode by starting 
-  it without any arguments (sans any global options).
-
-  You can access environmental variables using ${NAME} (or $N if one-character names).
+  You can access environmental variables using ${NAME} (or $N if
+  one-character names).
   
-  All commands and long option names can be abbreviated using the parts of the names. 
-  Some examples of valid abbreviations:
+  All commands and long option names can be abbreviated using the
+  parts of the names. Some examples of valid abbreviations:
 
     list-access, list-a, list, l-ac, lac, liac
     edit-access, edit-a, edit, e-ac, edac
     set-access, set-acc, set, s-a, sac
 
-  Tab-completion in CLI mode also works for command names, (global) long options and files.
+  Tab-completion in CLI mode also works for command names,
+  (global) long options and files.
   
-  Command names may also be used in links to the "acltool" binary like "ln -s acltool lac" and
-  then be used as shortcuts to the commands.
+  Command names may also be used in links to the "acltool"
+  binary like "ln -s acltool lac" and then be used as shortcuts
+  to the commands.
 
 
 FILE TYPES
