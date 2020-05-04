@@ -1,0 +1,187 @@
+.\" Manual page for acltool
+.\" Contact pen@lysator.lius.e to correct errors or typos.
+.TH acltool 1 "04 May 2020" "1.7" "acltool man page"
+.SH NAME
+acltool \- manipulate NFSv4 and ZFS ACLs
+.SH SYNOPSIS
+.B acltool
+.RI "[" "<options>*" "]"
+.RI "[" "<action>" ""
+.RI "[" "<options>*" "]"
+.RI "[" "<path>*" "]" "" "]"
+.SH DESCRIPTION
+.B acltool
+is a tool to manipulate NFSv4 & ZFS ACLs in various ways. POSIX.1e ACLs is
+.B not
+supported as of this time.
+.SH ABBREVIATIONS
+All
+.B actions
+or
+.B "long options"
+may be abbreviated freely as long as they can be uniqely
+identfied. For example
+.B edit-access
+may be abbreviated to
+.B edac,
+.B ed-ac,
+.B edit-acc
+or
+.B edit
+and many other variants.
+Similarly
+.B --no-update
+may (for example) be abbreviated to
+.B --no-up
+or
+.B --nu.
+.SH OPTIONS
+.TP
+.B "-h | --help"
+Display usage information.
+.TP
+.B "-v | --verbose"
+Increase verbosity
+.TP
+.B "-n | --no-update"
+No-update mode.
+.TP
+.B "-s | --sort"
+Enable
+.B "Sort ACL"
+mode.
+.TP
+.B "-m | --merge"
+Enable
+.B "Merge ACL"
+mode.
+.TP
+.B "-r | --recurse"
+Recurse thru directory tree.
+.TP
+.B "-d <n> | --depth=<n>"
+Limit recursion depth.
+.TP
+.B "-S <s> | --style=<S>"
+Set ACL print style.
+.TP
+.B "-p | --print"
+Increase
+.B "Print ACL"
+mode.
+.TP
+.B "-n | --no-update"
+Never modify ACLs on disk.
+.TP
+.B "-N | --no-prefix"
+Do not print path prefix when listing matching ACL entries.
+.TP
+.B "-e <cr> | --exec=<cr>"
+Add a semicolon-separated list of <change-requests> to be applied to ACLs
+.I (only for edit-access)
+.TP
+.B "-f <file> | --file=<file>"
+Read a semicolon or line-separated list of <change-requests> from a
+file to be applied to ACLs
+.I (only for edit-access)
+.SH ACTIONS
+.TP
+.B help
+.br
+Display usage information about all actions, or more detailed information
+about a specific one.
+.TP
+.B "list-access" (lac)
+.br
+List ACLs
+.TP
+.B "edit-access" (edac)
+.br
+Modify ACLs
+.TP
+.B "copy-access"
+.br
+Copy ACLs
+.TP
+.B "delete-access"
+.br
+Delete ACLs
+.TP
+.B "find-access"
+.br
+Search for matching ACLs
+.TP
+.B "inherit-access"
+.br
+Propagate ACL inheritance
+.TP
+.B "rename-access"
+.br
+Batch-rename ACL entries
+.TP
+.B "set-access"
+.br
+Set ACLs
+.TP
+.B "sort-access"
+.br
+Sort ACLS
+.TP
+.B "strip-access"
+.br
+Strip ACLs
+.TP
+.B "get-access"
+.br
+Get ACLs into variables in brief text format.
+.TP
+.B "change-directory" (cd)
+.br
+Change current directory
+.TP
+.B "print-working-directory" (pwd)
+.br
+Print current working directory
+.TP
+.B "exit-command" (exit)
+.br
+Exit from interactive mode.
+.TP
+.B "echo"
+.br
+Print text
+.TP
+.B "version"
+.br
+Print version and buiild information.
+.SH INTERACTIVE MODE
+.B Interactive Mode
+is entered if you do not specify an action on the command line.
+In this mode tab-completion works for commands and common long
+options (not action-specific options). Environment variables may be accessed
+using ${name}.
+.SH ALTERNATIVE PROGRAM NAMES
+You may make symbolic links to
+.B acltool
+in order to use actions directly. For example "ln -s acltool lac" makes it
+possible to use "lac" as a shortcut to "acltool lac" from a Shell.
+.SH SEE ALSO
+.TP
+.B BSD
+setfacl(1), getfacl(1), acl(3), acl(9)
+.TP
+.B SunOS
+chmod(1), ls(1), acl(2)
+.TP
+.B Linux
+nfs4_getfacl(1), nfs4_setfacl(1), nfs4_acl(5)
+.TP
+.B RFC's
+RFC3530 (NFSv4.0), NFSv4.1 Minor Version Draft.
+.SH BUGS
+No known bugs
+.SH SOURCE
+https://github.com/ptrrkssn/acltool
+.SH AUTHOR
+Peter Eriksson <pen@lysator.liu.se>
+
