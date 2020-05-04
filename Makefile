@@ -3,7 +3,8 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
-#CC=gcc
+# CC=gcc
+SOLARIS_CC=gcc
 CFLAGS=-O -Wall
 DEBUG_CFLAGS=-g -Wall
 
@@ -21,7 +22,7 @@ help:
 	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, clean" ; exit 0
 
 SunOS solaris omnios illumos:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
+	@$(MAKE) CC="$(SOLARIS_CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" XLIBS="-L/usr/local/lib -R/usr/local/lib -lcurses" all
 
 Linux linux:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all

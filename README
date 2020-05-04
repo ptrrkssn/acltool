@@ -121,7 +121,7 @@ EXAMPLES
   edit-access -r peter86:-rwx:f:allow dir
     Recursively remove permissions "rwx" from all existing peter86:*:f:allow ACEs
 
-  edit-access -r peter86:+rwx:f:allow@d dir
+  edit-access -r peter86:+rwx:f:allow?d dir
     Recursively add permissions "rwx" to all existing peter86:*:f:allow ACEs set on directories
     
   sort-access -m dir
@@ -169,6 +169,6 @@ EXAMPLES
   edit-access -e '0p;1,2,3p;0-$p' dir
     Print first entry, then entries 1,2&3, and then all entries in the ACL
 
-  edit-access -r -e 's/peter86:+rwx/peter86:rwxp:fd/@d;0-$p' dir
+  edit-access -r -e 's/peter86:+rwx/peter86:rwxp:fd/?d;0-$p' dir
     Recursively replace all "peter86:*::allow" entries where atleast rwx is set with "peter86:rwxp:fd"
     on directories, and then print the resulting ACL.
