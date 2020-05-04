@@ -74,4 +74,7 @@ range_adds(RANGE **rp, const char **sp);
 extern int
 range_print(RANGE *rp, FILE *fp);
 
+extern void
+range_free(RANGE **rpp);
+
 #endif

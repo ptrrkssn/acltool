@@ -88,8 +88,8 @@ get_acl(const char *path,
 
 int
 print_ace(acl_t ap,
-	      int p,
-	      int verbose) {
+	  int p,
+	  int flags) {
   acl_entry_t ae;
   char buf[1024];
 
@@ -97,7 +97,7 @@ print_ace(acl_t ap,
   if (_gacl_get_entry(ap, p, &ae) < 0)
     return -1;
   
-  if (acl_entry_to_text(ae, buf, sizeof(buf), (verbose ? 0 : GACL_TEXT_COMPACT)) < 0)
+  if (acl_entry_to_text(ae, buf, sizeof(buf), flags) < 0)
     return -1;
   
   puts(buf);

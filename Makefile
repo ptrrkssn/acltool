@@ -4,7 +4,8 @@ DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
 #CC=gcc
-CFLAGS=-O -g -Wall
+CFLAGS=-O -Wall
+DEBUG_CFLAGS=-g -Wall
 
 CMDOBJS=common.o cmd_edit.o
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o $(XOBJS) $(CMDOBJS)
@@ -12,6 +13,9 @@ LIBS=$(XLDFLAGS) -lreadline $(XLIBS)
 
 auto build:
 	@$(MAKE) `uname -s`
+
+debug:
+	@$(MAKE) `uname -s` CFLAGS="$(DEBUG_CFLAGS)"
 
 help:
 	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, clean" ; exit 0
@@ -23,7 +27,7 @@ Linux linux:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
 
 FreeBSD freebsd:
-	@$(MAKE) CC="$(CC) -g" CFLAGS="-I/usr/local/include $(CFLAGS)" XLDFLAGS="-L/usr/local/lib -R/usr/local/lib" XLIBS="-lncurses" all
+	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" XLDFLAGS="-L/usr/local/lib -R/usr/local/lib" XLIBS="-lncurses" all
 
 all: acltool
 

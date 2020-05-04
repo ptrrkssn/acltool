@@ -209,6 +209,17 @@ set_no_update(const char *name,
   return 0;
 }
 
+int
+set_no_prefix(const char *name,
+              const char *value,
+              unsigned int type,
+              const void *svp,
+              void *dvp,
+              const char *a0) {
+  config.f_noprefix = 1;
+  return 0;
+}
+
 extern OPTION global_options[];
 
 
@@ -238,6 +249,7 @@ OPTION global_options[] =
    { "style",     'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
    { "type",      't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
    { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
+   { "no-prefix", 'N', OPTS_TYPE_NONE,               set_no_prefix, NULL, "Do not prefixed filenames" },
    { NULL,        -1,  0,                            NULL,          NULL, NULL },
   };
 
@@ -294,6 +306,7 @@ config_cmd(int argc,
     else
       printf("  Recurse Max Depth:  %d\n", config.max_depth);
     printf("  Update:             %s\n", config.f_noupdate ? "No" : "Yes");
+    printf("  Prefix:             %s\n", config.f_noprefix ? "No" : "Yes");
     printf("  Style:              %s\n", style2str(config.f_style));
   } else {
     int i;

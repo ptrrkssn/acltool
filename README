@@ -34,6 +34,7 @@ OPTIONS
   -h / --help           -       Display usage
   -D / --debug          [<n>]   Debug level
   -v / --verbose        [<n>]   Verbosity level
+  -p / --print          [<n>]   Print (ACL) level
   -s / --sort           -       Enable sorting
   -m / --merge          -       Enable merging
   -r / --recurse        -       Enable recursion
@@ -75,7 +76,7 @@ COMMANDS
     edit-access, edit-a, edit, e-ac, edac
     set-access, set-acc, set, s-a, sac
 
-  Tab-completion in CLI mode also works for command names, long options and files.
+  Tab-completion in CLI mode also works for command names, (global) long options and files.
   
   Command names may also be used in links to the "acltool" binary like "ln -s acltool lac" and
   then be used as shortcuts to the commands.
@@ -93,10 +94,11 @@ FILE TYPES
 
 
 ACL PRINT STYLES
-  default         FreeBSD-style
-  verbose	  A more verbose version of FreeBSD
-  brief		  A one-line version
-  csv		  A CSV-styl one-line version
+  default         acltool-style
+  standard        FreeBSD-style
+  verbose	  More verbose version
+  brief		  One-line version
+  csv		  CSV-style one-line version
   solaris	  Solaris-style
   primos	  Prime/PRIMOS-style
   samba		  Samba-style
@@ -114,45 +116,59 @@ EXAMPLES
     Recursively display Access list for sockets and normal files
 
   edit-access -r user:peter86:rwx:f:allow dir
-    Recursively set the ACE on all objects
+    Recursively set the ACE permission "rwx" on all objects matching "user:peter86" with flags "f" and type "allow"
 
-  edit-access -r +peter86:rwx:f:allow dir
-    Recursively add permissions & flags "rwx:f" to all existing peter86:*:*:allow ACEs
-    
-  edit-access -r -peter86:rwx:f:allow dir
-    Recursively remove permission & flags "rwx:f" from all existing peter86:*:*:allow ACEs
-    
-  edit-access -r =user:peter86:rwx:f:allow dir
-    Recursively replace permission & flags "rwx:f" on all existing peter86:*:*:allow ACEs
-    
-  edit-access -r ^user:peter86:rwx:f:allow dir
-    Recursively set the ACE on all objects that does _not_ have a 'peter86:*:*:allow' ACE already
+  edit-access -r peter86:-rwx:f:allow dir
+    Recursively remove permissions "rwx" from all existing peter86:*:f:allow ACEs
 
-  rename-access -r employees:students,g:guests:noobs /export/homes
-    Recursively replace all ACL entries for groups "employees" with "students" and guests with noobs
+  edit-access -r peter86:+rwx:f:allow@d dir
+    Recursively add permissions "rwx" to all existing peter86:*:f:allow ACEs set on directories
     
   sort-access -m dir
     Sort and merge the ACL entries for dir
 
+  rename-access -r employees:students,g:guests:noobs /export/homes
+    Recursively replace all ACL entries for groups "employees" with "students" and guests with noobs
 
-Not Implemented Yet (format may change):
-
-  edit-access [/+parst38:rwx/]user:peter86:rwx:f:allow dir
-  
+  edit-access /parst38:rwx/user:peter86:rwx:f:allow/ dir  
     Replace all parst38-allow entries where rwx permissions is
     set with 'user:peter86:rwx:f:allow'
 
 
-  edit-access [2d]user:peter86:rwx:f:allow dir
-  
-    Replace entry #2 with "user:peter86:rwx:f:allow
+MORE ADVANCED USAGE
+
+The "edit-access" subcommand takes two additions command line switches:
+
+  -e <change-list>       Add a semicolon-separated "extended program" to the change request list
+  -f <filename>		 Add a "extended program" (semicolon or newline-separated) from a file
+
+If either is specified then no "simple" change-request is read from the command line.
+
+The "extended program" is (very) loosely based on "sed". The following commands are available and
+may optionally be prefixed with a <range> (comma-separated list of numbers of ranges. '$' can be
+used to signal the last entry of an ACL):
+
+  p                              Print entries
+  d                              Delete entries
+  i <ace>                        Insert entries
+  a <ace>                        Append entries after current position
+  s /<ace>/<ace>/[<modifiers>]   Substitute entries
 
 
-  edit-access [2]user:peter86:rwx:f:allow dir
+EXAMPLES
 
-    Insert entry at #2 with "user:peter86:rwx:f:allow
-
-
-  edit-access [2d] dir
-  
+  edit-access -e '2d' dir
     Delete entry #2
+
+  edit-access -e '2i user:peter86:rwx:f:allow' dir
+    Insert "user:peter86:rwx:f:allow" at position 2
+
+  edit-access -e '$a user:peter86:rwx:f:allow' dir
+    Add entry "user:peter86:rwx:f:allow" last in the ACL
+
+  edit-access -e '0p;1,2,3p;0-$p' dir
+    Print first entry, then entries 1,2&3, and then all entries in the ACL
+
+  edit-access -r -e 's/peter86:+rwx/peter86:rwxp:fd/@d;0-$p' dir
+    Recursively replace all "peter86:*::allow" entries where atleast rwx is set with "peter86:rwxp:fd"
+    on directories, and then print the resulting ACL.

@@ -51,22 +51,28 @@
 
 
 
-/* ACL change request */
+
+/* 
+ * ACL change request list 
+ */
 typedef struct ace_cr {
   RANGE *range;
   struct {
     acl_entry_t ep;
     GACE_EDIT_FLAGS flags;
     mode_t ftypes;
-  } match;
-  char cmd;
-  struct {
-    acl_entry_t ep;
-    GACE_EDIT_FLAGS flags;
-  } change;
+  } filter, match, change;
+  int cmd;
   char *modifiers;
   struct ace_cr *next;
 } ACECR;
+
+/* ACL script list */
+typedef struct script {
+  ACECR *cr;
+  struct script *next;
+} SCRIPT;
+
 
 /* 
  * acl    = <who>:<perms>[:<flags>][:<type>]
@@ -106,6 +112,7 @@ acecr_from_text(ACECR **head,
   for (cur = *head; cur; cur = cur->next)
     next = &cur->next;
 
+  /* Get each CR */
   while ((es = strsep(&bp, ";\n\r")) != NULL) {
     char *ftp;
 
@@ -121,13 +128,38 @@ acecr_from_text(ACECR **head,
     }
     memset(cur, 0, sizeof(*cur));
     
-    ftp = strchr(es, '@');
+    if (*es == '/') {
+      ++es;
+      
+      ep = strchr(es, '/');
+      if (!ep)
+	goto Fail;
+
+      *ep++ = '\0';
+      
+      ftp = strchr(es, '?');
+      if (ftp) {
+	*ftp = '\0';
+	str2filetype(ftp, &cur->filter.ftypes);
+      }
+
+      cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
+      if (!cur->filter.ep)
+	goto Fail;
+      
+      if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
+	goto Fail;
+      
+      es = ep;
+      
+    } else
+      range_adds(&cur->range, (const char **) &es);
+
+    ftp = strchr(es, '?');
     if (ftp) {
       *ftp++ = '\0';
       str2filetype(ftp, &cur->match.ftypes);
     }
-
-    range_adds(&cur->range, (const char **) &es);
 
     while (isspace(*es))
       ++es;
@@ -247,8 +279,8 @@ acecr_from_simple_text(ACECR **head,
       goto Fail;
     memset(cur, 0, sizeof(*cur));
     
-    /* Get @<filetype> matchlist */
-    ftp = strchr(es, '@');
+    /* Get ?<filetype> matchlist */
+    ftp = strchr(es, '?');
     if (ftp) {
       *ftp++ = '\0';
       str2filetype(ftp, &cur->match.ftypes);
@@ -351,10 +383,10 @@ acecr_from_simple_text(ACECR **head,
 }
 
 
-
 static int
-ace_match(ACECR *cr,
-	  acl_entry_t oae) {
+ace_match(acl_entry_t oae,
+	  acl_entry_t mae,
+	  int mflags) {
   /* Matching ACE */
   acl_tag_t mtt;
   acl_entry_type_t met;
@@ -371,12 +403,12 @@ ace_match(ACECR *cr,
 
   
   /* Get match ACE */
-  acl_get_tag_type(cr->match.ep, &mtt);
-  acl_get_entry_type_np(cr->match.ep, &met);
-  mip = acl_get_qualifier(cr->match.ep);
+  acl_get_tag_type(mae, &mtt);
+  acl_get_entry_type_np(mae, &met);
+  mip = acl_get_qualifier(mae);
   
-  if (acl_get_permset(cr->match.ep, &mps) < 0 ||
-      acl_get_flagset_np(cr->match.ep, &mfs) < 0)
+  if (acl_get_permset(mae, &mps) < 0 ||
+      acl_get_flagset_np(mae, &mfs) < 0)
     return -1;
   
   /* Get current ACE */
@@ -397,7 +429,7 @@ ace_match(ACECR *cr,
     return 0;
 
   /* Check the ACE type set */
-  switch (cr->match.flags & GACE_EDIT_TYPE_MASK) {
+  switch (mflags & GACE_EDIT_TYPE_MASK) {
   case GACE_EDIT_TYPE_NONE:
   case GACE_EDIT_TYPE_ADD:
     if (met != oet)
@@ -411,7 +443,7 @@ ace_match(ACECR *cr,
   }
 
   /* Check the flag set */
-  switch (cr->match.flags & GACE_EDIT_FLAG_MASK) {
+  switch (mflags & GACE_EDIT_FLAG_MASK) {
   case GACE_EDIT_FLAG_NONE:
     if (*mfs != *ofs)
       return 0;
@@ -429,7 +461,7 @@ ace_match(ACECR *cr,
   }
 
   /* Check the permissions set */
-  switch (cr->match.flags & GACE_EDIT_PERM_MASK) {
+  switch (mflags & GACE_EDIT_PERM_MASK) {
   case GACE_EDIT_PERM_NONE:
     if (*mps != *ops)
       return 0;
@@ -447,6 +479,13 @@ ace_match(ACECR *cr,
   }
 
   return 1;
+}
+
+
+static int
+acecr_match(ACECR *cr,
+	    acl_entry_t oae) {
+  return ace_match(oae, cr->match.ep, cr->match.flags);
 }
 
 
@@ -504,7 +543,7 @@ cmd_edit_ace(ACECR *cr,
       acl_get_flagset_np(oae, &ofs) < 0)
     return -1;
   
-  if (ace_match(cr, oae) != 1)
+  if (acecr_match(cr, oae) != 1)
     return 0;
 	  
   /* Update the tag type */
@@ -574,6 +613,46 @@ cmd_edit_ace(ACECR *cr,
   return -1;
 }
 
+RANGE *
+range_filter(RANGE *old, acl_entry_t fae, int flags, acl_t ap) {
+  RANGE *new = NULL;
+  acl_entry_t ae;
+  int p;
+  
+
+  if (old) {
+    /* Just check selected entries */
+    
+    if (range_len(old) < 1)
+      return NULL;
+  
+    p = RANGE_NONE;
+    while (range_next(old, &p) == 1) {
+      if (p == RANGE_END)
+	p = ap->ac-1;
+      
+      if (_gacl_get_entry(ap, p, &ae) < 0)
+	continue;
+  
+      if (ace_match(ae, fae, flags) == 1)
+	range_add(&new, p, p);
+		    
+      if (p >= ap->ac-1)
+	break;
+    }
+  } else {
+    /* Scan whole ACL */
+    for (p = 0; acl_get_entry(ap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
+      if (ace_match(ae, fae, flags) == 1) {
+	range_add(&new, p, p);
+      }
+    }
+  }
+  
+  return new;
+}
+
+
 
 static int
 walker_edit(const char *path,
@@ -581,9 +660,8 @@ walker_edit(const char *path,
 	    size_t base,
 	    size_t level,
 	    void *vp) {
-  int j;
   acl_t oap, nap;
-  ACECR *cr = (ACECR *) vp;
+  SCRIPT *script;
   int rc = 0;
   int pos = 0;
   
@@ -600,144 +678,179 @@ walker_edit(const char *path,
     return 1;
   }
 
-  /* Execute program */
-  for (rc = 0; rc == 0 && cr; cr = cr->next) {
-    acl_entry_t nae;
-    int p1, p;
-    int nm = 0;
-    
-    /* Make sure this change request is valid for this file type */
-    if (cr->match.ftypes && (sp->st_mode & cr->match.ftypes) == 0)
-      continue;
+  /* Execute script - all registered CR chains in sequence */
+  for (script = (SCRIPT *) vp; script; script = script->next) {
+    ACECR *cr = script->cr;
 
-    switch (cr->cmd) {
-    case 'd': /* Delete ACEs - do it backwards */
-      if (range_len(cr->range) > 0) {
-	p = RANGE_NONE;
-	while (range_prev(cr->range, &p) == 1) {
-	  if (p == RANGE_END)
-	    p = nap->ac-1;
-	  if (acl_delete_entry_np(nap, p) < 0) {
+    /* Loop around executing each CR until end or one gives an error */
+    for (rc = 0; rc == 0 && cr; cr = cr->next) {
+      acl_entry_t nae;
+      int p1, p;
+      int nm = 0;
+      RANGE *range = NULL;
+
+      
+      /* Make sure this change request is valid for this file type */
+      if (cr->match.ftypes && (sp->st_mode & cr->match.ftypes) == 0)
+	continue;
+      
+      if (cr->filter.ep) {
+	range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
+	if (!range)
+	  continue;
+      }
+      else
+	range = cr->range;
+
+      switch (cr->cmd) {
+      case 'd': /* Delete ACEs - do it backwards */
+	if (range_len(range) > 0) {
+	  p = RANGE_NONE;
+	  while (range_prev(range, &p) == 1) {
+	    if (p == RANGE_END)
+	      p = nap->ac-1;
+	    if (acl_delete_entry_np(nap, p) < 0) {
+	      rc = -1;
+	      break;
+	    }
+	  }
+	  pos = p;
+	} else {
+	  if (acl_delete_entry_np(nap, pos) < 0) {
 	    rc = -1;
 	    break;
 	  }
 	}
-	pos = p;
-      } else {
-	if (acl_delete_entry_np(nap, pos) < 0) {
-	  rc = -1;
-	  break;
-	}
-      }
-      break;
+	break;
 	
-    case 'p': /* Print ACE(s) */
-      if (range_len(cr->range) > 0) {
-	p = RANGE_NONE;
-	while (range_next(cr->range, &p) == 1) {
-	  if (p == RANGE_END)
-	    p = nap->ac-1;
+      case 'p': /* Print ACE(s) */
+	if (range_len(range) > 0) {
+	  p = RANGE_NONE;
+	  while (range_next(range, &p) == 1) {
+	    if (p == RANGE_END)
+	      p = nap->ac-1;
 
-	  if (print_ace(nap, p, config.f_verbose) < 0) {
-	    rc = -1;
-	    break;
-	  }
-	  
-	  if (p >= nap->ac-1)
-	    break;
-	}
-	pos = p;
-      } else {
-	if (print_ace(nap, pos, config.f_verbose) < 0) {
-	  rc = -1;
-	  break;
-	}
-      }
-      break;
-      
-    case 'a': /* Append ACE after position */
-    case 'i': /* Insert ACE at position */
-      if (range_last(cr->range, &p1) != 1)
-	p1 = pos;
-      if (cr->cmd == 'a')
-	++p1;
-      if (acl_create_entry_np(&nap, &nae, p1) < 0) {
-	fprintf(stderr, "Unable to create ACE at %d\n", p1);
-	rc = -1;
-      }
-      else if (acl_copy_entry(nae, cr->change.ep) < 0) {
-	fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
-	rc = -1;
-      }
-      break;
-      
-    case '=': /* Replace ACE at position */
-      if (range_last(cr->range, &p1) != 1)
-	p1 = pos;
-      if (_gacl_get_entry(nap, p1, &nae) < 0)
-	rc = -1;
-      else if (acl_copy_entry(nae, cr->change.ep) < 0)
-	rc = -1;
-      break;
-
-    case 'x': /* eXchange ACEs p1<->p2 */
-      rc = -1;
-      errno = ENOSYS;
-      break;
-      
-    case 's': /* Substitue ACEs */
-      if (range_len(cr->range) > 0) {
-	acl_entry_t ae;
-	int p = RANGE_NONE;
-	
-	while (range_next(cr->range, &p) == 1) {
-	  if (p == RANGE_END)
-	    p = nap->ac-1;
-
-	  if (_gacl_get_entry(nap, p, &ae) < 0) {
-	    rc = -1;
-	    break;
-	  }
+	    if (!config.f_noprefix)
+	      printf("%-20s\t", path);
+	    if (print_ace(nap, p, config.f_verbose ? 0 : GACL_TEXT_COMPACT) < 0) {
+	      rc = -1;
+	      break;
+	    }
 	    
-	  rc = cmd_edit_ace(cr, ae);
-	  if (rc < 0) {
+	    if (p >= nap->ac-1)
+	      break;
+	  }
+	  pos = p;
+	} else {
+	  printf("%s#%d\t", path, pos);
+	  if (print_ace(nap, pos, config.f_verbose ? 0 : GACL_TEXT_COMPACT) < 0) {
 	    rc = -1;
 	    break;
 	  }
-	  if (rc == 1)
-	    ++nm;
-	  
-	  if (p >= nap->ac-1)
-	    break;
 	}
-      } else {
-	acl_entry_t ae;
+	break;
 	
-	for (j = 0; acl_get_entry(nap, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; j++) {
-	  rc = cmd_edit_ace(cr, ae);
-	  if (rc < 0) {
-	    rc = -1;
-	    break;
-	  }
-	  if (rc == 1)
-	    ++nm;
-	}
-      }
-      if (nm == 0 && cr->change.flags & GACE_EDIT_TAG_ADD) {
-	if (acl_create_entry_np(&nap, &nae, pos) < 0) {
-	  fprintf(stderr, "Unable to create ACE at %d\n", pos);
+      case 'a': /* Append ACE after position */
+      case 'i': /* Insert ACE at position */
+	if (range_last(range, &p1) != 1)
+	  p1 = pos;
+	if (cr->cmd == 'a')
+	  ++p1;
+	if (acl_create_entry_np(&nap, &nae, p1) < 0) {
+	  fprintf(stderr, "Unable to create ACE at %d\n", p1);
 	  rc = -1;
 	}
 	else if (acl_copy_entry(nae, cr->change.ep) < 0) {
 	  fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
 	  rc = -1;
 	}
-      }
-      break;
+	break;
+	
+      case '=': /* Replace ACE at position */
+	if (range_last(range, &p1) != 1)
+	  p1 = pos;
+	if (_gacl_get_entry(nap, p1, &nae) < 0)
+	  rc = -1;
+	else if (acl_copy_entry(nae, cr->change.ep) < 0)
+	  rc = -1;
+	break;
+	
+      case 'x': /* eXchange ACEs p1<->p2 */
+	rc = -1;
+	errno = ENOSYS;
+	break;
+	
+      case 's': /* Substitue ACEs */
+	if (range_len(range) > 0) {
+	  acl_entry_t ae;
+	  int p = RANGE_NONE;
+	  
+	  while (range_next(range, &p) == 1) {
+	    if (p == RANGE_END)
+	      p = nap->ac-1;
+	    
+	    pos = p;
+	    
+	    if (_gacl_get_entry(nap, p, &ae) < 0) {
+	      rc = -1;
+	      break;
+	    }
+	    
+	    rc = cmd_edit_ace(cr, ae);
+	    if (rc < 0) {
+	      rc = -1;
+	      break;
+	    }
+	    if (rc == 1)
+	      ++nm;
+	    
+	    if (p >= nap->ac-1)
+	      break;
+	  }
+	} else {
+	  acl_entry_t ae;
+	  
+	  for (p = 0; acl_get_entry(nap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
+	    pos = p;
+	    
+	    rc = cmd_edit_ace(cr, ae);
+	    if (rc < 0) {
+	      rc = -1;
+	      break;
+	    }
 
-    default:
-      errno = ENOSYS;
-      rc = -1;
+	    if (rc == 1) {
+	      ++nm;
+
+	      /* 'Global' search & replace or stop at first match? */
+	      if (cr->modifiers && !strchr(cr->modifiers, 'g'))
+		break;
+	    }
+	  }
+	  if (rc > 0)
+	    rc = 0;
+	}
+
+	/* Add ACE entry if no match found? */
+	if (nm == 0 && cr->change.flags & GACE_EDIT_TAG_ADD) {
+	  if (acl_create_entry_np(&nap, &nae, pos) < 0) {
+	    fprintf(stderr, "Unable to create ACE at %d\n", pos);
+	    rc = -1;
+	  }
+	  else if (acl_copy_entry(nae, cr->change.ep) < 0) {
+	    fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
+	    rc = -1;
+	  }
+	}
+	break;
+	
+      default:
+	errno = ENOSYS;
+	rc = -1;
+      }
+      
+      if (range != cr->range)
+	range_free(&range);
     }
   }
   
@@ -748,9 +861,6 @@ walker_edit(const char *path,
     goto Fail;
   }
 
-  if (config.f_verbose > 1)
-    print_acl(stdout, nap, path, sp);
-  
   return 0;
 
  Fail:
@@ -759,7 +869,63 @@ walker_edit(const char *path,
   return 1;
 }
 
-static ACECR *edit_cr = NULL;
+static SCRIPT *edit_script = NULL;
+
+
+static int
+script_add(SCRIPT **spp,
+	   ACECR *cr) {
+  SCRIPT *new;
+  
+
+  if (!spp)
+    return -1;
+  
+  new = malloc(sizeof(*new));
+  if (!new)
+    return -1;
+
+  memset(new, 0, sizeof(*new));
+  new->cr = cr;
+  new->next = NULL;
+
+  while (*spp)
+    spp = &(*spp)->next;
+
+  *spp = new;
+  return 0;
+}
+
+static void
+acecr_free(ACECR *cr) {
+  while (cr) {
+    ACECR *next = cr->next;
+
+    if (cr->filter.ep)
+      free(cr->filter.ep);
+    if (cr->match.ep)
+      free(cr->match.ep);
+    if (cr->change.ep)
+      free(cr->change.ep);
+    if (cr->modifiers)
+      free(cr->modifiers);
+    free(cr);
+    cr = next;
+  }
+}
+
+static void
+script_free(SCRIPT **spp) {
+  SCRIPT **next;
+
+  for (; *spp; spp = next) {
+    next = &(*spp)->next;
+    acecr_free((*spp)->cr);
+    free(*spp);
+  }
+  *spp = NULL;
+}
+  
 
 static int
 editopt_handler(const char *name,
@@ -769,11 +935,15 @@ editopt_handler(const char *name,
 		void *dvp,
 		const char *a0) 
 {
+  ACECR *cr = NULL;
+
+  
   if (!vs)
     return -1;
   
+  
   if (strcmp(name, "exec") == 0) {
-    if (acecr_from_text(&edit_cr, vs) < 0)
+    if (acecr_from_text(&cr, vs) < 0)
       return -1;
   } else {
     FILE *fp;
@@ -787,11 +957,13 @@ editopt_handler(const char *name,
 	return -1;
     }
     while (fgets(buf, sizeof(buf), fp))
-      if (acecr_from_text(&edit_cr, buf) < 0)
+      if (acecr_from_text(&cr, buf) < 0)
 	return -1;
     if (fp != stdin)
       fclose(fp);
   }
+
+  script_add(&edit_script, cr);
   return 0;
 }
 
@@ -812,37 +984,25 @@ edit_cmd(int argc,
 
   if (argc < 2) {
     fprintf(stderr, "%s: Error: Missing required arguments\n", argv[0]);
-    edit_cr = NULL;
+    edit_script = NULL;
     return 1;
   }
 
   i = 1;
-  if (!edit_cr && argc > 2)
-    acecr_from_simple_text(&edit_cr, argv[i++]);
+  if (!edit_script && argc > 2) {
+    cr = NULL;
+    acecr_from_simple_text(&cr, argv[i++]);
+    script_add(&edit_script, cr);
+  }
   
-  if (!edit_cr) {
+  if (!edit_script) {
     fprintf(stderr, "%s: Error: Invalid/no change request\n", argv0);
-    edit_cr = NULL;
     return 1;
   }
 
-  rc = aclcmd_foreach(argc-i, argv+i, walker_edit, edit_cr);
+  rc = aclcmd_foreach(argc-i, argv+i, walker_edit, edit_script);
 
-  cr = edit_cr;
-  while (cr) {
-    ACECR *next = cr->next;
-
-    if (cr->match.ep)
-      free(cr->match.ep);
-    if (cr->change.ep)
-      free(cr->change.ep);
-    if (cr->modifiers)
-      free(cr->modifiers);
-    free(cr);
-    cr = next;
-  }
-  
-  edit_cr = NULL;
+  script_free(&edit_script);
   return rc;
 }
 
