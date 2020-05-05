@@ -128,6 +128,18 @@ set_merge(const char *name,
 }
 
 int
+set_regex(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  const void *svp,
+	  void *dvp,
+	  const char *a0) {
+  config.f_regex++;
+  
+  return 0;
+}
+
+int
 set_recurse(const char *name,
 	    const char *value,
 	    unsigned int type,
@@ -244,6 +256,7 @@ OPTION global_options[] =
    { "print",     'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
    { "sort",      's', OPTS_TYPE_NONE,               set_sort,      NULL, "Enable sorting" },
    { "merge",     'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Enable merging" },
+   { "regular-expressions",     'R', OPTS_TYPE_NONE,               set_regex,     NULL, "Enable regular expressions" },
    { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
    { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
    { "style",     'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },

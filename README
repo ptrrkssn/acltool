@@ -41,7 +41,7 @@ USAGE
 
     list-access, list-a, list, l-ac, lac, liac
     edit-access, edit-a, edit, e-ac, edac
-    set-access, set-acc, set, s-a, sac
+    set-access, set-acc, set, seta
 
   Tab-completion in CLI mode also works for command names,
   (global) long options and files.

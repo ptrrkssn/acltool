@@ -124,16 +124,16 @@ exit_cmd(int argc,
 
 
 COMMAND exit_command =
-  { "exit", 	exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
+  { "exit-command", 	exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
 
 COMMAND echo_command =
-  { "echo", 	echo_cmd,	NULL, "[<str>]*",	"Print some text" };
+  { "echo-text", 	echo_cmd,	NULL, "[<str>]*",	"Print some text" };
 
 COMMAND cd_command =
-  { "cd", 	cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
+  { "change-directory",  cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
 
 COMMAND pwd_command =
-  { "pwd", 	pwd_cmd,	NULL, "",		"Print working directory" };
+  { "print-working-directory", 	pwd_cmd,	NULL, "",		"Print working directory" };
 
 
 COMMAND *basic_commands[] =

@@ -44,9 +44,9 @@
 #include <grp.h>
 #include <ftw.h>
 #include <limits.h>
+#include <regex.h>
 
 #include "acltool.h"
-
 #include "range.h"
 
 
@@ -58,9 +58,14 @@
 typedef struct ace_cr {
   RANGE *range;
   struct {
+    int avail;
+    
     acl_entry_t ep;
     GACE_EDIT_FLAGS flags;
     mode_t ftypes;
+
+    regex_t regex;
+    
   } filter, match, change;
   int cmd;
   char *modifiers;
@@ -127,6 +132,14 @@ acecr_from_text(ACECR **head,
       goto Fail;
     }
     memset(cur, 0, sizeof(*cur));
+
+    while (isspace(*es))
+      ++es;
+    
+    range_adds(&cur->range, (const char **) &es);
+    
+    while (isspace(*es))
+      ++es;
     
     if (*es == '/') {
       ++es;
@@ -143,17 +156,23 @@ acecr_from_text(ACECR **head,
 	str2filetype(ftp, &cur->filter.ftypes);
       }
 
-      cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
-      if (!cur->filter.ep)
-	goto Fail;
-      
-      if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
-	goto Fail;
-      
+      if (config.f_regex) {
+	if (regcomp(&cur->filter.regex, es, config.f_regex > 1 ? REG_EXTENDED : 0) < 0)
+	  goto Fail;
+	cur->filter.avail = 1;
+      } else {
+	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
+	if (!cur->filter.ep)
+	  goto Fail;
+	
+	if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
+	  goto Fail;
+	
+	cur->filter.avail = 1;
+      }
       es = ep;
       
-    } else
-      range_adds(&cur->range, (const char **) &es);
+    }
 
     ftp = strchr(es, '?');
     if (ftp) {
@@ -369,6 +388,8 @@ acecr_from_simple_text(ACECR **head,
   if (tbuf)
     free(tbuf);
   if (cur) {
+    if (cur->filter.ep)
+      free(cur->filter.ep);
     if (cur->match.ep)
       free(cur->match.ep);
     if (cur->change.ep)
@@ -655,6 +676,54 @@ range_filter(RANGE *old, acl_entry_t fae, int flags, acl_t ap) {
 }
 
 
+RANGE *
+range_filter_regex(RANGE *old,
+		   regex_t *preg,
+		   int flags,
+		   acl_t ap) {
+  RANGE *new = NULL;
+  acl_entry_t ae;
+  int p;
+  char buf[1024];
+  
+
+  if (old) {
+    /* Just check selected entries */
+    
+    if (range_len(old) < 1)
+      return NULL;
+  
+    p = RANGE_NONE;
+    while (range_next(old, &p) == 1) {
+      if (p == RANGE_END)
+	p = ap->ac-1;
+      
+      if (_gacl_get_entry(ap, p, &ae) < 0)
+	continue;
+
+      if (acl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
+	continue;
+      
+      if (regexec(preg, buf, 0, NULL, 0) == 0)
+	range_add(&new, p, p);
+		    
+      if (p >= ap->ac-1)
+	break;
+    }
+  } else {
+    /* Scan whole ACL */
+    for (p = 0; acl_get_entry(ap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
+      if (acl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
+	continue;
+      
+      if (regexec(preg, buf, 0, NULL, 0) == 0)
+	range_add(&new, p, p);
+    }
+  }
+  
+  return new;
+}
+
 
 static int
 walker_edit(const char *path,
@@ -695,9 +764,12 @@ walker_edit(const char *path,
       /* Make sure this change request is valid for this file type */
       if (cr->match.ftypes && (sp->st_mode & cr->match.ftypes) == 0)
 	continue;
-      
-      if (cr->filter.ep) {
-	range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
+
+      if (cr->filter.avail) {
+	if (cr->filter.ep)
+	  range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
+	else
+	  range = range_filter_regex(cr->range, &cr->filter.regex, cr->filter.flags, nap);
 	if (!range)
 	  continue;
       }

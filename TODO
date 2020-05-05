@@ -8,4 +8,30 @@ Some stuff that needs to be done (in no particular order):
 - Clear INHERITED bits on updated ACEs (unless we force it).
 - Investigate how the inherit-access command should work
 - How should the check-access command work?
-- Implement "long name" permissions/flags
+
+
+
+SCRIPT LANGUAGE
+
+[<range>] [/<filter>/] <action> [<argument>]
+
+0s mikha02:rwx
+  Replace ACE at position 0 with 'mikha02:rwx::allow'
+  
+/peter86:rwx/s mikha02:rwx
+  Replace all ACEs matching 'peter86:rwx::allow' with 'mikha02:rwx::allow'
+  
+1a mikha02:rwx
+  Append ACE 'mikha02:rwx::allow' after position 1
+
+1i mikha02:rwx
+  Insert ACE 'mikha02:rwx::allow' at position 1
+  
+0-2,4d
+  Delete ACES on position 0,1,2,4
+  
+2-$/peter86:*/d
+  Delete all ACEs matching 'peter86:*::allow' between position 2-last
+
+5-$/peter86:rwx.*:.*:allow/p
+  Print all ACEs matching 'peter86:rwx.*:.*:allow' between position 5-last
