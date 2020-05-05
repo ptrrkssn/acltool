@@ -267,7 +267,10 @@ walker_strip(const char *path,
 
   tf = 0;
   if (acl_is_trivial_np(ap, &tf) < 0) {
+    error(0, errno, "%s: Internal Error (acl_is_trivial_np)", path);
+#if 0
     fprintf(stderr, "%s: Error: %s: Internal Error: %s\n", argv0, path, strerror(errno));
+#endif
     acl_free(ap);
     return 1;
   }

@@ -153,19 +153,32 @@ acecr_from_text(ACECR **head,
 
     /* Get filter */
     if (*es == '/' && (ep = strchr(++es, '/')) != NULL) {
+      int rflags = REG_EXTENDED;
+      
       *ep++ = '\0';
       
+      cur->filter.avail = 1;
+      while (strspn(ep, "iv"))
+	switch (*ep++) {
+	case 'i': /* Ignore case */
+	  rflags |= REG_ICASE;
+	  break;
+	case 'v': /* Inverse match */
+	  cur->filter.avail = -1;
+	  break;
+	}
+    
       if (config.f_regex) {
 	int ec;
 	
-	ec = regcomp(&cur->filter.regex, es, config.f_regex > 1 ? REG_EXTENDED : 0);
+	ec = regcomp(&cur->filter.regex, es, rflags);
 	if (ec) {
 	  char errbuf[1024];
+	  
 	  regerror(ec, &cur->filter.regex, errbuf, sizeof(errbuf));
 	  fprintf(stderr, "%s: Error: %s: %s\n", argv0, es, errbuf);
-	  exit(1);
+	  goto Fail;
 	}
-	cur->filter.avail = 1;
       } else {
 	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
 	if (!cur->filter.ep)
@@ -173,8 +186,6 @@ acecr_from_text(ACECR **head,
 	
 	if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
 	  goto Fail;
-	
-	cur->filter.avail = 1;
       }
       es = ep;
       
@@ -696,7 +707,7 @@ walker_edit(const char *path,
   SCRIPT *script;
   int rc = 0;
   int pos = 0;
-  
+  int p_line = 0;
 
   oap = get_acl(path, sp);  
   if (!oap) {
@@ -758,6 +769,8 @@ walker_edit(const char *path,
 	}
 	break;
 	
+      case 'n': /* Print ACE(s), with line numbers */
+	p_line = 1;
       case 'p': /* Print ACE(s) */
 	if (range_len(range) > 0) {
 	  p = RANGE_NONE;
@@ -767,6 +780,8 @@ walker_edit(const char *path,
 
 	    if (!config.f_noprefix)
 	      printf("%-20s\t", path);
+	    if (p_line)
+	      printf("%-4d\t", p);
 	    if (print_ace(nap, p, ACL_TEXT_STANDARD_NP) < 0) {
 	      rc = -1;
 	      break;
@@ -777,7 +792,10 @@ walker_edit(const char *path,
 	  }
 	  pos = p;
 	} else {
-	  printf("%s#%d\t", path, pos);
+	  if (!config.f_noprefix)
+	    printf("%-20s\t", path);
+	  if (p_line)
+	    printf("%-4d\t", pos);
 	  if (print_ace(nap, pos, ACL_TEXT_STANDARD_NP) < 0) {
 	    rc = -1;
 	    break;

@@ -61,9 +61,10 @@ pwd_cmd(int argc,
 	char **argv) {
   char buf[2048];
 
-  if (getcwd(buf, sizeof(buf)))
-    puts(buf);
-
+  if (!getcwd(buf, sizeof(buf)))
+    error(1, errno, "Getting current directory");
+  
+  puts(buf);
   return 0;
 }
 
@@ -76,29 +77,20 @@ cd_cmd(int argc,
   if (argc == 1) {
     char *homedir = getenv("HOME");
 
-    if (!homedir) {
-      fprintf(stderr, "%s: Error: Unable to read HOME environment\n",
-	      argv0);
-      return 1;
-    }
+    if (!homedir)
+      error(1, 0, "%s", "$HOME not set");
     
     rc = chdir(homedir);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Changing directory: %s\n",
-	      argv[0], homedir, strerror(errno));
-      return 1;
-    }
+    if (rc < 0)
+      error(1, errno, "%s", homedir);
 
     return 0;
   }
 
   for (i = 1; i < argc; i++) {
     rc = chdir(argv[i]);
-    if (rc < 0) {
-      fprintf(stderr, "%s: Error: %s: Changing directory: %s\n",
-	      argv[0], argv[i], strerror(errno));
-      return 1;
-    }
+    if (rc < 0)
+      error(1, errno, "%s", argv[i]);
   }
   
   return 0;
@@ -111,12 +103,8 @@ exit_cmd(int argc,
   int ec = 0;
 
   
-  if (argc > 1) {
-    if (sscanf(argv[1], "%d", &ec) != 1) {
-      fprintf(stderr, "%s: Error: %s: Invalid exit code\n", argv[0], argv[1]);
-      return -1;
-    }
-  }
+  if (argc > 1 && sscanf(argv[1], "%d", &ec) != 1)
+    error(1, 0, "%s: Invalid exit code", argv[1]);
 
   exit(ec);
 }

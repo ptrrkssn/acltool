@@ -79,5 +79,7 @@ extern CONFIG default_config;
 /* Per-command active configuration */
 extern CONFIG config;
 
+extern void
+error(int rc, int ec, const char *msg, ...);
 
 #endif

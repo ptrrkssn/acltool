@@ -154,12 +154,12 @@ cmd_run(COMMANDS *cmdlist,
   }
   
   if (nm < 1) {
-    fprintf(stderr, "Error: %s: No such command\n", argv[0]);
+    error(1, 0, "%s: Unknown command", argv[0]);
     return -1;
   }
 
   if (nm > 1) {
-    fprintf(stderr, "Error: %s: Matches multiple commands\n", argv[0]);
+    error(1, 0, "%s: Nonunique command", argv[0]);
     return -1;
   }
 

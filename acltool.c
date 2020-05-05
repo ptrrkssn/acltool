@@ -39,6 +39,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <ftw.h>
+#include <setjmp.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -476,14 +477,31 @@ run_cmd(int argc,
 
   config = default_config;
   rc = cmd_run(&commands, argc, argv);
-  if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s\n", argv[0], strerror(errno));
-    return 1;
-  }
-  
+  if (rc)
+    error(rc, errno, "%s", argv[0]);
   return rc;
 }
 
+
+static jmp_buf error_env;
+
+void
+error(int rc,
+      int ec,
+      const char *msg,
+      ...) {
+  va_list ap;
+
+  va_start(ap, msg);
+  fprintf(stderr, "%s: %s: ", argv0, rc ? (rc < 0 ? "Warning" : "Error") : "Info");
+  vfprintf(stderr, msg, ap);
+  if (ec)
+    fprintf(stderr, ": %s", strerror(errno));
+  putc('\n', stderr);
+  
+  if (rc)
+    longjmp(error_env, ec);
+}
 
 int
 main(int argc,
@@ -535,8 +553,10 @@ main(int argc,
       print_version();
       puts("\nINTERACTIVE MODE (type 'help' for information)");
     }
-    
+
     rl_attempted_completion_function = cmd_name_completion;
+    
+    rc = setjmp(error_env);
     
     while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
       char *cp;
@@ -565,14 +585,12 @@ main(int argc,
       }
       
       if (stdout_path) {
-	fprintf(stderr, "stdout_path='%s'\n", stdout_path);
 	if (freopen(stdout_path, "w", stdout) == NULL)
 	  if (freopen("/dev/tty", "w", stdout) == NULL)
 	    exit(1);
       }
 
       if (stdin_path) {
-	fprintf(stderr, "stdin_path='%s'\n", stdin_path);
 	if (freopen(stdin_path, "w", stdin) == NULL)
 	  if (freopen("/dev/tty", "r", stdin) == NULL)
 	    exit(1);
@@ -609,5 +627,9 @@ main(int argc,
     exit(rc);
   }
 
+  rc = setjmp(error_env);
+  if (rc)
+    exit(rc);
+  
   return run_cmd(argc-1, argv+1);
 }
