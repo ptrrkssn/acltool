@@ -305,9 +305,6 @@ print_acl(FILE *fp,
       return 1;
     }
 
-    if (config.f_verbose)
-      fprintf(fp, "# %s: %s\n", mode2typestr(sp->st_mode), path);
-    else
       fprintf(fp, "# file: %s\n", path);
     
     if (config.f_verbose)
@@ -320,6 +317,18 @@ print_acl(FILE *fp,
     else
       fprintf(fp, "# group: %s\n", gs);
     
+    if (config.f_verbose)
+      fprintf(fp, "# type: %s\n", mode2typestr(sp->st_mode));
+    if (config.f_verbose > 1) {
+      fprintf(fp, "# size: %lu\n", sp->st_size);
+      fprintf(fp, "# modified: %s", ctime(&sp->st_mtime));
+      fprintf(fp, "# changed:  %s", ctime(&sp->st_ctime));
+      fprintf(fp, "# accessed: %s", ctime(&sp->st_atime));
+#ifdef st_birthtime
+      fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
+#endif
+    }
+
     fputs(as, fp);
     acl_free(as);
     break;

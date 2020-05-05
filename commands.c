@@ -109,21 +109,17 @@ cmd_help(COMMANDS *cmdlist,
 	++nm;
       }
     }
-    
-    if (nm < 1) {
-      fprintf(stderr, "%s: No such command\n", name);
-      return -1;
-    }
-    
-  } else {
 
-    fprintf(fp, "COMMANDS:\n");
-    for (i = 0; i < cmdlist->c; i++) {
-      COMMAND *cp;
-      
-      cp = cmdlist->v[i];
-      fprintf(fp, "  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
-    }
+    if (nm > 0)
+      return 0;
+  } 
+
+  fprintf(fp, "COMMANDS:\n");
+  for (i = 0; i < cmdlist->c; i++) {
+    COMMAND *cp;
+    
+    cp = cmdlist->v[i];
+    fprintf(fp, "  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
   }
   
   return 0;

@@ -66,7 +66,7 @@ typedef struct ace_cr {
 
     regex_t regex;
     
-  } filter, match, change;
+  } filter, change;
   int cmd;
   char *modifiers;
   struct ace_cr *next;
@@ -119,8 +119,6 @@ acecr_from_text(ACECR **head,
 
   /* Get each CR */
   while ((es = strsep(&bp, ";\n\r")) != NULL) {
-    char *ftp;
-
     while (isspace(*es))
       ++es;
 
@@ -136,29 +134,37 @@ acecr_from_text(ACECR **head,
     while (isspace(*es))
       ++es;
     
-    range_adds(&cur->range, (const char **) &es);
+    /* Get file types */
+    if (*es == '{' && (ep = strchr(++es, '}')) != NULL) {
+      *ep++ = '\0';
+      
+      str2filetype(bp, &cur->filter.ftypes);
+      es = ep;
+    }
     
     while (isspace(*es))
       ++es;
     
-    if (*es == '/') {
+    /* Get ACE range */
+    range_adds(&cur->range, (const char **) &es);
+    
+    while (isspace(*es))
       ++es;
-      
-      ep = strchr(es, '/');
-      if (!ep)
-	goto Fail;
 
+    /* Get filter */
+    if (*es == '/' && (ep = strchr(++es, '/')) != NULL) {
       *ep++ = '\0';
       
-      ftp = strchr(es, '?');
-      if (ftp) {
-	*ftp = '\0';
-	str2filetype(ftp, &cur->filter.ftypes);
-      }
-
       if (config.f_regex) {
-	if (regcomp(&cur->filter.regex, es, config.f_regex > 1 ? REG_EXTENDED : 0) < 0)
-	  goto Fail;
+	int ec;
+	
+	ec = regcomp(&cur->filter.regex, es, config.f_regex > 1 ? REG_EXTENDED : 0);
+	if (ec) {
+	  char errbuf[1024];
+	  regerror(ec, &cur->filter.regex, errbuf, sizeof(errbuf));
+	  fprintf(stderr, "%s: Error: %s: %s\n", argv0, es, errbuf);
+	  exit(1);
+	}
 	cur->filter.avail = 1;
       } else {
 	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
@@ -174,47 +180,27 @@ acecr_from_text(ACECR **head,
       
     }
 
-    ftp = strchr(es, '?');
-    if (ftp) {
-      *ftp++ = '\0';
-      str2filetype(ftp, &cur->match.ftypes);
-    }
-
     while (isspace(*es))
       ++es;
     
-    if (isalpha(*es))
-      cur->cmd = *es++;
-    else if (*es == '/')
-      cur->cmd = 's';
-
-    while (isspace(*es))
-      ++es;
+    if (!isalpha(*es))
+      goto Fail;
     
-    if (cur->cmd == 's' && *es == '/') {
-      ++es;
-
-      /* Locate end of match */
-      ep = strchr(es+1, '/');
-      if (!ep)
-	goto Fail;
+    cur->cmd = *es++;
+    
+    for (ep = es; *ep && !isspace(*ep); ++ep)
+      ;
+    if (*ep)
       *ep++ = '\0';
-      
-      cur->match.ep = malloc(sizeof(*(cur->match.ep)));
-      if (!cur->match.ep)
-	goto Fail;
+    if (*es)
+      cur->modifiers = strdup(es);
 
-      if (_gacl_entry_from_text(es, cur->match.ep, &cur->match.flags) < 0) {
-	goto Fail;
-      }
-
-      es = ep;
-      
-      /* Locate end of change */
-      ep = strchr(es, '/');
-      if (ep)
-	*ep++ = '\0';
-      
+    es = ep;
+    if (isspace(*es)) {
+      while (isspace(*es))
+	++es;
+    }
+    if (*es) {
       cur->change.ep = malloc(sizeof(*(cur->change.ep)));
       if (!cur->change.ep)
 	goto Fail;
@@ -222,25 +208,6 @@ acecr_from_text(ACECR **head,
       if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0) {
 	goto Fail;
       }
-
-      if (ep)
-	cur->modifiers = strdup(ep);
-    } else if (cur->cmd == 'a' || cur->cmd == 'i') {
-      /* Locate end of change (for modifiers) */
-      ep = strchr(es, '/');
-      if (ep)
-	*ep++ = '\0';
-      
-      cur->change.ep = malloc(sizeof(*(cur->change.ep)));
-      if (!cur->change.ep)
-	goto Fail;
-
-      if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0) {
-	goto Fail;
-      }
-
-      if (ep)
-	cur->modifiers = strdup(ep);
     }
     
     *next = cur;
@@ -253,8 +220,12 @@ acecr_from_text(ACECR **head,
   if (tbuf)
     free(tbuf);
   if (cur) {
-    if (cur->match.ep)
-      free(cur->match.ep);
+    if (cur->filter.avail) {
+      if (cur->filter.ep)
+	free(cur->filter.ep);
+      else
+	regfree(&cur->filter.regex);
+    }
     if (cur->change.ep)
       free(cur->change.ep);
     if (cur->modifiers)
@@ -302,7 +273,7 @@ acecr_from_simple_text(ACECR **head,
     ftp = strchr(es, '?');
     if (ftp) {
       *ftp++ = '\0';
-      str2filetype(ftp, &cur->match.ftypes);
+      str2filetype(ftp, &cur->filter.ftypes);
     }
     
     ep = NULL;
@@ -314,13 +285,14 @@ acecr_from_simple_text(ACECR **head,
 	*ep++ = '\0';
     }
     
-    cur->match.ep = malloc(sizeof(*(cur->match.ep)));
-    if (!cur->match.ep)
+    cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
+    if (!cur->filter.ep)
       goto Fail;
     
-    if (_gacl_entry_from_text(es, cur->match.ep, &cur->match.flags) < 0)
+    if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
       goto Fail;
     
+    cur->filter.avail = 1;
     if (ep) {
       /* Matched change - only update matching ACEs
        *
@@ -358,18 +330,18 @@ acecr_from_simple_text(ACECR **head,
       if (!cur->change.ep)
 	goto Fail;
       
-      *(cur->change.ep) = *(cur->match.ep);
-      cur->change.flags = cur->match.flags;
+      *(cur->change.ep) = *(cur->filter.ep);
+      cur->change.flags = cur->filter.flags;
       
-      switch (cur->match.flags & GACE_EDIT_TAG_MASK) {
+      switch (cur->filter.flags & GACE_EDIT_TAG_MASK) {
       case GACE_EDIT_TAG_ADD:
       case GACE_EDIT_TAG_ALL:
-	acl_get_permset(cur->match.ep, &ps);
+	acl_get_permset(cur->filter.ep, &ps);
 	acl_clear_perms(ps);
-	acl_set_permset(cur->match.ep, ps);
+	acl_set_permset(cur->filter.ep, ps);
 	acl_free(ps);
-	cur->match.flags &= ~GACE_EDIT_PERM_MASK;
-	cur->match.flags |= GACE_EDIT_PERM_ALL;
+	cur->filter.flags &= ~GACE_EDIT_PERM_MASK;
+	cur->filter.flags |= GACE_EDIT_PERM_ALL;
 	break;
       case GACE_EDIT_TAG_SUB:
 	puts("SUB");
@@ -388,10 +360,12 @@ acecr_from_simple_text(ACECR **head,
   if (tbuf)
     free(tbuf);
   if (cur) {
-    if (cur->filter.ep)
-      free(cur->filter.ep);
-    if (cur->match.ep)
-      free(cur->match.ep);
+    if (cur->filter.avail) {
+      if (cur->filter.ep)
+	free(cur->filter.ep);
+      else
+	regfree(&cur->filter.regex);
+    }
     if (cur->change.ep)
       free(cur->change.ep);
     if (cur->modifiers)
@@ -503,24 +477,10 @@ ace_match(acl_entry_t oae,
 }
 
 
-static int
-acecr_match(ACECR *cr,
-	    acl_entry_t oae) {
-  return ace_match(oae, cr->match.ep, cr->match.flags);
-}
-
-
 
 static int
 cmd_edit_ace(ACECR *cr,
 	     acl_entry_t oae) {
-  
-  /* Matching ACE */
-  acl_tag_t mtt;
-  acl_entry_type_t met;
-  acl_permset_t mps;
-  acl_flagset_t mfs;
-  
   /* Change ACE */
   acl_tag_t ntt;
   acl_entry_type_t net;
@@ -535,17 +495,14 @@ cmd_edit_ace(ACECR *cr,
   acl_flagset_t ofs;
 	  
   
-  /* Get match ACE */
-  acl_get_tag_type(cr->match.ep, &mtt);
-  acl_get_entry_type_np(cr->match.ep, &met);
-#if 0
-  mip = acl_get_qualifier(cr->match.ep);
-#endif
-  
-  if (acl_get_permset(cr->match.ep, &mps) < 0 ||
-      acl_get_flagset_np(cr->match.ep, &mfs) < 0)
+  /* Get current ACE */
+  acl_get_tag_type(oae, &ott);
+  acl_get_entry_type_np(oae, &oet);
+	  
+  if (acl_get_permset(oae, &ops) < 0 ||
+      acl_get_flagset_np(oae, &ofs) < 0)
     return -1;
-  
+
   /* Get change ACE */
   acl_get_tag_type(cr->change.ep, &ntt);
   acl_get_entry_type_np(cr->change.ep, &net);
@@ -554,21 +511,7 @@ cmd_edit_ace(ACECR *cr,
   if (acl_get_permset(cr->change.ep, &nps) < 0 ||
       acl_get_flagset_np(cr->change.ep, &nfs) < 0)
     return -1;
-  
-  /* Get current ACE */
-  acl_get_tag_type(oae, &ott);
-  acl_get_entry_type_np(oae, &oet);
-#if 0
-  oip = acl_get_qualifier(oae);
-#endif
-	  
-  if (acl_get_permset(oae, &ops) < 0 ||
-      acl_get_flagset_np(oae, &ofs) < 0)
-    return -1;
-  
-  if (acecr_match(cr, oae) != 1)
-    return 0;
-	  
+
   /* Update the tag type */
   switch (cr->change.flags & GACE_EDIT_TAG_MASK) {
   case GACE_EDIT_TAG_SUB:
@@ -684,8 +627,8 @@ range_filter_regex(RANGE *old,
   RANGE *new = NULL;
   acl_entry_t ae;
   int p;
-  char buf[1024];
-  
+  char buf[1024], errbuf[1024];
+  int rc;
 
   if (old) {
     /* Just check selected entries */
@@ -704,8 +647,17 @@ range_filter_regex(RANGE *old,
       if (acl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
 	continue;
       
-      if (regexec(preg, buf, 0, NULL, 0) == 0)
+      rc = regexec(preg, buf, 0, NULL, 0);
+      switch (rc) {
+      case 0:
 	range_add(&new, p, p);
+      case REG_NOMATCH:
+	break;
+      default:
+	regerror(rc, preg, errbuf, sizeof(errbuf));
+	fprintf(stderr, "%s: Error: %s: %s\n", argv0, buf, errbuf);
+	exit(1);
+      }
 		    
       if (p >= ap->ac-1)
 	break;
@@ -713,11 +665,20 @@ range_filter_regex(RANGE *old,
   } else {
     /* Scan whole ACL */
     for (p = 0; acl_get_entry(ap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
-      if (acl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
+      if (acl_entry_to_text(ae, buf, sizeof(buf), ACL_TEXT_STANDARD_NP) < 0)
 	continue;
-      
-      if (regexec(preg, buf, 0, NULL, 0) == 0)
+
+      rc = regexec(preg, buf, 0, NULL, 0);
+      switch (rc) {
+      case 0:
 	range_add(&new, p, p);
+      case REG_NOMATCH:
+	break;
+      default:
+	regerror(rc, preg, errbuf, sizeof(errbuf));
+	fprintf(stderr, "%s: Error: %s: %s\n", argv0, buf, errbuf);
+	exit(1);
+      }
     }
   }
   
@@ -762,7 +723,7 @@ walker_edit(const char *path,
 
       
       /* Make sure this change request is valid for this file type */
-      if (cr->match.ftypes && (sp->st_mode & cr->match.ftypes) == 0)
+      if (cr->filter.ftypes && (sp->st_mode & cr->filter.ftypes) == 0)
 	continue;
 
       if (cr->filter.avail) {
@@ -806,7 +767,7 @@ walker_edit(const char *path,
 
 	    if (!config.f_noprefix)
 	      printf("%-20s\t", path);
-	    if (print_ace(nap, p, config.f_verbose ? 0 : GACL_TEXT_COMPACT) < 0) {
+	    if (print_ace(nap, p, ACL_TEXT_STANDARD_NP) < 0) {
 	      rc = -1;
 	      break;
 	    }
@@ -817,7 +778,7 @@ walker_edit(const char *path,
 	  pos = p;
 	} else {
 	  printf("%s#%d\t", path, pos);
-	  if (print_ace(nap, pos, config.f_verbose ? 0 : GACL_TEXT_COMPACT) < 0) {
+	  if (print_ace(nap, pos, ACL_TEXT_STANDARD_NP) < 0) {
 	    rc = -1;
 	    break;
 	  }
@@ -975,10 +936,12 @@ acecr_free(ACECR *cr) {
   while (cr) {
     ACECR *next = cr->next;
 
-    if (cr->filter.ep)
-      free(cr->filter.ep);
-    if (cr->match.ep)
-      free(cr->match.ep);
+    if (cr->filter.avail) {
+      if (cr->filter.ep)
+	free(cr->filter.ep);
+      else
+	regfree(&cr->filter.regex);
+    }
     if (cr->change.ep)
       free(cr->change.ep);
     if (cr->modifiers)

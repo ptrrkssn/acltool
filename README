@@ -113,15 +113,31 @@ The "edit-access" subcommand takes two additions command line switches:
 
 If either is specified then no "simple" change-request is read from the command line.
 
-The "extended program" is (very) loosely based on "sed". The following commands are available and
-may optionally be prefixed with a <range> (comma-separated list of numbers of ranges. '$' can be
-used to signal the last entry of an ACL):
+The "extended program" is (very) loosely based on "sed" and consists of a semicolon
+(or newlines when reading from a file) separated list of actions having a format like this:
 
-  p                              Print entries
-  d                              Delete entries
-  i <ace>                        Insert entries
-  a <ace>                        Append entries after current position
-  s /<ace>/<ace>/[<modifiers>]   Substitute entries
+  [{<filetypes>}] [<range>] [/<filter>/] <cmd>[<modifiers>] [<arguments>]
+
+Filetypes are used to select which file types to operate on.
+
+Ranges are used to limit which entries of an ACL to operate on.
+
+Filters are used to further select which ACL entries to operate on. Regular expressions
+may be used if enabled via "-R | --regex".
+
+Modifiers are used to modify the functionality of a command.
+
+For example:
+
+  {fd}0-3/peter86/p;0i peter86:rwx
+  
+The following commands are available:
+
+  p         Print entries
+  d         Delete entries
+  i <ace>   Insert entries
+  a <ace>   Append entries (after current position)
+  s <ace>   Set entries
 
 
 EXAMPLES
@@ -138,6 +154,6 @@ EXAMPLES
   edit-access -e '0p;1,2,3p;0-$p' dir
     Print first entry, then entries 1,2&3, and then all entries in the ACL
 
-  edit-access -r -e 's/peter86:+rwx/peter86:rwxp:fd/?d;0-$p' dir
-    Recursively replace all "peter86:*::allow" entries where atleast rwx is set with "peter86:rwxp:fd"
-    on directories, and then print the resulting ACL.
+  edit-access -r -e '{d}/peter86:+rwx/s peter86:rwxp:fd;0-$p' dir
+    Recursively replace all "peter86:*::allow" entries where atleast rwx is set
+    with "peter86:rwxp:fd" on directories, and then print the resulting ACL.
