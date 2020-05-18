@@ -30,6 +30,9 @@ Linux linux:
 FreeBSD freebsd:
 	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" XLDFLAGS="-L/usr/local/lib -R/usr/local/lib" XLIBS="-lncurses" all
 
+macos Darwin:
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+
 all: acltool
 
 acltool.o: 	acltool.c acltool.h argv.h misc.h commands.h strings.h
