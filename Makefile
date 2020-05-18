@@ -3,6 +3,8 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
+ALIASES=lac sac edac
+
 # CC=gcc
 SOLARIS_CC=gcc
 CFLAGS=-g -Wall
@@ -63,7 +65,7 @@ pull:	clean
 	git pull
 
 install:	acltool
-	cp acltool $(DESTBIN)
+	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -s acltool $$A; done
 
 check:	auto
 	./acltool lac t

@@ -50,7 +50,7 @@
 #include "acltool.h"
 
 char *argv0 = "acltool";
-char *version = "1.8.2";
+char *version = "1.8.3";
 
 COMMANDS commands = { 0 };
 
@@ -515,11 +515,13 @@ error(int rc,
   fprintf(stderr, "%s: ", rc ? (rc < 0 ? "Warning" : "Error") : "Info");
   vfprintf(stderr, msg, ap);
   if (ec)
-    fprintf(stderr, ": %s", strerror(errno));
+    fprintf(stderr, ": %s", strerror(ec));
   putc('\n', stderr);
+
+  va_end(ap);
   
   if (rc)
-    longjmp(error_env, ec);
+    longjmp(error_env, rc);
 }
 
 int
@@ -549,6 +551,10 @@ main(int argc,
   if (strcmp(aname, "acltool") != 0) {
     /* Shortcut to acl-cmd */
     argv[0] = s_dup(aname);
+    
+    rc = setjmp(error_env);
+    if (rc)
+      exit(rc);
     
     rc = run_cmd(argc, argv);
     return rc;
