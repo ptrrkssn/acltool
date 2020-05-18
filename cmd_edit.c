@@ -757,19 +757,31 @@ walker_edit(const char *path,
 
       
       /* Make sure this change request is valid for this file type */
-      if (cr->ftypes && (sp->st_mode & cr->ftypes) == 0)
+      if (cr->ftypes && (sp->st_mode & cr->ftypes) == 0) {
+	if (config.f_debug)
+	  fprintf(stderr, "*** File type mismatch - skipping\n");
 	continue;
+      }
 
       if (cr->filter.avail) {
 	if (cr->filter.ep)
 	  range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
 	else
 	  range = range_filter_regex(cr->range, &cr->filter.preg, cr->filter.flags, nap);
-	if (!range)
+	if (!range) {
+	  if (config.f_debug)
+	    fprintf(stderr, "*** Range filter mismatch - skipping\n");
 	  continue;
+	}
       }
       else
 	range = cr->range;
+
+      if (config.f_debug) {
+	fprintf(stderr, "*** Range: ");
+	range_print(range, stderr);
+	fprintf(stderr, "\n*** Action: %c\n", cr->cmd);
+      }
 
       switch (cr->cmd) {
       case 'd': /* Delete ACEs - do it backwards */
@@ -1020,7 +1032,7 @@ editopt_handler(const char *name,
     return -1;
   
   
-  if (strcmp(name, "exec") == 0) {
+  if (strncmp(name, "exec", 4) == 0) {
     if (acecr_from_text(&cr, vs) < 0)
       return -1;
   } else {
