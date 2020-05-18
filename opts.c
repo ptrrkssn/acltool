@@ -152,7 +152,7 @@ opts_parse_argv(int argc,
 		char **argv,
 		OPTION *opts,
 		...) {
-  int i, j, k, nm;
+  int i, j, k, nm, rc = 0;
   char *name;
   char *value;
   OPTION *op, *optlist;
@@ -201,7 +201,10 @@ opts_parse_argv(int argc,
 	return -1;
       }
 
-      opts_set_value(op, value, argv[0]);
+      rc = opts_set_value(op, value, argv[0]);
+      if (rc != 0)
+	return rc;
+	
     } else {
       /* Short option (-x) */
 
@@ -240,7 +243,7 @@ opts_parse_argv(int argc,
 	value = NULL;
 	switch (op->type & OPTS_TYPE_MASK) {
 	case OPTS_TYPE_NONE:
-	  opts_set_value(op, NULL, argv[0]);
+	  rc = opts_set_value(op, NULL, argv[0]);
 	  break;
 
 	case OPTS_TYPE_INT:
@@ -250,7 +253,7 @@ opts_parse_argv(int argc,
 	  else if (argv[i+1] && (isdigit(argv[i+1][0]) || (argv[i+1][0] == '-' && isdigit(argv[i+1][1]))))
 	    value = argv[++i];
 	  
-	  opts_set_value(op, value, argv[0]);
+	  rc = opts_set_value(op, value, argv[0]);
 	  break;
 	  
 	case OPTS_TYPE_UINT:
@@ -260,7 +263,7 @@ opts_parse_argv(int argc,
 	  else if (argv[i+1] && isdigit(argv[i+1][0]))
 	    value = argv[++i];
 
-	  opts_set_value(op, value, argv[0]);
+	  rc = opts_set_value(op, value, argv[0]);
 	  break;
 
 	case OPTS_TYPE_STR:
@@ -269,7 +272,7 @@ opts_parse_argv(int argc,
 	  else if (argv[i+1])
 	    value = argv[++i];
 
-	  opts_set_value(op, value, argv[0]);
+	  rc = opts_set_value(op, value, argv[0]);
 	  break;
 	  
 	default:
@@ -277,6 +280,9 @@ opts_parse_argv(int argc,
 		  argv[0], (op->type & OPTS_TYPE_MASK));
 	  return -1;
 	}
+
+	if (rc != 0)
+	  return rc;
 	
 	if (value)
 	  goto NextArg;

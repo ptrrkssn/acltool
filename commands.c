@@ -111,7 +111,7 @@ cmd_help(COMMANDS *cmdlist,
     }
 
     if (nm > 0)
-      return 0;
+      return -1;
   } 
 
   fprintf(fp, "COMMANDS:\n");
@@ -122,7 +122,7 @@ cmd_help(COMMANDS *cmdlist,
     fprintf(fp, "  %-20s\t%-30s\t%s\n", cp->name, cp->args, cp->help);
   }
   
-  return 0;
+  return -1;
 }
 
 
@@ -163,9 +163,10 @@ cmd_run(COMMANDS *cmdlist,
     return -1;
   }
 
+  argv[0] = scp->name;
   i = opts_parse_argv(argc, argv, global_options, scp->options, NULL);
   if (i < 0)
-    return 1;
+    return i;
   for (j = 1; i < argc; i++, j++)
     argv[j] = argv[i];
   argv[j] = NULL;

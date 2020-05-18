@@ -57,6 +57,8 @@ COMMANDS commands = { 0 };
 CONFIG default_config = { 0, 0, 0, 0, 0, 0 };
 CONFIG config = { 0, 0, 0, 0, 0, 0 };
 
+int f_interactive = 0;
+
 
 
 int
@@ -492,7 +494,7 @@ run_cmd(int argc,
 
   config = default_config;
   rc = cmd_run(&commands, argc, argv);
-  if (rc)
+  if (rc > 0)
     error(rc, errno, "%s", argv[0]);
   return rc;
 }
@@ -567,6 +569,7 @@ main(int argc,
     if (isatty(fileno(stdin))) {
       print_version();
       puts("\nINTERACTIVE MODE (type 'help' for information)");
+      f_interactive = 1;
     }
 
     rl_attempted_completion_function = cmd_name_completion;
