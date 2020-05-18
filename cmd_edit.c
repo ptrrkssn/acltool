@@ -237,6 +237,7 @@ acecr_from_text(ACECR **head,
     next = &cur->next;
   }
 
+  free(tbuf);
   return 0;
 
  Fail:
@@ -740,6 +741,7 @@ walker_edit(const char *path,
 
   nap = acl_dup(oap);
   if (!nap) {
+    acl_free(oap);
     fprintf(stderr, "%s: Error: %s: Internal Fault (acl_dup): %s\n", argv0, path, strerror(errno));
     return 1;
   }
@@ -949,6 +951,8 @@ walker_edit(const char *path,
     goto Fail;
   }
 
+  acl_free(oap);
+  acl_free(nap);
   return 0;
 
  Fail:

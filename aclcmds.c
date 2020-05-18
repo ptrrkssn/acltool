@@ -525,12 +525,14 @@ get_cmd(int argc,
     nv = malloc(ns);
     if (!nv) {
       fprintf(stderr, "%s: Error: %s: Malloc(%d): %s\n", argv0, argv[i], (int) ns, strerror(errno));
+      acl_free(ap);
       return 1;
     }
     
     snprintf(nv, ns, "%s=%s", argv[i], as);
     if (putenv(nv) < 0) {
       fprintf(stderr, "%s: Error: %s: Putenv: %s\n", argv0, argv[i], strerror(errno));
+      acl_free(ap);
       return 1;
     }
     acl_free(as);

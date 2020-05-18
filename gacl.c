@@ -788,8 +788,17 @@ _gacl_entry_match(GACE *aep,
     uid_t *qa = (uid_t *) gacl_get_qualifier(aep);
     uid_t *qb = (uid_t *) gacl_get_qualifier(mep);
     
-    if ((!qa && qb) || (qa && !qb) || (*qa != *qb))
+    if ((!qa && qb) || (qa && !qb) || (*qa != *qb)) {
+      if (qa)
+	acl_free(qa);
+      if (qb)
+	acl_free(qb);
       return 0;
+    }
+    if (qa)
+      acl_free(qa);
+    if (qb)
+      acl_free(qb);
   }
   
   /* 2. ACE entry type (allow, deny, audit, alarm) */
@@ -2468,7 +2477,8 @@ _gacl_get_fd_file(int fd,
 
   if (rc < 0)
     goto Fail;
-  
+
+  acl_free(oap);
   return nap;
 
  Fail:
