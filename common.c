@@ -113,7 +113,7 @@ set_acl(const char *path,
 
   if (config.f_sort) {
     acl_t sap = acl_sort(ap);
-    
+
     if (!sap) {
       error(1, errno, "%s: Sorting ACL", path);
       return -1;
