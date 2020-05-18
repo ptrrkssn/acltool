@@ -68,18 +68,8 @@ get_acl(const char *path,
   else
     ap = acl_get_file(path, ACL_TYPE_NFS4);
   if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
+    error(1, errno, "Getting ACL");
     return NULL;
-  }
-
-  if (config.f_sort) {
-    acl_t sap = acl_sort(ap);
-    if (!sap) {
-      fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
-      return NULL;
-    }
-    acl_free(ap);
-    ap = sap;
   }
 
   return ap;
@@ -108,27 +98,46 @@ print_ace(acl_t ap,
 int
 set_acl(const char *path,
 	const struct stat *sp,
-	acl_t ap,
+	acl_t nap,
 	acl_t oap) {
-  int rc;
+  int rc, s_errno;
+  acl_t ap = nap;
 
+
+  if (config.f_sort) {
+    acl_t sap = acl_sort(ap);
+    
+    if (!sap) {
+      error(1, errno, "%s: Sorting ACL", path);
+      return -1;
+    }
+    ap = sap;
+  }
 
   if (config.f_merge) {
     acl_t map = acl_merge(ap);
+    
     if (!map) {
-      fprintf(stderr, "%s: Error: %s: Merging ACL: %s\n", argv0, path, strerror(errno));
+      s_errno = errno;
+      if (ap != nap)
+	acl_free(ap);
+      error(1, s_errno, "%s: Merging ACL", path);
       return -1;
     }
-    acl_free(ap);
+    if (ap != nap)
+      acl_free(ap);
     ap = map;
   }
 
   if (config.f_print > 1)
     print_acl(stdout, ap, path, sp);
   
-  /* Skip set operation if old and new acl is the same */
-  if (oap && acl_match(ap, oap) == 1)
+  /* Skip set operation if old and new acl is the same (and force flag not in use) */
+  if (oap && acl_match(ap, oap) == 1 && !config.f_force) {
+    if (ap != nap)
+      acl_free(ap);
     return 0;
+  }
 
   rc = 0;
   if (!config.f_noupdate) {
@@ -139,7 +148,10 @@ set_acl(const char *path,
   }
 
   if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s: Setting ACL: %s\n", argv0, path, strerror(errno));
+    s_errno = errno;
+    if (ap != nap)
+      acl_free(ap);
+    error(1, s_errno, "%s: Setting ACL", path);
     return rc;
   }
 
@@ -149,6 +161,9 @@ set_acl(const char *path,
   if (config.f_verbose)
     printf("%s: ACL Updated%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
   
+  if (ap != nap)
+    acl_free(ap);
+
   return 1;
 }
 
@@ -232,6 +247,8 @@ primos_print_perms(FILE *fp,
     putc(' ', fp);
   return 0;
 }
+
+
 static int
 primos_print_flags(FILE *fp,
 		   const char *s) {
@@ -305,7 +322,7 @@ print_acl(FILE *fp,
       return 1;
     }
 
-      fprintf(fp, "# file: %s\n", path);
+    fprintf(fp, "# file: %s\n", path);
     
     if (config.f_verbose)
       fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);

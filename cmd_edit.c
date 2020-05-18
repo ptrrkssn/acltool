@@ -56,17 +56,25 @@
  * ACL change request list 
  */
 typedef struct ace_cr {
+  mode_t ftypes;
   RANGE *range;
   struct {
+    /* Regex style */
     int avail;
-    
+    regex_t preg;
+
+    /* Simple style */
     acl_entry_t ep;
     GACE_EDIT_FLAGS flags;
-    mode_t ftypes;
+  } filter;
+  struct {
+    /* Generic data */
+    char *data;
 
-    regex_t regex;
-    
-  } filter, change;
+    /* ACE entry */
+    acl_entry_t ep;
+    GACE_EDIT_FLAGS flags;
+  } change;
   int cmd;
   char *modifiers;
   struct ace_cr *next;
@@ -138,7 +146,7 @@ acecr_from_text(ACECR **head,
     if (*es == '{' && (ep = strchr(++es, '}')) != NULL) {
       *ep++ = '\0';
       
-      str2filetype(bp, &cur->filter.ftypes);
+      str2filetype(bp, &cur->ftypes);
       es = ep;
     }
     
@@ -171,11 +179,11 @@ acecr_from_text(ACECR **head,
       if (config.f_regex) {
 	int ec;
 	
-	ec = regcomp(&cur->filter.regex, es, rflags);
+	ec = regcomp(&cur->filter.preg, es, rflags);
 	if (ec) {
 	  char errbuf[1024];
 	  
-	  regerror(ec, &cur->filter.regex, errbuf, sizeof(errbuf));
+	  regerror(ec, &cur->filter.preg, errbuf, sizeof(errbuf));
 	  fprintf(stderr, "%s: Error: %s: %s\n", argv0, es, errbuf);
 	  goto Fail;
 	}
@@ -212,6 +220,10 @@ acecr_from_text(ACECR **head,
 	++es;
     }
     if (*es) {
+      cur->change.data = strdup(es);
+      if (!cur->change.data)
+	goto Fail;
+      
       cur->change.ep = malloc(sizeof(*(cur->change.ep)));
       if (!cur->change.ep)
 	goto Fail;
@@ -235,8 +247,10 @@ acecr_from_text(ACECR **head,
       if (cur->filter.ep)
 	free(cur->filter.ep);
       else
-	regfree(&cur->filter.regex);
+	regfree(&cur->filter.preg);
     }
+    if (cur->change.data)
+      free(cur->change.data);
     if (cur->change.ep)
       free(cur->change.ep);
     if (cur->modifiers)
@@ -284,7 +298,7 @@ acecr_from_simple_text(ACECR **head,
     ftp = strchr(es, '?');
     if (ftp) {
       *ftp++ = '\0';
-      str2filetype(ftp, &cur->filter.ftypes);
+      str2filetype(ftp, &cur->ftypes);
     }
     
     ep = NULL;
@@ -375,8 +389,10 @@ acecr_from_simple_text(ACECR **head,
       if (cur->filter.ep)
 	free(cur->filter.ep);
       else
-	regfree(&cur->filter.regex);
+	regfree(&cur->filter.preg);
     }
+    if (cur->change.data)
+      free(cur->change.data);
     if (cur->change.ep)
       free(cur->change.ep);
     if (cur->modifiers)
@@ -490,23 +506,24 @@ ace_match(acl_entry_t oae,
 
 
 static int
-cmd_edit_ace(ACECR *cr,
-	     acl_entry_t oae) {
-  /* Change ACE */
+cmd_edit_ace(acl_entry_t oae,
+	     acl_entry_t nae,
+	     GACE_EDIT_FLAGS flags) {
+  /* Old ACE */
+  acl_tag_t ott;
+  acl_entry_type_t oet;
+  acl_permset_t ops;
+  acl_flagset_t ofs;
+	  
+  /* New ACE */
   acl_tag_t ntt;
   acl_entry_type_t net;
   uid_t *nip;
   acl_permset_t nps;
   acl_flagset_t nfs;
 
-  /* Current ACE */
-  acl_tag_t ott;
-  acl_entry_type_t oet;
-  acl_permset_t ops;
-  acl_flagset_t ofs;
-	  
   
-  /* Get current ACE */
+  /* Get old ACE */
   acl_get_tag_type(oae, &ott);
   acl_get_entry_type_np(oae, &oet);
 	  
@@ -514,17 +531,17 @@ cmd_edit_ace(ACECR *cr,
       acl_get_flagset_np(oae, &ofs) < 0)
     return -1;
 
-  /* Get change ACE */
-  acl_get_tag_type(cr->change.ep, &ntt);
-  acl_get_entry_type_np(cr->change.ep, &net);
-  nip = acl_get_qualifier(cr->change.ep);
+  /* Get new ACE */
+  acl_get_tag_type(nae, &ntt);
+  acl_get_entry_type_np(nae, &net);
+  nip = acl_get_qualifier(nae);
   
-  if (acl_get_permset(cr->change.ep, &nps) < 0 ||
-      acl_get_flagset_np(cr->change.ep, &nfs) < 0)
+  if (acl_get_permset(nae, &nps) < 0 ||
+      acl_get_flagset_np(nae, &nfs) < 0)
     return -1;
 
   /* Update the tag type */
-  switch (cr->change.flags & GACE_EDIT_TAG_MASK) {
+  switch (flags & GACE_EDIT_TAG_MASK) {
   case GACE_EDIT_TAG_SUB:
     goto Fail;
     
@@ -536,7 +553,7 @@ cmd_edit_ace(ACECR *cr,
   }
   
   /* Update the permissions set */
-  switch (cr->change.flags & GACE_EDIT_PERM_MASK) {
+  switch (flags & GACE_EDIT_PERM_MASK) {
   case GACE_EDIT_PERM_ADD:
     acl_merge_permset(ops, nps, +1);
     if (acl_set_permset(oae, ops) < 0)
@@ -555,7 +572,7 @@ cmd_edit_ace(ACECR *cr,
   }
   
   /* Update the flag set */
-  switch (cr->change.flags & GACE_EDIT_FLAG_MASK) {
+  switch (flags & GACE_EDIT_FLAG_MASK) {
   case GACE_EDIT_FLAG_ADD:
     acl_merge_flagset(ofs, nfs, +1);
     if (acl_set_flagset_np(oae, ofs) < 0)
@@ -574,7 +591,7 @@ cmd_edit_ace(ACECR *cr,
   }
   
   /* Update the type */
-  switch (cr->change.flags & GACE_EDIT_TYPE_MASK) {
+  switch (flags & GACE_EDIT_TYPE_MASK) {
   case GACE_EDIT_TYPE_SUB:
     goto Fail;
     
@@ -590,6 +607,12 @@ cmd_edit_ace(ACECR *cr,
   return -1;
 }
 
+static int
+cmd_edit_crace(ACECR *cr,
+	       acl_entry_t oae) {
+  return cmd_edit_ace(oae, cr->change.ep, cr->change.flags);
+  
+}
 RANGE *
 range_filter(RANGE *old, acl_entry_t fae, int flags, acl_t ap) {
   RANGE *new = NULL;
@@ -734,14 +757,14 @@ walker_edit(const char *path,
 
       
       /* Make sure this change request is valid for this file type */
-      if (cr->filter.ftypes && (sp->st_mode & cr->filter.ftypes) == 0)
+      if (cr->ftypes && (sp->st_mode & cr->ftypes) == 0)
 	continue;
 
       if (cr->filter.avail) {
 	if (cr->filter.ep)
 	  range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
 	else
-	  range = range_filter_regex(cr->range, &cr->filter.regex, cr->filter.flags, nap);
+	  range = range_filter_regex(cr->range, &cr->filter.preg, cr->filter.flags, nap);
 	if (!range)
 	  continue;
       }
@@ -849,7 +872,7 @@ walker_edit(const char *path,
 	      break;
 	    }
 	    
-	    rc = cmd_edit_ace(cr, ae);
+	    rc = cmd_edit_crace(cr, ae);
 	    if (rc < 0) {
 	      rc = -1;
 	      break;
@@ -866,7 +889,7 @@ walker_edit(const char *path,
 	  for (p = 0; acl_get_entry(nap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
 	    pos = p;
 	    
-	    rc = cmd_edit_ace(cr, ae);
+	    rc = cmd_edit_crace(cr, ae);
 	    if (rc < 0) {
 	      rc = -1;
 	      break;
@@ -958,7 +981,7 @@ acecr_free(ACECR *cr) {
       if (cr->filter.ep)
 	free(cr->filter.ep);
       else
-	regfree(&cr->filter.regex);
+	regfree(&cr->filter.preg);
     }
     if (cr->change.ep)
       free(cr->change.ep);
@@ -1024,8 +1047,8 @@ editopt_handler(const char *name,
 
 static OPTION edit_options[] =
   {
-   { "exec", 'e', OPTS_TYPE_STR, editopt_handler, "Commands (from string)" },
-   { "file", 'f', OPTS_TYPE_STR, editopt_handler, "Commands (from file)" },
+   { "execute", 'e', OPTS_TYPE_STR, editopt_handler, "Commands (from string)" },
+   { "file",    'E', OPTS_TYPE_STR, editopt_handler, "Commands (from file)" },
    { NULL, 0, 0, NULL, NULL },
   };
 

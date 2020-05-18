@@ -267,11 +267,10 @@ walker_strip(const char *path,
 
   tf = 0;
   if (acl_is_trivial_np(ap, &tf) < 0) {
-    error(0, errno, "%s: Internal Error (acl_is_trivial_np)", path);
-#if 0
-    fprintf(stderr, "%s: Error: %s: Internal Error: %s\n", argv0, path, strerror(errno));
-#endif
+    int s_errno = errno;
+    
     acl_free(ap);
+    error(0, s_errno, "%s: Internal Error (acl_is_trivial_np)", path);
     return 1;
   }
 
@@ -290,11 +289,6 @@ walker_strip(const char *path,
   if (rc < 0)
     return 1;
 
-#if 0
-  if (config.f_verbose)
-    printf("%s: ACL Stripped%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
-#endif
-  
   return 0;
 }
 
@@ -353,12 +347,32 @@ walker_sort(const char *path,
 
   if (rc < 0)
     return 1;
-
-#if 0
-  if (config.f_verbose)
-    printf("%s: ACL Sorted%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
-#endif
   
+  return 0;
+}
+
+static int
+walker_touch(const char *path,
+	     const struct stat *sp,
+	     size_t base,
+	     size_t level,
+	     void *vp) {
+  int rc;
+  acl_t ap;
+
+
+  ap = get_acl(path, sp);
+  if (!ap) {
+    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
+    return 1;
+  }
+
+  rc = set_acl(path, sp, ap, ap);
+  acl_free(ap);
+
+  if (rc < 0)
+    return 1;
+
   return 0;
 }
 
@@ -380,18 +394,14 @@ walker_set(const char *path,
   DACL *a = (DACL *) vp;
 
   
-  if (!config.f_noupdate) {
-    if (S_ISDIR(sp->st_mode))
-      rc = set_acl(path, sp, a->da, NULL);
-    else
-      rc = set_acl(path, sp, a->fa, NULL);
-    if (rc < 0)
-      return 1;
-  }
-#if 0  
-  if (config.f_verbose)
-    printf("%s: ACL Set%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
-#endif  
+  if (S_ISDIR(sp->st_mode))
+    rc = set_acl(path, sp, a->da, NULL);
+  else
+    rc = set_acl(path, sp, a->fa, NULL);
+  
+  if (rc < 0)
+    return 1;
+
   return 0;
 }
 
@@ -573,6 +583,12 @@ sort_cmd(int argc,
   return aclcmd_foreach(argc-1, argv+1, walker_sort, NULL);
 }
 
+int
+touch_cmd(int argc,
+	 char **argv) {
+  return aclcmd_foreach(argc-1, argv+1, walker_touch, NULL);
+}
+
 
 int
 strip_cmd(int argc,
@@ -612,6 +628,8 @@ set_cmd(int argc,
     fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
+
+  _acl_filter_file(a.fa);
 
   rc = aclcmd_foreach(argc-2, argv+2, walker_set, (void *) &a);
 
@@ -674,11 +692,9 @@ walker_rename(const char *path,
   }
   
   if (f_updated) {
-    if (!config.f_noupdate) {
-      rc = set_acl(path, sp, ap, NULL);
-      if (rc < 0) {
-	return 1;
-      }
+    rc = set_acl(path, sp, ap, NULL);
+    if (rc < 0) {
+      return 1;
     }
   }
   
@@ -1016,11 +1032,16 @@ extern COMMAND edit_command;
 COMMAND list_command =
   { "list-access", 	list_cmd,	NULL, "<path>+",		"List ACL(s)" };
 
+COMMAND touch_command =
+  { "touch-access",     touch_cmd,	NULL, "<path>+",		"Touch/update ACL(s)" };
+
+#if 0
 COMMAND strip_command =
   { "strip-access",     strip_cmd,	NULL, "<path>+",		"Strip ACL(s)" };
 
 COMMAND sort_command =
   { "sort-access",      sort_cmd,	NULL,   "<path>+",		"Sort ACL(s)" };
+#endif
 
 COMMAND copy_command =
   { "copy-access",     copy_cmd,	NULL,    "<src> <dst>+",		"Copy ACL(s)" };
@@ -1048,12 +1069,15 @@ COMMAND inherit_command =
 COMMAND *acl_commands[] =
   {
    &list_command,
-   &strip_command,
-   &sort_command,
-   &copy_command,
-   &delete_command,
    &set_command,
    &edit_command,
+   &touch_command,
+#if 0
+   &sort_command,
+   &strip_command,
+#endif
+   &copy_command,
+   &delete_command,
    &find_command,
    &rename_command,
    &get_command,

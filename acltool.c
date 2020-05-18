@@ -50,7 +50,7 @@
 #include "acltool.h"
 
 char *argv0 = "acltool";
-char *version = "1.7";
+char *version = "1.8";
 
 COMMANDS commands = { 0 };
 
@@ -86,6 +86,20 @@ set_verbose(const char *name,
   else
     config.f_verbose++;
   
+  return 0;
+}
+
+int
+set_force(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  const void *svp,
+	  void *dvp,
+	  const char *a0) {
+  if (svp)
+    config.f_force = * (int *) svp;
+  else
+    config.f_force++;
   return 0;
 }
 
@@ -251,20 +265,21 @@ show_help(const char *name,
 
 OPTION global_options[] =
   {
-   { "help",      'h', OPTS_TYPE_NONE,               show_help,     NULL, "Display usage" },
-   { "debug",     'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     NULL, "Debug level" },
-   { "verbose",   'v', OPTS_TYPE_NONE,               set_verbose,   NULL, "Verbosity level" },
-   { "print",     'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
-   { "sort",      's', OPTS_TYPE_NONE,               set_sort,      NULL, "Enable sorting" },
-   { "merge",     'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Enable merging" },
+   { "help",      		'h', OPTS_TYPE_NONE,               show_help,     NULL, "Display usage" },
+   { "debug",     		'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     NULL, "Debug level" },
+   { "verbose",   		'v', OPTS_TYPE_NONE,               set_verbose,   NULL, "Verbosity level" },
+   { "force",     		'f', OPTS_TYPE_NONE,               set_force,     NULL, "Force updates" },
+   { "print",     		'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
+   { "sort",      		's', OPTS_TYPE_NONE,               set_sort,      NULL, "Sort ACLs" },
+   { "merge",     		'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redunant ACL entries" },
+   { "recurse",   		'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
+   { "depth",     		'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
+   { "style",     		'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
+   { "type",      		't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
+   { "no-update", 		'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
+   { "no-prefix", 		'N', OPTS_TYPE_NONE,               set_no_prefix, NULL, "Do not prefix filenames" }, 
    { "regular-expressions",     'R', OPTS_TYPE_NONE,               set_regex,     NULL, "Enable regular expressions" },
-   { "recurse",   'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
-   { "depth",     'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
-   { "style",     'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
-   { "type",      't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
-   { "no-update", 'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
-   { "no-prefix", 'N', OPTS_TYPE_NONE,               set_no_prefix, NULL, "Do not prefixed filenames" },
-   { NULL,        -1,  0,                            NULL,          NULL, NULL },
+  { NULL,        		-1,  0,                            NULL,          NULL, NULL },
   };
 
 
