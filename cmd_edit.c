@@ -146,7 +146,7 @@ acecr_from_text(ACECR **head,
     if (*es == '{' && (ep = strchr(++es, '}')) != NULL) {
       *ep++ = '\0';
       
-      str2filetype(bp, &cur->ftypes);
+      str2filetype(es, &cur->ftypes);
       es = ep;
     }
     
@@ -1038,7 +1038,8 @@ editopt_handler(const char *name,
   } else {
     FILE *fp;
     char buf[LINE_MAX];
-
+    int n = 0;
+    
     if (strcmp(vs, "-") == 0) {
       fp = stdin;
     } else {
@@ -1046,9 +1047,19 @@ editopt_handler(const char *name,
       if (!fp)
 	return -1;
     }
-    while (fgets(buf, sizeof(buf), fp))
-      if (acecr_from_text(&cr, buf) < 0)
+    while (fgets(buf, sizeof(buf), fp)) {
+      int i;
+
+      for (i = strlen(buf)-1; i >= 0 && isspace(buf[i]); i--)
+	;
+      buf[i+1] = '\0';
+      fprintf(stderr, "'%s'\n", buf);
+      n++;
+      if (acecr_from_text(&cr, buf) < 0) {
+	error(1, 0, "%s: Invalid action at line %d", buf, n);
 	return -1;
+      }
+    }
     if (fp != stdin)
       fclose(fp);
   }
