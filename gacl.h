@@ -235,6 +235,90 @@ typedef enum gace_type {
 
 /* ---------------------------------------- Linux - END ---------------------------------------- */
 
+#elif defined(__APPLE__)
+/* ---------------------------------------- MacOS - START ---------------------------------------- */
+
+#define GACL_LINUX_EMULATION   1
+#define GACL_SOLARIS_EMULATION 1
+
+#define acl_t            macos_acl_t
+#define acl_entry_t      macos_acl_entry_t
+#define acl_entry_type_t macos_acl_entry_type_t
+#define acl_type_t       macos_acl_type_t
+#define acl_tag_t        macos_acl_tag_t
+#define acl_flagset_t    macos_acl_flagset_t
+#define acl_flag_t       macos_acl_flag_t
+#define acl_permset_t    macos_acl_permset_t
+#define acl_perm_t       macos_acl_perm_t
+#define acl_entry_id_t   macos_acl_entry_id_t
+
+#ifdef GACL_C_INTERNAL
+#define _ACL_PRIVATE 1
+#endif
+
+#include <sys/acl.h>
+
+#undef acl_t
+#undef acl_entry_t
+#undef acl_entry_type_t
+#undef acl_type_t
+#undef acl_tag_t
+#undef acl_flagset_t
+#undef acl_flag_t
+#undef acl_permset_t
+#undef acl_perm_t
+#undef acl_entry_id_t
+
+#if 0
+#undef acl_get_file
+#undef acl_get_link_np
+#undef acl_get_fd
+#undef acl_get_fd_np
+
+#undef acl_set_file
+#undef acl_set_link_np
+#undef acl_set_fd
+#undef acl_set_fd_np
+#endif
+
+typedef enum gace_type {
+  GACE_TYPE_UNDEFINED = -1,
+  GACE_TYPE_ALLOW = __DARWIN_ACL_EXTENDED_ALLOW,
+  GACE_TYPE_DENY  = __DARWIN_ACL_EXTENDED_DENY,
+  GACE_TYPE_AUDIT,
+  GACE_TYPE_ALARM,
+} GACE_TYPE;
+
+#define GACE_READ_DATA           	__DARWIN_ACL_READ_DATA
+#define GACE_LIST_DIRECTORY      	__DARWIN_ACL_LIST_DIRECTORY
+#define GACE_WRITE_DATA          	__DARWIN_ACL_WRITE_DATA
+#define GACE_ADD_FILE            	__DARWIN_ACL_ADD_FILE
+#define GACE_APPEND_DATA         	__DARWIN_ACL_APPEND_DATA
+#define GACE_ADD_SUBDIRECTORY    	__DARWIN_ACL_ADD_SUBDIRECTORY
+#define GACE_READ_NAMED_ATTRS    	__DARWIN_ACL_READ_EXTATTRIBUTES
+#define GACE_WRITE_NAMED_ATTRS   	__DARWIN_ACL_WRITE_EXTATTRIBUTES
+#define GACE_EXECUTE             	__DARWIN_ACL_EXECUTE
+#define GACE_DELETE_CHILD        	__DARWIN_ACL_DELETE_CHILD
+#define GACE_READ_ATTRIBUTES     	__DARWIN_ACL_READ_ATTRIBUTES
+#define GACE_WRITE_ATTRIBUTES    	__DARWIN_ACL_WRITE_ATTRIBUTES
+#define GACE_DELETE              	__DARWIN_ACL_DELETE
+#define GACE_READ_ACL            	__DARWIN_ACL_READ_SECURITY
+#define GACE_WRITE_ACL           	__DARWIN_ACL_WRITE_SECURITY
+#define GACE_WRITE_OWNER         	__DARWIN_ACL_CHANGE_OWNER
+#define GACE_SYNCHRONIZE         	__DARWIN_ACL_SYNCHRONIZE
+
+#define GACE_FLAG_FILE_INHERIT          __DARWIN_ACL_ENTRY_FILE_INHERIT
+#define GACE_FLAG_DIRECTORY_INHERIT     __DARWIN_ACL_ENTRY_DIRECTORY_INHERIT
+#define GACE_FLAG_NO_PROPAGATE_INHERIT  __DARWIN_ACL_ENTRY_LIMIT_INHERIT /* And/Or __DARWIN_ACL_FLAG_NO_INHERIT? */
+#define GACE_FLAG_INHERIT_ONLY          __DARWIN_ACL_ENTRY_ONLY_INHERIT
+#define GACE_FLAG_SUCCESSFUL_ACCESS     0 /* Not implemented */
+#define GACE_FLAG_FAILED_ACCESS         0 /* Not implemented */
+#define GACE_FLAG_INHERITED             __DARWIN_ACL_ENTRY_INHERITED
+
+#define GACL_MAX_ENTRIES 		ACL_MAX_ENTRIES
+
+/* ---------------------------------------- MacOS - END ---------------------------------------- */
+
 #endif
 
 
@@ -669,9 +753,12 @@ typedef GACE_TYPE acl_entry_type_t;
 typedef GACE_PERMSET *acl_permset_t;
 typedef GACE_FLAGSET *acl_flagset_t;
 
-#ifndef __FreeBSD__
+#if !defined(__FreeBSD__)
 #define ACL_TYPE_NFS4             GACL_TYPE_NFS4
+
+#if !defined(ACL_MAX_ENTRIES)
 #define ACL_MAX_ENTRIES           GACL_MAX_ENTRIES
+#endif
 
 #define ACL_UNDEFINED_TAG         GACE_TAG_UNDEFINED
 #define ACL_USER_OBJ              GACE_TAG_USER_OBJ 

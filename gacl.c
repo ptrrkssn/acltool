@@ -2405,6 +2405,7 @@ _gacl_set_fd_file(int fd,
 }
 #endif
 
+
 #ifdef __FreeBSD__
 
 static int
@@ -2795,6 +2796,140 @@ _gacl_set_fd_file(int fd,
   }
 }
 
+#endif
+
+#ifdef __APPLE__
+
+static int
+_gacl_entry_from_acl_entry(GACE *nep,
+			   macos_acl_entry_t oep) {
+#if 1
+  errno = ENOSYS;
+  return -1;
+#else
+  uid_t *ugp;
+  macos_acl_tag_t at;
+  
+  acl_get_tag_type(oep, &at);
+  nep->tag = at;
+  
+  ugp = acl_get_qualifier(oep);
+  if (ugp)
+    nep->id = *ugp;
+  
+  nep->perms = oep->ae_perm;
+  nep->flags = oep->ae_flags;
+  nep->type  = oep->ae_entry_type;
+
+  return 1;
+#endif
+}
+
+static int
+_acl_entry_from_gace(macos_acl_entry_t nep,
+		     GACE *oep) {
+#if 1
+  errno = ENOSYS;
+  return -1;
+#else
+  nep->ae_tag        = oep->tag;
+  nep->ae_id         = oep->id;
+  nep->ae_perm       = oep->perms;
+  nep->ae_flags      = oep->flags;
+  nep->ae_entry_type = oep->type;
+
+  return 1;
+#endif
+}
+
+GACL *
+_gacl_get_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  int flags) {
+  GACL *nap;
+  macos_acl_t oap;
+  macos_acl_entry_t oep;
+  int id, rc;
+  
+  
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW)
+      oap = acl_get_link_np(path, type);
+    else
+      oap = acl_get_file(path, type);
+  } else
+    oap = acl_get_fd_np(fd, type);
+
+  nap = gacl_init(0);
+  id = ACL_FIRST_ENTRY;
+  nap->type = type;
+  
+  while ((rc = acl_get_entry(oap, id, &oep)) == 1) {
+    GACE *nep;
+
+    id = ACL_NEXT_ENTRY;
+    if (gacl_create_entry_np(&nap, &nep, -1) < 0)
+      goto Fail;
+
+    if (_gacl_entry_from_acl_entry(nep, oep) < 0)
+      goto Fail;
+  }
+
+  if (rc < 0)
+    goto Fail;
+  
+  return nap;
+
+ Fail:
+  acl_free(oap);
+  gacl_free(nap);
+  return NULL;
+}
+
+
+int
+_gacl_set_fd_file(int fd,
+		  const char *path,
+		  GACL_TYPE type,
+		  GACL *ap,
+		  int flags) {
+  GACE *oep;
+  macos_acl_t nap;
+  int i, rc;
+  
+  
+  nap = acl_init(ap->ac);
+
+  for (i = 0; (rc = gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &oep)) == 1; i++) {
+    macos_acl_entry_t nep;
+
+    if (acl_create_entry_np(&nap, &nep, i) < 0)
+      goto Fail;
+
+    if (_acl_entry_from_gace(nep, oep) < 0)
+      goto Fail;
+  }
+
+  if (rc < 0)
+    goto Fail;
+  
+  if (path) {
+    if (flags & GACL_F_SYMLINK_NOFOLLOW)
+      rc = acl_set_link_np(path, type, nap);
+    else
+      rc = acl_set_file(path, type, nap);
+  } else
+    rc = acl_set_fd_np(fd, nap, type);
+
+  acl_free(nap);
+  return rc;
+
+ Fail:
+  acl_free(ap);
+  gacl_free(nap);
+  return -1;
+}
 #endif
 
 
