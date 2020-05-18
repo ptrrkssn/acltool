@@ -91,4 +91,8 @@ ft_foreach(const char *path,
 	   mode_t filetypes);
 
 
+extern char *
+strxcat(const char *str,
+	...);
+
 #endif

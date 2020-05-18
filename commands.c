@@ -133,7 +133,10 @@ cmd_run(COMMANDS *cmdlist,
 	char *argv[]) {
   int i, j, nm;
   COMMAND *scp;
-
+  char *tmp_a0a;
+#if 0
+  char *tmp_a0b;
+#endif
 
   if (!argv[0])
     return 0;
@@ -163,8 +166,22 @@ cmd_run(COMMANDS *cmdlist,
     return -1;
   }
 
-  argv[0] = scp->name;
+  tmp_a0a = argv[0];
+  argv[0] = strdup(scp->name);
+#if 0
+  tmp_a0b = argv0;
+  argv0 = strxcat(argv0, ": ", argv[0], NULL);
+#endif
   i = opts_parse_argv(argc, argv, global_options, scp->options, NULL);
+
+#if 0
+  free(argv0);
+  argv0 = tmp_a0b;
+#endif
+  
+  free(argv[0]);
+  argv[0] = tmp_a0a;
+  
   if (i < 0)
     return i;
   for (j = 1; i < argc; i++, j++)

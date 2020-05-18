@@ -193,7 +193,10 @@ opts_parse_argv(int argc,
       free(name);
 
       if (nm < 1 || !op) {
+	error(1, 0, "%s: Invalid option", argv[i]);
+#if 0
 	fprintf(stderr, "%s: Error: %s: Invalid option\n", argv[0], argv[i]);
+#endif
 	return -1;
       }
       if (nm > 1) {

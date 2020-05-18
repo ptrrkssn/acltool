@@ -510,7 +510,9 @@ error(int rc,
   va_list ap;
 
   va_start(ap, msg);
-  fprintf(stderr, "%s: %s: ", argv0, rc ? (rc < 0 ? "Warning" : "Error") : "Info");
+  if (!f_interactive)
+    fprintf(stderr, "%s: ", argv0);
+  fprintf(stderr, "%s: ", rc ? (rc < 0 ? "Warning" : "Error") : "Info");
   vfprintf(stderr, msg, ap);
   if (ec)
     fprintf(stderr, ": %s", strerror(errno));
