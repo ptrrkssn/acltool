@@ -65,7 +65,7 @@ pull:	clean
 	git pull
 
 install:	acltool
-	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -s acltool $$A; done
+	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -sf acltool $$A; done
 
 check:	auto
 	./acltool lac t
