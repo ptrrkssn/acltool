@@ -17,6 +17,6 @@ jobs:
     - name: make
       run: make
     - name: make check
-      run: make check || true # No ACL support on github...
+      run: make check
     - name: make distcheck
-      run: make distcheck || true # No ACL support on github...
+      run: make distcheck
