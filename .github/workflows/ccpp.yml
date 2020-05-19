@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: test -f /usr/bin/apt && test -f /usr/include/readline/readline.h || sudo apt install libreadline-dev
+      run: test "`uname -s`" = "Linux" -a -f /usr/bin/apt -a ! -f /usr/include/readline/readline.h && sudo apt install libreadline-dev
     - name: configure
       run: ./configure
     - name: make
