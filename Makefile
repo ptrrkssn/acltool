@@ -3,6 +3,8 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
+TESTDIR=.
+
 ALIASES=lac sac edac
 
 # CC=gcc
@@ -67,7 +69,25 @@ pull:	clean
 install:	acltool
 	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -sf acltool $$A; done
 
-check:	auto
+check:	
+	$(MAKE) check-`uname -s`
+
+check-macos check-Darwin: check-lac check-sac check-edac
+
+check-freebsd check-FreeBSD: check-lac check-sac check-edac
+
+check-sunos check-solaris check-omnios check-illumos check-SunOS: check-lac check-sac check-edac
+
+check-linux check-Linux:
+	@df -t nfs4 $(TESTDIR) 2>/dev/null || echo "FATAL: Sorry, can only check on NFSv4 filesystems" 
+
+check-lac: auto
 	./acltool lac t
+
+check-sac: auto
+	./acltool sac 'user:nobody:rwx' t
+
+check-edac: auto
+	./acltool edac -Re '/user:nobody:r.*/p'
 
 distcheck: check
