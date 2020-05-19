@@ -790,15 +790,15 @@ _gacl_entry_match(GACE *aep,
     
     if ((!qa && qb) || (qa && !qb) || (*qa != *qb)) {
       if (qa)
-	acl_free(qa);
+	gacl_free(qa);
       if (qb)
-	acl_free(qb);
+	gacl_free(qb);
       return 0;
     }
     if (qa)
-      acl_free(qa);
+      gacl_free(qa);
     if (qb)
-      acl_free(qb);
+      gacl_free(qb);
   }
   
   /* 2. ACE entry type (allow, deny, audit, alarm) */
