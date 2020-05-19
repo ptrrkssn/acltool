@@ -2810,29 +2810,122 @@ _gacl_set_fd_file(int fd,
 
 #ifdef __APPLE__
 
+#include <membership.h>
+
+
 static int
 _gacl_entry_from_acl_entry(GACE *nep,
 			   macos_acl_entry_t oep) {
-#if 1
-  errno = ENOSYS;
-  return -1;
-#else
-  uid_t *ugp;
+  int ugtype;
+  guid_t *guidp;
   macos_acl_tag_t at;
+  macos_acl_permset_t ops;
+  macos_acl_flagset_t ofs;
+#if 0
+  struct passwd *pp;
+#endif
   
-  acl_get_tag_type(oep, &at);
-  nep->tag = at;
+  if (acl_get_tag_type(oep, &at) < 0)
+    return -1;
   
-  ugp = acl_get_qualifier(oep);
-  if (ugp)
-    nep->id = *ugp;
+  switch (at) {
+  case ACL_UNDEFINED_TAG:
+    return -1;
+
+  case ACL_EXTENDED_ALLOW:
+  case ACL_EXTENDED_DENY:
+    guidp = acl_get_qualifier(oep);
+    nep->type = (at == ACL_EXTENDED_ALLOW ? GACE_TYPE_ALLOW : GACE_TYPE_DENY);
+
+    if (mbr_uuid_to_id((const unsigned char *) guidp, &nep->id, &ugtype) < 0)
+      return -1;
+
+    switch (ugtype) {
+    case ID_TYPE_UID:
+#if 0
+      /* XXX: Verify the returned id? */
+      pp = getpwuid(nep->id);
+      fprintf(stderr, "user=%s\n", pp->pw_name);
+#endif
+      nep->tag = GACE_TAG_USER;
+      break;
+      
+    case ID_TYPE_GID:
+      nep->tag = GACE_TAG_GROUP;
+      break;
+
+    default:
+      free(guidp);
+      errno = ENOSYS;
+      return -1;
+    } 
+    free(guidp);
+ }
+
+  if (acl_get_permset(oep, &ops) < 0)
+    return -1;
   
-  nep->perms = oep->ae_perm;
-  nep->flags = oep->ae_flags;
-  nep->type  = oep->ae_entry_type;
+  gacl_clear_perms(&nep->perms);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_READ_DATA))
+    gacl_add_perm(&nep->perms, GACE_READ_DATA);
+#if 0
+  if (acl_get_perm_np(ops, __DARWIN_ACL_LIST_DIRECTORY))
+    gacl_add_perm(&nep->perms, GACE_LIST_DIRECTORY);
+#endif
+  if (acl_get_perm_np(ops, __DARWIN_ACL_WRITE_DATA))
+    gacl_add_perm(&nep->perms, GACE_WRITE_DATA);
+#if 0
+  if (acl_get_perm_np(ops, __DARWIN_ACL_ADD_FILE))
+    gacl_add_perm(&nep->perms, GACE_ADD_FILE);
+#endif
+  if (acl_get_perm_np(ops, __DARWIN_ACL_EXECUTE))
+    gacl_add_perm(&nep->perms, GACE_EXECUTE);
+#if 0
+  if (acl_get_perm_np(ops, __DARWIN_ACL_SEARCH))
+    gacl_add_perm(&nep->perms, GACE_);
+#endif
+  if (acl_get_perm_np(ops, __DARWIN_ACL_DELETE))
+    gacl_add_perm(&nep->perms, GACE_DELETE);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_APPEND_DATA))
+    gacl_add_perm(&nep->perms, GACE_APPEND_DATA);
+#if 0
+  if (acl_get_perm_np(ops, __DARWIN_ACL_ADD_SUBDIRECTORY))
+    gacl_add_perm(&nep->perms, GACE_ADD_SUBDIRECTORY);
+#endif
+  if (acl_get_perm_np(ops, __DARWIN_ACL_DELETE_CHILD))
+    gacl_add_perm(&nep->perms, GACE_DELETE_CHILD);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_READ_ATTRIBUTES))
+    gacl_add_perm(&nep->perms, GACE_READ_ATTRIBUTES);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_WRITE_ATTRIBUTES))
+    gacl_add_perm(&nep->perms, GACE_WRITE_ATTRIBUTES);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_READ_EXTATTRIBUTES))
+    gacl_add_perm(&nep->perms, GACE_READ_NAMED_ATTRS);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_WRITE_EXTATTRIBUTES))
+    gacl_add_perm(&nep->perms, GACE_WRITE_NAMED_ATTRS);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_READ_SECURITY))
+    gacl_add_perm(&nep->perms, GACE_READ_ACL);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_WRITE_SECURITY))
+    gacl_add_perm(&nep->perms, GACE_WRITE_ACL);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_CHANGE_OWNER))
+    gacl_add_perm(&nep->perms, GACE_WRITE_OWNER);
+  if (acl_get_perm_np(ops, __DARWIN_ACL_SYNCHRONIZE))
+    gacl_add_perm(&nep->perms, GACE_SYNCHRONIZE);
+  
+  if (acl_get_flagset_np(oep, &ofs) < 0)
+    return -1;
+
+  if (acl_get_flag_np(ofs, __DARWIN_ACL_FLAG_NO_INHERIT))
+    gacl_add_flag_np(&nep->flags, GACE_FLAG_NO_PROPAGATE_INHERIT);
+  if (acl_get_flag_np(ofs, __DARWIN_ACL_ENTRY_INHERITED))
+    gacl_add_flag_np(&nep->flags, GACE_FLAG_INHERITED);
+  if (acl_get_flag_np(ofs, __DARWIN_ACL_ENTRY_FILE_INHERIT))
+    gacl_add_flag_np(&nep->flags, GACE_FLAG_FILE_INHERIT);
+  if (acl_get_flag_np(ofs, __DARWIN_ACL_ENTRY_DIRECTORY_INHERIT))
+    gacl_add_flag_np(&nep->flags, GACE_FLAG_DIRECTORY_INHERIT);
+  if (acl_get_flag_np(ofs, __DARWIN_ACL_ENTRY_ONLY_INHERIT))
+    gacl_add_flag_np(&nep->flags, GACE_FLAG_INHERIT_ONLY);
 
   return 1;
-#endif
 }
 
 static int
@@ -2861,21 +2954,27 @@ _gacl_get_fd_file(int fd,
   macos_acl_t oap;
   macos_acl_entry_t oep;
   int id, rc;
-  
-  
+  macos_acl_type_t at = ACL_TYPE_EXTENDED;
+
+
+  if (type != GACL_TYPE_NFS4) {
+    errno = ENOSYS;
+    return NULL;
+  }
+
   if (path) {
     if (flags & GACL_F_SYMLINK_NOFOLLOW)
-      oap = acl_get_link_np(path, (macos_acl_type_t) type);
+      oap = acl_get_link_np(path, at);
     else
-      oap = acl_get_file(path, (macos_acl_type_t) type);
+      oap = acl_get_file(path, at);
   } else
-    oap = acl_get_fd_np(fd, (macos_acl_type_t) type);
+    oap = acl_get_fd_np(fd, at);
 
   nap = gacl_init(0);
   id = ACL_FIRST_ENTRY;
   nap->type = type;
-  
-  while ((rc = acl_get_entry(oap, id, &oep)) == 1) {
+
+  while ((rc = acl_get_entry(oap, id, &oep)) >= 0) {
     GACE *nep;
 
     id = ACL_NEXT_ENTRY;
@@ -2886,7 +2985,7 @@ _gacl_get_fd_file(int fd,
       goto Fail;
   }
 
-  if (rc < 0)
+  if (rc < 0 && errno != EINVAL)
     goto Fail;
   
   return nap;
