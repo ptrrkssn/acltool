@@ -80,18 +80,17 @@ check-freebsd check-FreeBSD: check-all
 check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 
 check-linux check-Linux:
-	@df -t nfs4 $(TESTDIR) 2>/dev/null || echo "FATAL: Sorry, can only check on NFSv4 filesystems" 
-	@$(MAKE) check-all
+	@df -t nfs4 $(TESTDIR) 2>/dev/null && $(MAKE) check-all
 
 check-all: check-lac check-sac check-edac
 
 check-lac: auto
-	./acltool lac -r t
+	./acltool lac t
 
 check-sac: auto
-	./acltool sac -r "user:nobody:rwx,user:$$USER:all" t
+	./acltool sac "user:nobody:rwx,user:$$USER:all" t
 
 check-edac: auto
-	./acltool edac -rRe '/user:nobody:r.*/p' t
+	./acltool edac -Re '/user:nobody:r.*/p' t
 
 distcheck: check
