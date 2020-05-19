@@ -51,7 +51,7 @@
 #include "acltool.h"
 
 char *argv0 = "acltool";
-char *version = "1.9";
+char *version = "1.10";
 
 COMMANDS commands = { 0 };
 

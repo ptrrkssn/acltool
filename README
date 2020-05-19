@@ -10,21 +10,18 @@ AUTHOR
 
 OPERATING SYSTEMS SUPPORTED (for now)
 
-  - FreeBSD (ZFS & NFSv4)
+  - FreeBSD (ZFS & NFSv4, tested on 11.3 & 12.1)
   - Solaris (ZFS & NFSv4, tested on OmniOS)
-  - Linux (for NFSv4 only, tested on Ubuntu 20)
-  - MacOS (only tested with local ACLs - limited read-only support for now)
+  - Linux (for NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
+  - MacOS (local "extended" ACLs, tested with MacOS 10.15)
 
 
 BUILD INSTRUCTIONS
 
-  Just type 'make' in the source directory. It will automatically
-  detect and build on:
-
-    - FreeBSD (tested on 11.3 & 12.1)
-    - Linux (tested on CentOS 7, Ubuntu 19 & Debian 9)
-    - Solaris-based systems (tested on OmniOS)
-    - MacOS-based systems
+  Just type 'make' in the source directory and it will automatically
+  detect and build on the supported operating systems. No need to run
+  a "configure" script. For Linux you may want to install the Gnu readline
+  development libraries & header files (if not already there).
 
 
 USAGE
@@ -41,9 +38,9 @@ USAGE
   All commands and long option names can be abbreviated using the
   parts of the names. Some examples of valid abbreviations:
 
-    list-access, list-a, list, l-ac, lac, liac
-    edit-access, edit-a, edit, e-ac, edac
-    set-access, set-acc, set, seta
+    list-access, lac,  list, list-a, l-ac, liac
+    edit-access, edac, edit, edit-a, e-ac,
+    set-access,  sac,  set,  set-acc, seta
 
   Tab-completion in CLI mode also works for command names,
   (global) long options and files.
