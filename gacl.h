@@ -754,7 +754,10 @@ typedef GACE_PERMSET *acl_permset_t;
 typedef GACE_FLAGSET *acl_flagset_t;
 
 #if !defined(__FreeBSD__)
+
+#ifndef ACL_TYPE_NFS4
 #define ACL_TYPE_NFS4             GACL_TYPE_NFS4
+#endif
 
 #if !defined(ACL_MAX_ENTRIES)
 #define ACL_MAX_ENTRIES           GACL_MAX_ENTRIES
