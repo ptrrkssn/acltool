@@ -2930,7 +2930,7 @@ _gacl_set_fd_file(int fd,
     else
       rc = acl_set_file(path, (macos_acl_type_t) type, nap);
   } else
-    rc = acl_set_fd_np(fd, (macos_acl_type_t) nap, type);
+    rc = acl_set_fd_np(fd, nap, (macos_acl_type_t) type);
 
   acl_free(nap);
   return rc;
