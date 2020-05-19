@@ -36,6 +36,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 #include <pwd.h>
 #include <grp.h>
 #include <ftw.h>

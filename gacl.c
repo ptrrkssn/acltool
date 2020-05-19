@@ -2865,11 +2865,11 @@ _gacl_get_fd_file(int fd,
   
   if (path) {
     if (flags & GACL_F_SYMLINK_NOFOLLOW)
-      oap = acl_get_link_np(path, type);
+      oap = acl_get_link_np(path, (macos_acl_type_t) type);
     else
-      oap = acl_get_file(path, type);
+      oap = acl_get_file(path, (macos_acl_type_t) type);
   } else
-    oap = acl_get_fd_np(fd, type);
+    oap = acl_get_fd_np(fd, (macos_acl_type_t) type);
 
   nap = gacl_init(0);
   id = ACL_FIRST_ENTRY;
@@ -2926,11 +2926,11 @@ _gacl_set_fd_file(int fd,
   
   if (path) {
     if (flags & GACL_F_SYMLINK_NOFOLLOW)
-      rc = acl_set_link_np(path, type, nap);
+      rc = acl_set_link_np(path, (macos_acl_type_t) type, nap);
     else
-      rc = acl_set_file(path, type, nap);
+      rc = acl_set_file(path, (macos_acl_type_t) type, nap);
   } else
-    rc = acl_set_fd_np(fd, nap, type);
+    rc = acl_set_fd_np(fd, (macos_acl_type_t) nap, type);
 
   acl_free(nap);
   return rc;

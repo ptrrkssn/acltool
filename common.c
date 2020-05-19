@@ -344,7 +344,7 @@ print_acl(FILE *fp,
     if (config.f_verbose)
       fprintf(fp, "# type: %s\n", mode2typestr(sp->st_mode));
     if (config.f_verbose > 1) {
-      fprintf(fp, "# size: %lu\n", sp->st_size);
+      fprintf(fp, "# size: %llu\n", (long long unsigned) sp->st_size);
       fprintf(fp, "# modified: %s", ctime(&sp->st_mtime));
       fprintf(fp, "# changed:  %s", ctime(&sp->st_ctime));
       fprintf(fp, "# accessed: %s", ctime(&sp->st_atime));
@@ -462,11 +462,11 @@ print_acl(FILE *fp,
     is_trivial = 0;
     acl_is_trivial_np(a, &is_trivial);
     
-    printf("%s%s %2lu %8s %8s %8ld %16s %s\n",
+    printf("%s%s %2lu %8s %8s %8llu %16s %s\n",
 	   mode2str(sp->st_mode), is_trivial ? " " : "+",
-	   (unsigned long int) sp->st_nlink,
+	   (unsigned long) sp->st_nlink,
 	   us, gs,
-	   sp->st_size,
+	   (unsigned long long) sp->st_size,
 	   tbuf, path);
 	   
     as = acl_to_text_np(a, NULL, (config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
