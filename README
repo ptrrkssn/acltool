@@ -11,8 +11,9 @@ AUTHOR
 OPERATING SYSTEMS SUPPORTED (for now)
 
   - FreeBSD (ZFS & NFSv4)
-  - Solaris (tested on OmniOS, ZFS & NFSv4)
-  - Linux (for NFSv4 only)
+  - Solaris (ZFS & NFSv4, tested on OmniOS)
+  - Linux (for NFSv4 only, tested on Ubuntu 20)
+  - MacOS (only tested with local ACLs - limited read-only support for now)
 
 
 BUILD INSTRUCTIONS
@@ -23,6 +24,7 @@ BUILD INSTRUCTIONS
     - FreeBSD (tested on 11.3 & 12.1)
     - Linux (tested on CentOS 7, Ubuntu 19 & Debian 9)
     - Solaris-based systems (tested on OmniOS)
+    - MacOS-based systems
 
 
 USAGE
