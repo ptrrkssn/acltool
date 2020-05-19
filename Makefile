@@ -80,7 +80,7 @@ check-freebsd check-FreeBSD: check-all
 check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 
 check-linux check-Linux:
-	@df -t nfs4 $(TESTDIR) 2>/dev/null && $(MAKE) check-all
+	-@df -t nfs4 $(TESTDIR) 2>/dev/null && $(MAKE) check-all
 
 check-all: check-lac check-sac check-edac
 
