@@ -2969,6 +2969,7 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
   
   if (acl_set_qualifier(nep, &guid) < 0)
     return -1;
+
   
   if (gacl_get_permset(oep, &ops) < 0)
     return -1;
@@ -2983,12 +2984,16 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
       acl_add_perm(perms, pmap[i].macos);
   }
   
+  if (acl_set_permset(nep, perms) < 0)
+    return -1;
+  
+
   if (gacl_get_flagset_np(oep, &ofs) < 0)
     return -1;
 
   if (acl_get_flagset_np(nep, &flags) < 0)
     return -1;
-  
+
   acl_clear_flags_np(flags);
   
   for (i = 0; fmap[i].macos != -1; i++) {
@@ -2996,6 +3001,9 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
       acl_add_flag_np(flags, fmap[i].macos);
   }
 
+  if (acl_set_flagset_np(nep, flags) < 0)
+    return -1;
+  
   return 1;
 }
 
