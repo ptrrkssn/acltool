@@ -1010,12 +1010,16 @@ acecr_free(ACECR *cr) {
 
 static void
 script_free(SCRIPT **spp) {
-  SCRIPT **next;
+  SCRIPT *sp, *next;
 
-  for (; *spp; spp = next) {
-    next = &(*spp)->next;
-    acecr_free((*spp)->cr);
-    free(*spp);
+  
+  if (!spp)
+    return;
+  
+  for (sp = *spp; sp; sp = next) {
+    next = sp->next;
+    acecr_free(sp->cr);
+    free(sp);
   }
   *spp = NULL;
 }
@@ -1088,8 +1092,8 @@ edit_cmd(int argc,
   
 
   if (argc < 2) {
-    fprintf(stderr, "%s: Error: Missing required arguments\n", argv[0]);
-    edit_script = NULL;
+    script_free(&edit_script);
+    error(1, 0, "Missing required arguments");
     return 1;
   }
 
@@ -1101,7 +1105,7 @@ edit_cmd(int argc,
   }
   
   if (!edit_script) {
-    fprintf(stderr, "%s: Error: Invalid/no change request\n", argv0);
+    error(1, 0, "Invalid or no change request");
     return 1;
   }
 

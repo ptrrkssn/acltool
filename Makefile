@@ -7,7 +7,7 @@ ALIASES=lac sac edac
 
 # CC=gcc
 SOLARIS_CC=gcc
-CFLAGS=-g -Wall
+CFLAGS=-O -g -Wall
 DEBUG_CFLAGS=-g -Wall
 
 CMDOBJS=common.o cmd_edit.o
