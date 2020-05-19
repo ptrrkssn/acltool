@@ -58,7 +58,8 @@ acltool: $(OBJS)
 	$(CC) -o acltool $(OBJS) $(LIBS)
 
 distclean clean:
-	-rm -f *~ *.o \#* core *.core acltool */*~ t/*
+	-rm -f *~ *.o \#* core *.core acltool */*~
+	-rm -fr t/*
 
 push: 	clean
 	git add -A && git commit -a && git push
@@ -70,8 +71,7 @@ install:	acltool
 	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -sf acltool $$A; done
 
 check:
-	@rm -fr $(TESTDIR)/* ; mkdir $(TESTDIR)/d1 && touch $(TESTDIR)/f1
-	@$(MAKE) check-`uname -s`
+	@mkdir -p $(TESTDIR) && $(MAKE) check-`uname -s`
 
 check-macos check-Darwin: check-all
 
