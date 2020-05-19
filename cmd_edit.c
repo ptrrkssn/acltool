@@ -1061,7 +1061,6 @@ editopt_handler(const char *name,
       for (i = strlen(buf)-1; i >= 0 && isspace(buf[i]); i--)
 	;
       buf[i+1] = '\0';
-      fprintf(stderr, "'%s'\n", buf);
       n++;
       if (acecr_from_text(&cr, buf) < 0) {
 	error(1, 0, "%s: Invalid action at line %d", buf, n);
