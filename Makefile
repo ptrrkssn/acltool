@@ -3,7 +3,7 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
-TESTDIR=.
+TESTDIR=t
 
 ALIASES=lac sac edac
 
@@ -58,7 +58,7 @@ acltool: $(OBJS)
 	$(CC) -o acltool $(OBJS) $(LIBS)
 
 distclean clean:
-	-rm -f *~ *.o \#* core *.core acltool */*~
+	-rm -f *~ *.o \#* core *.core acltool */*~ t/*
 
 push: 	clean
 	git add -A && git commit -a && git push
@@ -69,25 +69,29 @@ pull:	clean
 install:	acltool
 	cp acltool $(DESTBIN) && cd $(DESTBIN) && for A in $(ALIASES); do ln -sf acltool $$A; done
 
-check:	
-	$(MAKE) check-`uname -s`
+check:
+	@rm -fr $(TESTDIR)/* ; mkdir $(TESTDIR)/d1 && touch $(TESTDIR)/f1
+	@$(MAKE) check-`uname -s`
 
-check-macos check-Darwin: check-lac check-sac check-edac
+check-macos check-Darwin: check-all
 
-check-freebsd check-FreeBSD: check-lac check-sac check-edac
+check-freebsd check-FreeBSD: check-all
 
-check-sunos check-solaris check-omnios check-illumos check-SunOS: check-lac check-sac check-edac
+check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 
 check-linux check-Linux:
 	@df -t nfs4 $(TESTDIR) 2>/dev/null || echo "FATAL: Sorry, can only check on NFSv4 filesystems" 
+	@$(MAKE) check-all
+
+check-all: check-lac check-sac check-edac
 
 check-lac: auto
-	./acltool lac t
+	./acltool lac -r t
 
 check-sac: auto
-	./acltool sac 'user:nobody:rwx' t
+	./acltool sac -r "user:nobody:rwx,user:$$USER:all" t
 
 check-edac: auto
-	./acltool edac -Re '/user:nobody:r.*/p'
+	./acltool edac -rRe '/user:nobody:r.*/p' t
 
 distcheck: check
