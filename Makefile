@@ -88,9 +88,9 @@ check-lac: auto
 	./acltool lac t
 
 check-sac: auto
-	./acltool sac "user:nobody:rwx,user:$$USER:all" t
+	./acltool sac -vp "user:nobody:rwx,user:$$USER:all" t
 
 check-edac: auto
-	./acltool edac -Re '/user:nobody:r.*/p' t
+	./acltool edac -vpRe '/user:nobody:r.*/d' t
 
 distcheck: check
