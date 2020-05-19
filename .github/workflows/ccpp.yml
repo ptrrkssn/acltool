@@ -4,7 +4,9 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest, macos-latest
+    runs-on:
+    - ubuntu-latest
+    - macos-latest
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
