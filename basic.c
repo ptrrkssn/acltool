@@ -36,6 +36,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
+#include <fcntl.h>
 
 #include "acltool.h"
 #include "basic.h"
@@ -136,8 +138,8 @@ dir_cmd(int argc,
 	  else if (S_ISLNK(sb.st_mode)) {
 	    char buf[2048];
 
-	    buf[0] = '\0';
-	    (void) readlink(path, buf, sizeof(buf));
+	    if (readlink(path, buf, sizeof(buf)) < 0)
+	      buf[0] = '\0';
 	    
 	    printf("%-20s  %-6s  %10s  %s -> %s\n",
 		   tbuf,
