@@ -1,5 +1,5 @@
 /*
- * acltool.h
+ * vfs.c
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,56 +31,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_H
-#define ACLTOOL_H 1
-
-#include <sys/types.h>
-#include <sys/stat.h>
-
+#include <stdlib.h>
+#include <string.h>
 #include "vfs.h"
-#include "gacl.h"
-#include "argv.h"
-#include "commands.h"
-#include "aclcmds.h"
-#include "basic.h"
-#include "strings.h"
-#include "misc.h"
-#include "opts.h"
-#include "common.h"
 
+char *vfs_cwd = NULL;
 
+int
+vfs_chdir(const char *path) {
+  int rc;
 
-struct command;
-
-typedef struct config {
-  int f_debug;
-  int f_verbose;
-  int f_force;
-  int f_print;
-  int f_sort;
-  int f_merge;
-  int f_recurse;
-  int f_noupdate;
-  int f_noprefix;
-  int f_regex;
-  mode_t f_filetype;
-  ACL_STYLE f_style;
   
-  int max_depth;
-} CONFIG;
+  rc = chdir(path);
+  if (rc < 0)
+    return rc;
+
+  if (vfs_cwd)
+    free(vfs_cwd);
+
+  vfs_cwd = strdup(path);
+  if (!vfs_cwd)
+    return -1;
+  
+  return rc;
+}
 
 
-extern char *argv0;
+int
+vfs_lstat(const char *path,
+	  struct stat *sp) {
+  return lstat(path, sp);
+}
 
-extern OPTION global_options[];
 
-/* Default configuration loaded from config file and global command line */
-extern CONFIG default_config;
+DIR *
+vfs_opendir(const char *path) {
+  return opendir(path);
+}
 
-/* Per-command active configuration */
-extern CONFIG config;
+struct dirent *
+vfs_readdir(DIR *dp) {
+  return readdir(dp);
+}
 
-extern void
-error(int rc, int ec, const char *msg, ...);
+int
+vfs_closedir(DIR *dp) {
+  return closedir(dp);
+}
 
-#endif

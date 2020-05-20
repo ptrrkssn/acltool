@@ -57,7 +57,7 @@ get_acl(const char *path,
 
 
   if (!sp) {
-    if (lstat(path, &sbuf) < 0) {
+    if (vfs_lstat(path, &sbuf) < 0) {
       error(1, errno, "Getting ACL (lstat)");
       return NULL;
     }

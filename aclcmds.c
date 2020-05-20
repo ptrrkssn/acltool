@@ -552,7 +552,7 @@ copy_cmd(int argc,
   DACL a;
 
   
-  if (lstat(argv[1], &s0) != 0) {
+  if (vfs_lstat(argv[1], &s0) != 0) {
     fprintf(stderr, "%s: Error: %s: Accessing: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
