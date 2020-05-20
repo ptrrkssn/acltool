@@ -61,10 +61,126 @@ pwd_cmd(int argc,
 	char **argv) {
   char buf[2048];
 
-  if (!getcwd(buf, sizeof(buf)))
+  if (!vfs_getcwd(buf, sizeof(buf)))
     error(1, errno, "Getting current directory");
   
   puts(buf);
+  return 0;
+}
+
+
+static int
+_dirname_compare(const void *a, const void *b) {
+  char *sa = * (char **) a;
+  char *sb = * (char **) b;
+
+  return strcmp(sa, sb);
+}
+
+
+int
+dir_cmd(int argc,
+	char **argv) {
+  VFS_DIR *vdp;
+  struct dirent *dep;
+  int i, j;
+  
+  for (i = 1; i < argc || (i == 1 && argc == 1); i++) {
+    SLIST *nlist;
+
+    
+    vdp = vfs_opendir(argv[i]);
+    if (!vdp)
+      error(1, errno, "Opening directory");
+    
+    nlist = slist_new(1024);
+    if (!nlist)
+      error(1, errno, "Memory allocation failure");
+    
+    while ((dep = vfs_readdir(vdp)) != NULL)
+      slist_add(nlist, dep->d_name);
+    vfs_closedir(vdp);
+
+    qsort(&nlist->v[0], nlist->c, sizeof(nlist->v[0]), _dirname_compare);
+
+    for (j = 0; j < nlist->c; j++) {
+      if (config.f_verbose) {
+	char *path;
+	struct stat sb;
+	
+	if (argv[i])
+	  path = strxcat(argv[i], "/", nlist->v[j], NULL);
+	else
+	  path = strdup(nlist->v[j]);
+	
+	if (vfs_lstat(path, &sb) < 0)
+	  printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);
+	else {
+	  char tbuf[256];
+	  struct tm *tp;
+
+	  tp = localtime(&sb.st_mtime);
+	  strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", tp);
+	  if (S_ISREG(sb.st_mode))
+	    printf("%-20s  %-6s  %10llu  %s\n",
+		   tbuf,
+		   "",
+		   (unsigned long long) sb.st_size,
+		   nlist->v[j]);
+	  else if (S_ISDIR(sb.st_mode))
+	    printf("%-20s  %-6s  %10s  %s\n",
+		   tbuf,
+		   "<DIR>",
+		   "",
+		   nlist->v[j]);
+	  else if (S_ISLNK(sb.st_mode)) {
+	    char buf[2048];
+
+	    buf[0] = '\0';
+	    (void) readlink(path, buf, sizeof(buf));
+	    
+	    printf("%-20s  %-6s  %10s  %s -> %s\n",
+		   tbuf,
+		   "<LINK>",
+		   "",
+		   nlist->v[j],
+		   buf[0] ? buf : "?");
+	  } else if (S_ISFIFO(sb.st_mode))
+	    printf("%-20s  %-6s  %10s  %s\n",
+		   tbuf,
+		   "<FIFO>",
+		   "",
+		   nlist->v[j]);
+	  else if (S_ISSOCK(sb.st_mode))
+	    printf("%-20s  %-6s  %10s  %s\n",
+		   tbuf,
+		   "<SOCK>",
+		   "",
+		   nlist->v[j]);
+	  else if (S_ISCHR(sb.st_mode))
+	    printf("%-20s  %-6s  %10s  %s\n",
+		   tbuf,
+		   "<CHR>",
+		   "",
+		   nlist->v[j]);
+	  else if (S_ISBLK(sb.st_mode))
+	    printf("%-20s  %-6s  %10s  %s\n",
+		   tbuf,
+		   "<BLK>",
+		   "",
+		   nlist->v[j]);
+	  else
+	    printf("%-20s  %-6s  %-10s  %s\n",
+		   tbuf,
+		   "<?>",
+		   "",
+		   nlist->v[j]);
+	}
+      } else
+	puts(nlist->v[j]);
+    }
+    slist_free(nlist);
+  }
   return 0;
 }
 
@@ -80,7 +196,7 @@ cd_cmd(int argc,
     if (!homedir)
       error(1, 0, "%s", "$HOME not set");
     
-    rc = chdir(homedir);
+    rc = vfs_chdir(homedir);
     if (rc < 0)
       error(1, errno, "%s", homedir);
 
@@ -88,7 +204,7 @@ cd_cmd(int argc,
   }
 
   for (i = 1; i < argc; i++) {
-    rc = chdir(argv[i]);
+    rc = vfs_chdir(argv[i]);
     if (rc < 0)
       error(1, errno, "%s", argv[i]);
   }
@@ -120,6 +236,9 @@ COMMAND echo_command =
 COMMAND cd_command =
   { "change-directory",  cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
 
+COMMAND dir_command =
+  { "directory-listing",    dir_cmd,		NULL, "[<path>]*",	"List directory" };
+
 COMMAND pwd_command =
   { "print-working-directory", 	pwd_cmd,	NULL, "",		"Print working directory" };
 
@@ -130,6 +249,7 @@ COMMAND *basic_commands[] =
    &echo_command,
    &cd_command,
    &pwd_command,
+   &dir_command,
    NULL,
   };
 

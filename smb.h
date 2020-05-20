@@ -1,5 +1,5 @@
 /*
- * vfs.h
+ * smb.h
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,52 +31,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_VFS_H
-#define ACLTOOL_VFS_H
-
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
-typedef struct {
-  enum { VFS_DIR_TYPE_UNKNOWN = 0, VFS_DIR_TYPE_SYS = 1, VFS_DIR_TYPE_SMB = 2 } type;
-  union {
-    DIR *sys;
-    int smb;
-  } dh;
-} VFS_DIR;
-
+#ifndef ACLTOOL_SMB_H
+#define ACLTOOL_SMB_H 1
+#endif
 
 extern int
-vfs_chdir(const char *path);
-
-extern char *
-vfs_getcwd(char *buf,
-	   size_t bufsize);
-
-extern int
-vfs_lstat(const char *path,
+smb_lstat(const char *path,
 	  struct stat *sp);
 
+extern int
+smb_chdir(const char *path);
+
 extern VFS_DIR *
-vfs_opendir(const char *path);
+smb_opendir(const char *path);
 
 extern struct dirent *
-vfs_readdir(VFS_DIR *dp);
+smb_readdir(VFS_DIR *dp);
 
 extern int
-vfs_closedir(VFS_DIR *dp);
+smb_closedir(VFS_DIR *dp);
 
 
-#ifndef IN_ACLTOOL_VFS_C
-#define chdir    vfs_chdir
-#define getcwd   vfs_getcwd
-#define lstat    vfs_lstat
-#define opendir  vfs_opendir
-#define readdir  vfs_readdir
-#define closedir vfs_closedir
-#define DIR      VFS_DIR
-#endif
-
-#endif

@@ -222,3 +222,53 @@ s_nmatch(const char *a,
   return ai ? 1 : 0;
 }
 
+
+SLIST *
+slist_new(size_t size) {
+  SLIST *sp = malloc(sizeof(*sp));
+
+  if (!sp)
+    return NULL;
+
+  sp->c = 0;
+  sp->s = size;
+  sp->v = malloc(sizeof(char *) * size);
+  if (!sp->v) {
+    free(sp);
+    return NULL;
+  }
+
+  return sp;
+}
+
+
+int
+slist_add(SLIST *sp,
+	  char *s) {
+
+  if (sp->c >= sp->s) {
+    char **nv = realloc(sp->v, sizeof(char *) * sp->s + 256);
+    if (!nv)
+      return -1;
+
+    sp->v = nv;
+    sp->s += 256;
+  }
+
+  sp->v[sp->c++] = strdup(s);
+  return sp->c;
+}
+
+
+void
+slist_free(SLIST *sp) {
+  int i;
+
+  for (i = 0; i < sp->c; i++)
+    free(sp->v[i]);
+  free(sp);
+}
+
+
+
+

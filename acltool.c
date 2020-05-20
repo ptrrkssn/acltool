@@ -51,7 +51,7 @@
 #include "acltool.h"
 
 char *argv0 = "acltool";
-char *version = "1.10";
+char *version = "1.10.1";
 
 COMMANDS commands = { 0 };
 
@@ -315,9 +315,12 @@ version_cmd(int argc,
 	    char **argv) {
   print_version();
   puts("");
-  puts("Author: Peter Eriksson <pen@lysator.liu.se>");
-  puts("Built:  " __DATE__ " " __TIME__);
-  puts("Source: https://github.com/ptrrkssn/acltool");
+  puts("Author:  Peter Eriksson <pen@lysator.liu.se>");
+  puts("Built:   " __DATE__ " " __TIME__);
+  puts("Source:  https://github.com/ptrrkssn/acltool");
+#ifdef ENABLE_SMB
+  puts("Options: SMB");
+#endif  
   return 0;
 }
 

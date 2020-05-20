@@ -1,5 +1,4 @@
 #!/bin/sh
-#
-# Just a dummy configure script (all the magic is in Makefile for now)
 
+echo "Sorry, this script is a dummy-do-nothing one. Just run 'make' to build 'acltool'."
 exit 0

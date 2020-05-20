@@ -36,6 +36,23 @@
 
 #include <sys/types.h>
 
+typedef struct slist {
+  size_t c;
+  size_t s;
+  char **v;
+} SLIST;
+
+extern SLIST *
+slist_new(size_t size);
+
+extern int
+slist_add(SLIST *sp,
+	  char *s);
+
+extern void
+slist_free(SLIST *sp);
+
+
 
 extern char *
 s_ndup(const char *s,

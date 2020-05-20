@@ -31,51 +31,191 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "vfs.h"
+#include <errno.h>
 
-char *vfs_cwd = NULL;
+#define IN_ACLTOOL_VFS_C 1
+#include "vfs.h"
+#include "misc.h"
+
+#ifdef ENABLE_SMB
+#include "smb.h"
+#endif
+
+static char *cwd = NULL;
+
 
 int
 vfs_chdir(const char *path) {
   int rc;
 
+
+  if (!path)
+    path = "";
+
+#ifdef ENABLE_SMB
+  if (strncmp(path, "smb:/", 5) == 0) {
+    rc = smb_chdir(path);
+    if (rc >= 0)
+    cwd = strdup(path);
+    return rc;
+  }
+  
+  if (*path != '/' && cwd && strncmp(cwd, "smb:/", 5) == 0) {
+    char *np;
+    
+    if (strcmp(path, "..") == 0) {
+      np = strrchr(cwd, '/');
+      if (np)
+	*np = '\0';
+      return smb_chdir(cwd);
+    } else {
+      np = strxcat(cwd, *path ? "/" : NULL, path, NULL);
+      if (!np)
+	return -1;
+      rc = smb_chdir(np);
+      cwd = np;
+      return rc;
+    }
+  }
+#endif
+  if (!path || !*path)
+    path = ".";
   
   rc = chdir(path);
-  if (rc < 0)
-    return rc;
+  if (rc >= 0)
+    cwd = strdup(path);
 
-  if (vfs_cwd)
-    free(vfs_cwd);
-
-  vfs_cwd = strdup(path);
-  if (!vfs_cwd)
-    return -1;
-  
   return rc;
+}
+
+
+char *
+vfs_getcwd(char *buf,
+	   size_t bufsize) {
+#ifdef ENABLE_SMB
+  if (cwd && strncmp(cwd, "smb:/", 5) == 0) {
+    if (strlen(cwd)+1 > bufsize) {
+      errno = EINVAL;
+      return NULL;
+    }
+    
+    strcpy(buf, cwd);
+    return buf;
+  }
+#endif
+  
+  return getcwd(buf, bufsize);
 }
 
 
 int
 vfs_lstat(const char *path,
 	  struct stat *sp) {
+  if (!path)
+    path = "";
+  
+#ifdef ENABLE_SMB
+  if (strncmp(path, "smb:/", 5) == 0)
+    return smb_lstat(path, sp);
+  
+  if (*path != '/' && cwd && strncmp(cwd, "smb:/", 5) == 0) {
+    int rc;
+    char *np = strxcat(cwd, *path ? "/" : NULL, path, NULL);
+    if (!np)
+      return -1;
+    rc = smb_lstat(np, sp);
+    free(np);
+    return rc;
+  }
+#endif
+
+  if (!path || !*path)
+    path = ".";
+  
   return lstat(path, sp);
 }
 
 
-DIR *
+VFS_DIR *
 vfs_opendir(const char *path) {
-  return opendir(path);
+  VFS_DIR *vdp;
+  DIR *dh;
+
+  if (!path)
+    path = "";
+  
+#ifdef ENABLE_SMB
+  if (strncmp(path, "smb:/", 5) == 0)
+    return smb_opendir(path);
+  
+  if (*path != '/' && cwd && strncmp(cwd, "smb:/", 5) == 0) {
+    char *np = strxcat(cwd, *path ? "/" : NULL, path, NULL);
+    if (!np)
+      return NULL;
+    vdp = smb_opendir(np);
+    free(np);
+    return vdp;
+  }
+#endif
+  
+  if (!path || !*path)
+    path = ".";
+  
+  dh = opendir(path);
+  if (!dh)
+    return NULL;
+  
+  vdp = malloc(sizeof(*vdp));
+  if (!vdp)
+    return NULL;
+  
+  vdp->type = VFS_DIR_TYPE_SYS;
+  vdp->dh.sys = dh;
+  return vdp;
 }
+
 
 struct dirent *
-vfs_readdir(DIR *dp) {
-  return readdir(dp);
+vfs_readdir(VFS_DIR *vdp) {
+  switch (vdp->type) {
+#ifdef ENABLE_SMB
+  case VFS_DIR_TYPE_SMB:
+    return smb_readdir(vdp);
+#endif
+  case VFS_DIR_TYPE_SYS:
+    return readdir(vdp->dh.sys);
+    
+  default:
+    errno = ENOSYS;
+    return NULL;
+  }
 }
 
+
 int
-vfs_closedir(DIR *dp) {
-  return closedir(dp);
+vfs_closedir(VFS_DIR *vdp) {
+  int rc;
+
+  
+  switch (vdp->type) {
+#ifdef ENABLE_SMB
+  case VFS_DIR_TYPE_SMB:
+    rc = smb_closedir(vdp);
+    break;
+#endif
+  case VFS_DIR_TYPE_SYS:
+    rc = closedir(vdp->dh.sys);
+    free(vdp);
+    break;
+
+  default:
+    errno = ENOSYS;
+    return -1;
+  }
+  
+  return rc;
 }
 

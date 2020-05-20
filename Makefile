@@ -3,9 +3,15 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
+# Change this to point to the libsmbclient (Samba) files if you want SMB support
 SMBDIR=/liu/pkg/samba/default
 SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
+
+# Remove comment '#' character to enable SMB
+SMB_CFLAGS=# -I$(SMBINC) -DENABLE_SMB=1
+SMB_LDFLAGS=# -L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+
 
 TESTDIR=t
 
@@ -13,12 +19,12 @@ ALIASES=lac sac edac
 
 # CC=gcc
 SOLARIS_CC=gcc
-CFLAGS=-O -g -Wall # -DENABLE_SMB=1 -I$(SMBINC)
+CFLAGS=-O -g -Wall $(SMB_CFLAGS)
 DEBUG_CFLAGS=-g -Wall
 
-CMDOBJS=common.o cmd_edit.o vfs.o
+CMDOBJS=common.o cmd_edit.o vfs.o smb.o
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o $(XOBJS) $(CMDOBJS)
-LIBS=$(XLDFLAGS) -lreadline $(XLIBS) # -L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+LIBS=$(XLDFLAGS) -lreadline $(XLIBS) $(SMB_LDFLAGS)
 
 auto build:
 	@$(MAKE) `uname -s`
