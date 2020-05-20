@@ -87,9 +87,14 @@ dir_cmd(int argc,
   struct dirent *dep;
   int i, j;
   
+  
   for (i = 1; i < argc || (i == 1 && argc == 1); i++) {
     SLIST *nlist;
-
+    unsigned int n_files = 0;
+    unsigned int n_dirs = 0;
+    unsigned int n_others = 0;
+    unsigned long long t_files = 0;
+    
     
     vdp = vfs_opendir(argv[i]);
     if (!vdp)
@@ -105,6 +110,9 @@ dir_cmd(int argc,
 
     qsort(&nlist->v[0], nlist->c, sizeof(nlist->v[0]), _dirname_compare);
 
+    if (config.f_verbose > 1)
+      printf("Directory of %s\n\n", argv[i] ? argv[i] : ".");
+    
     for (j = 0; j < nlist->c; j++) {
       if (config.f_verbose) {
 	char *path;
@@ -123,65 +131,92 @@ dir_cmd(int argc,
 
 	  tp = localtime(&sb.st_mtime);
 	  strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", tp);
-	  if (S_ISREG(sb.st_mode))
-	    printf("%-20s  %-6s  %10llu  %s\n",
+	  if (S_ISREG(sb.st_mode)) {
+	    ++n_files;
+	    t_files += sb.st_size;
+	    
+	    printf("%-20s  %-6s  %13llu  %s\n",
 		   tbuf,
 		   "",
 		   (unsigned long long) sb.st_size,
 		   nlist->v[j]);
-	  else if (S_ISDIR(sb.st_mode))
-	    printf("%-20s  %-6s  %10s  %s\n",
+	  } else if (S_ISDIR(sb.st_mode)) {
+	    ++n_dirs;
+	    
+	    printf("%-20s  %-6s  %13llu  %s\n",
 		   tbuf,
 		   "<DIR>",
-		   "",
+		   (unsigned long long) sb.st_size,
 		   nlist->v[j]);
-	  else if (S_ISLNK(sb.st_mode)) {
+	  } else if (S_ISLNK(sb.st_mode)) {
 	    char buf[2048];
 
+	    ++n_others;
+	    
 	    if (readlink(path, buf, sizeof(buf)) < 0)
 	      buf[0] = '\0';
-	    
-	    printf("%-20s  %-6s  %10s  %s -> %s\n",
+	    printf("%-20s  %-6s  %13llu  %s -> %s\n",
 		   tbuf,
 		   "<LINK>",
-		   "",
+		   (unsigned long long) sb.st_size,
 		   nlist->v[j],
 		   buf[0] ? buf : "?");
-	  } else if (S_ISFIFO(sb.st_mode))
-	    printf("%-20s  %-6s  %10s  %s\n",
+	  } else if (S_ISFIFO(sb.st_mode)) {
+	    ++n_others;
+	    
+	    printf("%-20s  %-6s  %13s  %s\n",
 		   tbuf,
 		   "<FIFO>",
 		   "",
 		   nlist->v[j]);
-	  else if (S_ISSOCK(sb.st_mode))
-	    printf("%-20s  %-6s  %10s  %s\n",
+	  } else if (S_ISSOCK(sb.st_mode)) {
+	    ++n_others;
+	    
+	    printf("%-20s  %-6s  %13s  %s\n",
 		   tbuf,
 		   "<SOCK>",
 		   "",
 		   nlist->v[j]);
-	  else if (S_ISCHR(sb.st_mode))
-	    printf("%-20s  %-6s  %10s  %s\n",
+	  } else if (S_ISCHR(sb.st_mode)) {
+	    ++n_others;
+	    
+	    printf("%-20s  %-6s  %13s  %s\n",
 		   tbuf,
 		   "<CHR>",
 		   "",
 		   nlist->v[j]);
-	  else if (S_ISBLK(sb.st_mode))
-	    printf("%-20s  %-6s  %10s  %s\n",
+	  } else if (S_ISBLK(sb.st_mode)) {
+	    ++n_others;
+	    
+	    printf("%-20s  %-6s  %13s  %s\n",
 		   tbuf,
 		   "<BLK>",
 		   "",
 		   nlist->v[j]);
-	  else
-	    printf("%-20s  %-6s  %-10s  %s\n",
+	  } else {
+	    ++n_others;
+	    
+	    printf("%-20s  %-6s  %13s  %s\n",
 		   tbuf,
 		   "<?>",
 		   "",
 		   nlist->v[j]);
+	  }
 	}
       } else
 	puts(nlist->v[j]);
     }
     slist_free(nlist);
+    if (config.f_verbose > 1) {
+      printf("\n%15u File%s    %18llu Byte%s\n",
+	     n_files,
+	     n_files == 1 ? " " : "s",
+	     t_files,
+	     t_files == 1 ? "" : "s");
+      printf("%15u Director%s\n",
+	     n_dirs,
+	     n_dirs == 1 ? "y" : "ies");
+    }
   }
   return 0;
 }
