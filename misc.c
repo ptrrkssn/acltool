@@ -851,11 +851,11 @@ _ft_foreach(const char *path,
   _ftcb_init(&ftcb);
   plen = strlen(path);
   
-  dp = opendir(path);
+  dp = vfs_opendir(path);
   if (!dp)
     return -1;
   
-  while ((dep = readdir(dp)) != NULL) {
+  while ((dep = vfs_readdir(dp)) != NULL) {
     char *fpath;
     
     /* Ignore . and .. */
@@ -869,7 +869,7 @@ _ft_foreach(const char *path,
       goto End;
     }
 
-    if (lstat(fpath, &sb) < 0) {
+    if (vfs_lstat(fpath, &sb) < 0) {
       free(fpath);
       rc = -1;
       goto End;
@@ -904,7 +904,7 @@ _ft_foreach(const char *path,
     }
   }
 
-  closedir(dp);
+  vfs_closedir(dp);
   dp = NULL;
   
   for (ftdcb = ftcb.head; ftdcb; ftdcb = ftdcb->next) {
@@ -933,7 +933,7 @@ ft_foreach(const char *path,
   struct stat stat;
 
   
-  if (lstat(path, &stat) < 0)
+  if (vfs_lstat(path, &stat) < 0)
     return -1;
   
   return _ft_foreach(path, &stat, walker, vp, 0, maxlevel, filetypes);

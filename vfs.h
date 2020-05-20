@@ -1,5 +1,5 @@
 /*
- * acltool.h
+ * vfs.h
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,56 +31,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_H
-#define ACLTOOL_H 1
+#ifndef ACLTOOL_VFS_H
+#define ACLTOOL_VFS_H
 
+#include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "vfs.h"
-#include "gacl.h"
-#include "argv.h"
-#include "commands.h"
-#include "aclcmds.h"
-#include "basic.h"
-#include "strings.h"
-#include "misc.h"
-#include "opts.h"
-#include "common.h"
+extern char *vfs_cwd;
 
 
-
-struct command;
-
-typedef struct config {
-  int f_debug;
-  int f_verbose;
-  int f_force;
-  int f_print;
-  int f_sort;
-  int f_merge;
-  int f_recurse;
-  int f_noupdate;
-  int f_noprefix;
-  int f_regex;
-  mode_t f_filetype;
-  ACL_STYLE f_style;
-  
-  int max_depth;
-} CONFIG;
+extern int
+vfs_chdir(const char *path);
 
 
-extern char *argv0;
+extern int
+vfs_lstat(const char *path,
+	  struct stat *sp);
 
-extern OPTION global_options[];
+extern DIR *
+vfs_opendir(const char *path);
 
-/* Default configuration loaded from config file and global command line */
-extern CONFIG default_config;
+extern struct dirent *
+vfs_readdir(DIR *dp);
 
-/* Per-command active configuration */
-extern CONFIG config;
-
-extern void
-error(int rc, int ec, const char *msg, ...);
+extern int
+vfs_closedir(DIR *dp);
 
 #endif

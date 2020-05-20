@@ -43,6 +43,7 @@
 #define GACL_C_INTERNAL 1
 #include "gacl.h"
 
+#include "vfs.h"
 
 static struct gace_perm2c {
   int p;
@@ -1693,7 +1694,7 @@ gacl_delete_file_np(const char *path,
   int rc;
 
 
-  if (stat(path, &sb) < 0)
+  if (vfs_lstat(path, &sb) < 0)
     return -1;
 
   ap = _gacl_from_mode(sb.st_mode);
@@ -1718,7 +1719,7 @@ gacl_delete_link_np(const char *path,
   int rc;
 
 
-  if (lstat(path, &sb) < 0)
+  if (vfs_lstat(path, &sb) < 0)
     return -1;
 
   ap = _gacl_from_mode(sb.st_mode);
@@ -2762,7 +2763,7 @@ _gacl_get_fd_file(int fd,
   if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
     struct stat sb;
     
-    if (lstat(path, &sb) < 0)
+    if (vfs_lstat(path, &sb) < 0)
       return NULL;
     
     if (S_ISLNK(sb.st_mode)) {
@@ -2885,7 +2886,7 @@ _gacl_set_fd_file(int fd,
   if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
     struct stat sb;
     
-    if (lstat(path, &sb) < 0)
+    if (vfs_lstat(path, &sb) < 0)
       return -1;
     
     if (S_ISLNK(sb.st_mode)) {

@@ -1,12 +1,19 @@
 ACLTOOL
 
-  This is a tool to manage ACLs - listing, creating, editing,
-  searching, stripping, sorting and removing redundant entries and more.
+  This is a tool to manage NFSv4/ZFS (and MacOS) ACLs - listing, creating,
+  editing, searching, stripping, sorting and removing redundant entries
+  and more. It currently does not support POSIX or other kinds of ACLs.
+
 
 AUTHOR
 
   Peter Eriksson <pen@lysator.liu.se>
 
+
+DOWNLOAD
+
+  https://github.com/ptrrkssn/acltool
+  
 
 OPERATING SYSTEMS SUPPORTED (for now)
 
