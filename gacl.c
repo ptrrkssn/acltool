@@ -3071,7 +3071,7 @@ _gacl_set_fd_file(int fd,
   macos_acl_type_t at = ACL_TYPE_EXTENDED;
 
   if (type != GACL_TYPE_NFS4) {
-    errno = ENOSYS;
+    errno = EINVAL;
     return -1;
   }
     
@@ -3108,9 +3108,10 @@ _gacl_set_fd_file(int fd,
   } else
     rc = acl_set_fd_np(fd, nap, at);
 
-  acl_free(nap);
   if (rc < 0)
-    fprintf(stderr, "acl_set_xxx failed\n");
+    fprintf(stderr, "acl_set_xxx failed: rc=%d\n", rc);
+  
+  acl_free(nap);
   return rc;
 
  Fail:
