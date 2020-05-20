@@ -10,3 +10,6 @@ Some stuff that needs to be done (in no particular order):
 - How should the check-access command work?
 - Rework "merge_acl" (not correct currently)
 - Add MacOS support
+- Linux: Communicate with idmap/gssd?
+- MacOS: Investigate difference between MacOS "Extended" ACLs and NFSv4/ZFS
+- Improve error handling
