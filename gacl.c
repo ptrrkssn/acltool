@@ -43,6 +43,7 @@
 #define GACL_C_INTERNAL 1
 #include "gacl.h"
 
+#include "vfs.h"
 
 static struct gace_perm2c {
   int p;
