@@ -55,6 +55,11 @@ extern char *
 vfs_getcwd(char *buf,
 	   size_t bufsize);
 
+extern char *
+vfs_fullpath(const char *path,
+	     char *buf,
+	     size_t bufsize);
+
 extern int
 vfs_lstat(const char *path,
 	  struct stat *sp);

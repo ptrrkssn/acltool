@@ -47,51 +47,6 @@
 static char *cwd = NULL;
 
 
-int
-vfs_chdir(const char *path) {
-  int rc;
-
-
-  if (!path)
-    path = "";
-
-#ifdef ENABLE_SMB
-  if (strncmp(path, "smb:/", 5) == 0) {
-    rc = smb_chdir(path);
-    if (rc >= 0)
-    cwd = strdup(path);
-    return rc;
-  }
-  
-  if (*path != '/' && cwd && strncmp(cwd, "smb:/", 5) == 0) {
-    char *np;
-    
-    if (strcmp(path, "..") == 0) {
-      np = strrchr(cwd, '/');
-      if (np)
-	*np = '\0';
-      return smb_chdir(cwd);
-    } else {
-      np = strxcat(cwd, *path ? "/" : NULL, path, NULL);
-      if (!np)
-	return -1;
-      rc = smb_chdir(np);
-      cwd = np;
-      return rc;
-    }
-  }
-#endif
-  if (!path || !*path)
-    path = ".";
-  
-  rc = chdir(path);
-  if (rc >= 0)
-    cwd = strdup(path);
-
-  return rc;
-}
-
-
 char *
 vfs_getcwd(char *buf,
 	   size_t bufsize) {
@@ -109,6 +64,92 @@ vfs_getcwd(char *buf,
   
   return getcwd(buf, bufsize);
 }
+
+
+char *
+vfs_fullpath(const char *path,
+	     char *buf,
+	     size_t bufsize) {
+  size_t len;
+  int i;
+  
+  
+  if (!path)
+    return vfs_getcwd(buf, bufsize);
+
+  if (*path == '/') {
+    if (strlen(path)+1 > bufsize) {
+      errno = ERANGE;
+      return NULL;
+    }
+    strcpy(buf, path);
+    return buf;
+  }
+
+  if (vfs_getcwd(buf, bufsize) == NULL)
+    return NULL;
+
+  if (strcmp(path, ".") == 0)
+    return buf;
+
+  len = strlen(buf)+1+strlen(path)+1;
+  if (len > bufsize) {
+    errno = ERANGE;
+    return NULL;
+  }
+
+  strcat(buf, "/");
+  strcat(buf, path);
+
+  i = 0;
+  while (buf[i]) {
+    if (strncmp(buf+i, "/./", 3) == 0 || strcmp(buf+i, "/.") == 0) {
+      /* Remove "." path segments */
+      memmove(buf+i, buf+i+2, strlen(buf+i+2)+1);
+    } else if (strncmp(buf+i, "/../", 4) == 0 || strcmp(buf+i, "/..") == 0) {
+      /* Remove ".." path segments */
+      int j;
+
+      for (j = i-1; j >= 0 && buf[j] != '/'; j--)
+	;
+      memmove(buf+j, buf+i+3, strlen(buf+i+3)+1);
+      i = j;
+    } else
+      ++i;
+  }
+    
+  return buf;
+}
+
+int
+vfs_chdir(const char *path) {
+  int rc;
+  char buf[2048];
+
+  
+  if (!path)
+    path = "";
+  
+  if (!vfs_fullpath(path, buf, sizeof(buf)))
+    return -1;
+
+#ifdef ENABLE_SMB
+  if (strncmp(path, "smb:/", 5) == 0) {
+    rc = smb_chdir(path);
+    if (rc >= 0)
+      cwd = strdup(path);
+    return rc;
+  }
+#endif
+  
+  rc = chdir(path);
+  if (rc >= 0)
+    cwd = strdup(path);
+
+  return rc;
+}
+
+
 
 
 int

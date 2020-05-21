@@ -63,7 +63,11 @@ pwd_cmd(int argc,
 	char **argv) {
   char buf[2048];
 
+#if 0
   if (!vfs_getcwd(buf, sizeof(buf)))
+    error(1, errno, "Getting current directory");
+#endif
+  if (!vfs_fullpath(".", buf, sizeof(buf)))
     error(1, errno, "Getting current directory");
   
   puts(buf);
@@ -110,8 +114,15 @@ dir_cmd(int argc,
 
     qsort(&nlist->v[0], nlist->c, sizeof(nlist->v[0]), _dirname_compare);
 
-    if (config.f_verbose > 1)
-      printf("Directory of %s\n\n", argv[i] ? argv[i] : ".");
+    if (config.f_verbose > 1) {
+      char buf[2048];
+
+      
+      if (!vfs_fullpath(argv[i], buf, sizeof(buf)))
+	error(1, errno, "Unable to get full directory name");
+      
+      printf("Directory of %s\n\n", buf);
+    }
     
     for (j = 0; j < nlist->c; j++) {
       if (config.f_verbose) {
@@ -244,6 +255,15 @@ cd_cmd(int argc,
     rc = vfs_chdir(argv[i]);
     if (rc < 0)
       error(1, errno, "%s", argv[i]);
+  }
+  
+  if (config.f_verbose) {
+    char buf[2048];
+
+    if (!vfs_fullpath(".", buf, sizeof(buf)))
+      error(1, errno, "Getting current directory");
+    
+    printf("New current directory: %s\n", buf);
   }
   
   return 0;
