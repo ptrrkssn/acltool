@@ -1,7 +1,8 @@
-Prime/PRIMOS ACLs:
+Prime/PRIMOS:
 
 Prime/PRIMOS was an operating system for "supermini" computers back 
-in the 80ies or so. It had a really nice ACL system.
+in the 80ies or so. It had a really nice ACL system and a really flexible
+way to abbreviate command names and command option arguments.
 
 You could set ACLs on directories or files. By default it inherited ACLs 
 from parent directories. You could also create a special ACL object (ACAT) 

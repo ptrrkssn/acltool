@@ -3,6 +3,10 @@ ACLTOOL
   This is a tool to manage NFSv4/ZFS (and MacOS) ACLs - listing, creating,
   editing, searching, stripping, sorting and removing redundant entries
   and more. It currently does not support POSIX or other kinds of ACLs.
+  
+  Bits and pieces of command names (lac/edac/sac) and how abbreviations
+  of command names and command name switches work is inspired by the now
+  long defunct Prime/PRIMOS operating system.
 
 
 AUTHOR
