@@ -52,9 +52,9 @@ USAGE
   All commands and long option names can be abbreviated using the
   parts of the names. Some examples of valid abbreviations:
 
-    list-access, lac,  list, list-a, l-ac, liac
-    edit-access, edac, edit, edit-a, e-ac,
-    set-access,  sac,  set,  set-acc, seta
+    list-access, lac,  list-a, l-ac, liac
+    edit-access, edac, edit-a, e-ac,
+    set-access,  sac,  set-a, seta
 
   Tab-completion in CLI mode also works for command names,
   (global) long options and files.
