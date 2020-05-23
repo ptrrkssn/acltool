@@ -33,7 +33,6 @@
 
 #ifndef ACLTOOL_SMB_H
 #define ACLTOOL_SMB_H 1
-#endif
 
 extern int
 smb_lstat(const char *path,
@@ -51,4 +50,28 @@ smb_readdir(VFS_DIR *dp);
 extern int
 smb_closedir(VFS_DIR *dp);
 
+extern GACL *
+smb_acl_get_file(const char *path);
 
+
+extern ssize_t
+smb_listxattr(const char *path,
+	     char *buf,
+	      size_t bufsize);
+
+extern int
+smb_getxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize);
+extern int
+smb_setxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize);
+
+extern int
+smb_removexattr(const char *path,
+		const char *attr);
+
+#endif

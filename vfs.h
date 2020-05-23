@@ -39,14 +39,20 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "gacl.h"
+
+typedef enum vfs_type { VFS_TYPE_UNKNOWN = 0, VFS_TYPE_SYS = 1, VFS_TYPE_SMB = 2 } VFS_TYPE;
+		       
 typedef struct {
-  enum { VFS_DIR_TYPE_UNKNOWN = 0, VFS_DIR_TYPE_SYS = 1, VFS_DIR_TYPE_SMB = 2 } type;
+  VFS_TYPE type;
   union {
     DIR *sys;
     int smb;
   } dh;
 } VFS_DIR;
 
+extern VFS_TYPE
+vfs_get_type(const char *path);
 
 extern int
 vfs_chdir(const char *path);
@@ -73,6 +79,46 @@ vfs_readdir(VFS_DIR *dp);
 extern int
 vfs_closedir(VFS_DIR *dp);
 
+extern GACL *
+vfs_acl_get_file(const char *path,
+		 GACL_TYPE type);
+
+
+#ifdef __APPLE__
+#define VFS_XATTR_FLAG_NOFOLLOW XATTR_NOFOLLOW
+#else
+#define VFS_XATTR_FLAG_NOFOLLOW 0x0001
+#endif
+
+
+ssize_t
+vfs_listxattr(const char *path,
+	      char *buf,
+	      size_t bufsize,
+	      int flags);
+
+extern ssize_t
+vfs_getxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize,
+	     int flags);
+
+extern ssize_t
+vfs_setxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize,
+	     int flags);
+extern int
+vfs_removexattr(const char *path,
+		const char *attr,
+		int flags);
+
+extern GACL *
+vfs_acl_get_link(const char *path,
+		 GACL_TYPE type);
+
 
 #ifndef IN_ACLTOOL_VFS_C
 #define chdir    vfs_chdir
@@ -81,7 +127,14 @@ vfs_closedir(VFS_DIR *dp);
 #define opendir  vfs_opendir
 #define readdir  vfs_readdir
 #define closedir vfs_closedir
+
+#if 0
+#define acl_get_file    vfs_acl_get_file
+#define acl_get_link_np vfs_acl_get_link
+#endif
+
 #define DIR      VFS_DIR
+
 #endif
 
 #endif

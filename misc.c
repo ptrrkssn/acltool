@@ -836,6 +836,7 @@ _ft_foreach(const char *path,
   struct stat sb;
   size_t plen;
 
+  
   if (!filetypes || (stat->st_mode & filetypes))
     rc = walker(path, stat, 0, curlevel, vp);
   else
@@ -857,7 +858,7 @@ _ft_foreach(const char *path,
   
   while ((dep = vfs_readdir(dp)) != NULL) {
     char *fpath;
-    
+
     /* Ignore . and .. */
     if (strcmp(dep->d_name, ".") == 0 ||
 	strcmp(dep->d_name, "..") == 0)
@@ -915,7 +916,7 @@ _ft_foreach(const char *path,
 
  End:
   if (dp)
-    closedir(dp);
+    vfs_closedir(dp);
   _ftcb_destroy(&ftcb);
   return rc;
 }
@@ -932,7 +933,7 @@ ft_foreach(const char *path,
 	   mode_t filetypes) {
   struct stat stat;
 
-  
+
   if (vfs_lstat(path, &stat) < 0)
     return -1;
   

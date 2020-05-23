@@ -66,13 +66,13 @@ get_acl(const char *path,
   }
 
   if (S_ISLNK(sp->st_mode)) {
-    ap = acl_get_link_np(path, ACL_TYPE_NFS4);
+    ap = vfs_acl_get_link(path, ACL_TYPE_NFS4);
     if (!ap) {
-      error(1, errno, "Getting ACL (acl_get_file)");
+      error(1, errno, "Getting ACL (acl_get_link)");
       return NULL;
     }
   } else {
-    ap = acl_get_file(path, ACL_TYPE_NFS4);
+    ap = vfs_acl_get_file(path, ACL_TYPE_NFS4);
     if (!ap) {
       error(1, errno, "Getting ACL (acl_get_file)");
       return NULL;

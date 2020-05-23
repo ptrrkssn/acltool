@@ -42,113 +42,52 @@
 #include <libsmbclient.h>
 
 static SMBCCTX *context = NULL;
-  
 
 
 static void
-_smb_get_auth_data_fn(const char * pServer,
-		      const char * pShare,
-		      char * pWorkgroup,
-		      int maxLenWorkgroup,
-		      char * pUsername,
-		      int maxLenUsername,
-		      char * pPassword,
-		      int maxLenPassword)
+get_auth_data_with_context_fn(SMBCCTX *context,
+			      const char * pServer,
+			      const char * pShare,
+			      char * pWorkgroup,
+			      int maxLenWorkgroup,
+			      char * pUsername,
+			      int maxLenUsername,
+			      char * pPassword,
+			      int maxLenPassword)
 {
-    char            temp[128];
-    char            server[256] = { '\0' };
-    char            share[256] = { '\0' };
-    char            workgroup[256] = { '\0' };
-    char            username[256] = { '\0' };
-    char            password[256] = { '\0' };
-    char           *ret;
-
-    static int krb5_set = 1;
-
-    if (strcmp(server, pServer) == 0 &&
-        strcmp(share, pShare) == 0 &&
-        *workgroup != '\0' &&
-        *username != '\0')
-    {
-        strncpy(pWorkgroup, workgroup, maxLenWorkgroup - 1);
-        strncpy(pUsername, username, maxLenUsername - 1);
-        strncpy(pPassword, password, maxLenPassword - 1);
-        return;
-    }
-
-    if (krb5_set && getenv("KRB5CCNAME")) {
-      krb5_set = 0;
-      return;
-    }
-
-    fprintf(stdout, "Workgroup: [%s] ", pWorkgroup);
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pWorkgroup, temp, maxLenWorkgroup - 1);
-    }
-    
-    fprintf(stdout, "Username: [%s] ", pUsername);
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pUsername, temp, maxLenUsername - 1);
-    }
-    
-    fprintf(stdout, "Password: ");
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pPassword, temp, maxLenPassword - 1);
-    }
-
-    strncpy(workgroup, pWorkgroup, sizeof(workgroup) - 1);
-    strncpy(username, pUsername, sizeof(username) - 1);
-    strncpy(password, pPassword, sizeof(password) - 1);
-
-    krb5_set = 1;
-}
+  return;
+}  
 
 
-static void
+
+static int
 _smb_init(void) {
   if (context)
-    return;
-  
-  if (smbc_init(_smb_get_auth_data_fn, 0) < 0)
-    return;
-  
-  context = smbc_set_context(NULL);
-  if (context) {
-    smbc_setOptionFullTimeNames(context, 1);
+    return 0;
+
+  context = smbc_new_context();
+  if (!context) {
+    printf("Could not allocate new smbc context\n");
+    return -1;
   }
+  
+  smbc_setFunctionAuthDataWithContext(context,
+				      get_auth_data_with_context_fn);
+  
+  smbc_setOptionUserData(context, strdup("hello world"));
+  smbc_setOptionUseKerberos(context, 1);
+  smbc_setOptionFallbackAfterKerberos(context, 1);
+
+    if (!smbc_init_context(context)) {
+        smbc_free_context(context, 0);
+        printf("Could not initialize smbc context\n");
+        return -1;
+    }
+
+    /* Tell the compatibility layer to use this context */
+    smbc_set_context(context);
+
+    return 1;
 }
 
 
@@ -204,7 +143,7 @@ smb_opendir(const char *path) {
     return NULL;
   }
 
-  vdp->type = VFS_DIR_TYPE_SMB;
+  vdp->type = VFS_TYPE_SMB;
   vdp->dh.smb = dh;
   return vdp;
 }
@@ -217,7 +156,7 @@ smb_readdir(VFS_DIR *vdp) {
   int dh;
   
 
-  if (vdp->type != VFS_DIR_TYPE_SMB) {
+  if (vdp->type != VFS_TYPE_SMB) {
     errno = EINVAL;
     return NULL;
   }
@@ -257,7 +196,7 @@ smb_closedir(VFS_DIR *vdp) {
   int dh;
   
 
-  if (vdp->type != VFS_DIR_TYPE_SMB) {
+  if (vdp->type != VFS_TYPE_SMB) {
     errno = EINVAL;
     return -1;
   }
@@ -268,6 +207,62 @@ smb_closedir(VFS_DIR *vdp) {
   free(vdp);
   
   return smbc_closedir(dh);
+}
+
+
+int
+smb_listxattr(const char *path,
+	      char *buf,
+	      size_t bufsize,
+	      int flags) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+smb_getxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize) {
+  _smb_init();
+  
+  return smbc_getxattr(path, attr, buf, bufsize);
+}
+
+int
+smb_setxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize) {
+  _smb_init();
+  
+  return smbc_setxattr(path, attr, buf, bufsize, 0);
+}
+
+int
+smb_removexattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize) {
+  _smb_init();
+  
+  return smbc_removexattr(path, attr);
+}
+
+
+GACL *
+smb_acl_get_file(const char *path) {
+  char buf[2048];
+
+
+  if (smb_getxattr(path, "system.nt_sec_desc.acl.*+", buf, sizeof(buf)) < 0)
+    return NULL;
+
+  fprintf(stderr, "SMB ACL:\t%s\n", buf);
+  /* Translate value into standard GACL */
+
+  errno = ENOSYS;
+  return NULL;
 }
 
 #else
@@ -301,6 +296,31 @@ int
 smb_closedir(VFS_DIR *vdp) {
   errno = ENOSYS;
   return -1;
+}
+
+int
+smb_listxattr(const char *path,
+	      char *buf,
+	      size_t bufsize,
+	      int flags) {
+  errno = ENOSYS;
+  return -1;
+}
+
+int
+smb_getxattr(const char *path,
+	     const char *attr,
+	     char *buf,
+	     size_t bufsize,
+	     int flags) {
+  errno = ENOSYS;
+  return -1;
+}
+
+GACL *
+smb_acl_get_file(const char *path) {
+  errno = ENOSYS;
+  return NULL;
 }
 
 #endif

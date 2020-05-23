@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
@@ -232,6 +233,7 @@ dir_cmd(int argc,
   return 0;
 }
 
+
 int
 cd_cmd(int argc,
        char **argv) {
@@ -283,21 +285,154 @@ exit_cmd(int argc,
 }
 
 
+int
+listxattr_cmd(int argc,
+	      char **argv) {
+  int i;
+
+
+  for (i = 1; i < argc; i++) {
+    char buf[2048], *bp;
+    ssize_t rc;
+    int len;
+
+    
+    rc = vfs_listxattr(argv[i], buf, sizeof(buf), VFS_XATTR_FLAG_NOFOLLOW);
+    if (rc < 0)
+      error(1, errno, "%s: Getting Extended Attributes", argv[i]);
+
+    if (i > 1)
+      putchar('\n');
+    printf("Extended Attributes of %s:\n", argv[i]);
+    bp = buf;
+    while (rc > 0) {
+      len = strlen(bp);
+      printf("  %s\n", bp);
+      bp += len;
+      rc -= len;
+    }
+  }
+  
+  return 0;
+}
+
+
+int
+is_printable(char *buf,
+	     size_t bufsize) {
+  while (bufsize) {
+    if (bufsize > 1 && !isprint(*buf))
+      return 0;
+    if (bufsize == 1 && *buf != '\0')
+      return 0;
+    ++buf;
+    --bufsize;
+  }
+
+  return 1;
+}
+
+int
+getxattr_cmd(int argc,
+	      char **argv) {
+  int i, j;
+
+
+  printf("Extended Attributes of %s:\n", argv[1]);
+  for (i = 2; i < argc; i++) {
+    char buf[2048];
+    ssize_t rc;
+    int p_flag = 0;
+    
+    rc = vfs_getxattr(argv[1], argv[i], buf, sizeof(buf), VFS_XATTR_FLAG_NOFOLLOW);
+    if (rc < 0)
+      error(1, errno, "%s: %s: Getting Extended Attribute", argv[1], argv[i]);
+
+    printf("  %s =", argv[i]);
+    p_flag = is_printable(buf, rc);
+    if (p_flag) {
+      putchar(' ');
+      putchar('"');
+    }
+    for (j = 0; j < rc; j++) {
+      if (p_flag) {
+	if (buf[j] == '"')
+	  putchar('\\');
+	putchar(buf[j]);
+      } else
+	printf(" %02x", buf[j]);
+    }
+    if (p_flag)
+      putchar('"');
+    putchar('\n');
+  }
+  
+  return 0;
+}
+
+int
+setxattr_cmd(int argc,
+	      char **argv) {
+  int i;
+
+
+  for (i = 2; i < argc; i++) {
+    int rc;
+    char *vp = strchr(argv[i], '=');
+
+    if (!vp)
+      error(1, 0, "%s: Missing '=' delimiter", argv[i]);
+
+    *vp++ = '\0';
+
+    fprintf(stderr, "Setting xattr '%s' to '%s'\n", argv[i], vp);
+    
+    rc = vfs_setxattr(argv[1], argv[i], vp, strlen(vp)+1, VFS_XATTR_FLAG_NOFOLLOW);
+    if (rc < 0)
+      error(1, errno, "%s: %s: Setting Extended Attribute", argv[1], argv[i]);
+  }
+  
+  return 0;
+}
+
+int
+removexattr_cmd(int argc,
+		char **argv) {
+  int i;
+
+
+  for (i = 2; i < argc; i++) {
+    int rc;
+    
+    rc = vfs_removexattr(argv[1], argv[i], VFS_XATTR_FLAG_NOFOLLOW);
+    if (rc < 0)
+      error(1, errno, "%s: %s: Removeing Extended Attribute", argv[1], argv[i]);
+  }
+  
+  return 0;
+}
+
+
 
 COMMAND exit_command =
   { "exit-command", 	exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
-
 COMMAND echo_command =
-  { "echo-text", 	echo_cmd,	NULL, "[<str>]*",	"Print some text" };
-
+  { "echo-text", echo_cmd,		NULL, "[<str>]*",	"Print some text" };
 COMMAND cd_command =
-  { "change-directory",  cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
-
+  { "change-directory", cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
 COMMAND dir_command =
-  { "directory-listing",    dir_cmd,		NULL, "[<path>]*",	"List directory" };
-
+  { "directory-listing", dir_cmd,	NULL, "[<path>]*",	"List directory" };
 COMMAND pwd_command =
-  { "print-working-directory", 	pwd_cmd,	NULL, "",		"Print working directory" };
+  { "print-working-directory", pwd_cmd,	NULL, "",		"Print working directory" };
+
+COMMAND listxattr_command =
+  { "list-xattr", listxattr_cmd,	NULL, "[<path>]*",			"List extended attributes" };
+COMMAND getxattr_command =
+  { "get-xattr", getxattr_cmd,		NULL, "<path>+ [<attr>]*",		"Get extended attributes" };
+COMMAND setxattr_command =
+  { "set-xattr", setxattr_cmd,		NULL, "<path>+ [<attr>=<val>]*",	"Set extended attributes" };
+COMMAND removexattr_command =
+  { "remove-xattr", removexattr_cmd,	NULL, "<path> [<attr>]*",		"Remove extended attributes" };
 
 
 COMMAND *basic_commands[] =
@@ -307,6 +442,10 @@ COMMAND *basic_commands[] =
    &cd_command,
    &pwd_command,
    &dir_command,
+   &listxattr_command,
+   &getxattr_command,
+   &setxattr_command,
+   &removexattr_command,
    NULL,
   };
 

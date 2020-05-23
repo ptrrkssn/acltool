@@ -9,8 +9,8 @@ SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
 
 # Remove comment '#' character to enable SMB
-SMB_CFLAGS=# -I$(SMBINC) -DENABLE_SMB=1
-SMB_LDFLAGS=# -L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+SMB_CFLAGS=-I$(SMBINC) -DENABLE_SMB=1
+SMB_LDFLAGS=-L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
 
 
 TESTDIR=t
@@ -49,19 +49,18 @@ macos Darwin:
 
 all: acltool
 
-acltool.o: 	acltool.c acltool.h argv.h misc.h commands.h strings.h
-argv.o: 	argv.c argv.h buffer.h misc.h strings.h
-opts.o: 	opts.c opts.h misc.h strings.h
+acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h Makefile
 
-buffer.o: 	buffer.c buffer.h
-misc.o:		misc.c misc.h strings.h
-strings.o:	strings.c strings.h
-
-commands.o:	commands.c commands.h misc.h strings.h
-basic.o:	basic.c    basic.h    commands.h
-aclcmds.o:	aclcmds.c  aclcmds.h  commands.h acltool.h strings.h
-
-gacl.o:		gacl.c gacl.h
+acltool.o: 	acltool.c acltool.h
+argv.o: 	argv.c argv.h acltool.h
+opts.o: 	opts.c opts.h acltool.h
+buffer.o: 	buffer.c buffer.h acltool.h
+misc.o:		misc.c misc.h acltool.h
+strings.o:	strings.c strings.h acltool.h
+commands.o:	commands.c commands.h acltool.h
+basic.o:	basic.c basic.h acltool.h
+aclcmds.o:	aclcmds.c aclcmds.h acltool.h
+gacl.o:		gacl.c gacl.h acltool.h
 
 
 acltool: $(OBJS)
