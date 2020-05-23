@@ -420,7 +420,7 @@ vfs_getxattr(const char *path,
       return extattr_get_link(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
     return extattr_get_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
 #elif defined(__APPLE__)
-    return getxattr(path, attr, buf, bufsize, flags);
+    return getxattr(path, attr, buf, bufsize, 0, flags);
 #elif defined(__sun__)
     fd = attropen(path, attr, O_RDONLY);
     if (fd < 0)
@@ -474,7 +474,7 @@ vfs_setxattr(const char *path,
       return extattr_set_link(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
     return extattr_set_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
 #elif defined(__APPLE__)
-    return setxattr(path, attr, buf, bufsize, flags);
+    return setxattr(path, attr, buf, bufsize, 0, flags);
 #elif defined(__sun__)
     fd = attropen(path, attr, O_CREAT|O_WRONLY, 0600);
     if (fd < 0)

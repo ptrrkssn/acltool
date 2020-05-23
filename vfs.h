@@ -85,6 +85,7 @@ vfs_acl_get_file(const char *path,
 
 
 #ifdef __APPLE__
+#include <sys/xattr.h>
 #define VFS_XATTR_FLAG_NOFOLLOW XATTR_NOFOLLOW
 #else
 #define VFS_XATTR_FLAG_NOFOLLOW 0x0001
