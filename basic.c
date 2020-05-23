@@ -284,6 +284,21 @@ exit_cmd(int argc,
   exit(ec);
 }
 
+#if 0
+size_t 
+strnlen(const char *s,
+	size_t maxlen) {
+  ssize_t len = 0;
+
+  if (!s)
+    return 0;
+  
+  while (len < maxlen && *s != '\0')
+    ++len;
+
+  return len;
+}
+#endif
 
 int
 listxattr_cmd(int argc,
@@ -309,8 +324,8 @@ listxattr_cmd(int argc,
       printf("%s:\n", argv[i]);
     bp = buf;
     while (rc > 0) {
-      len = strlen(bp);
-      printf("  %s\n", bp);
+      len = strnlen(bp, rc);
+      printf("  %.*s\n", len, bp);
       bp += len+1;
       rc -= len+1;
     }

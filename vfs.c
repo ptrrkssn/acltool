@@ -324,6 +324,10 @@ vfs_listxattr(const char *path,
 #ifdef ENABLE_SMB
   char pbuf[2048];
 #endif
+#if defined(__FreeBSD__)
+  char tbuf[2048], *tp;
+  int tlen, rc;
+#endif
 #if defined(__sun__)
   int fd;
   DIR *dirp;
@@ -348,8 +352,31 @@ vfs_listxattr(const char *path,
     return listxattr(path, buf, bufsize);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      return extattr_list_link(path, EXTATTR_NAMESPACE_USER, buf, bufsize);
-    return extattr_list_file(path, EXTATTR_NAMESPACE_USER, buf, bufsize);
+      rc = extattr_list_link(path, EXTATTR_NAMESPACE_USER, tbuf, sizeof(tbuf));
+    else
+      rc = extattr_list_file(path, EXTATTR_NAMESPACE_USER, tbuf, sizeof(tbuf));
+    if (rc < 0)
+      return rc;
+
+    tlen = 0;
+    tp = tbuf;
+    while (rc > 0) {
+      int elen = * (unsigned char *) tp;
+
+      if (tlen + elen + 1 > bufsize) {
+	errno = ERANGE;
+	return -1;
+      }
+
+      memcpy(buf+tlen, tp+1, elen);
+      buf[tlen+elen] = '\0';
+
+      ++elen;
+      tp += elen;
+      rc -= elen;
+      tlen += elen;
+    }
+    return tlen;
 #elif defined(__APPLE__)
     return listxattr(path, buf, bufsize, flags);
 #elif defined(__sun__)
