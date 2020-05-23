@@ -30,9 +30,9 @@ OPERATING SYSTEMS SUPPORTED
   - FreeBSD (ZFS & NFSv4, tested on 11.3 & 12.1)
   - Solaris (ZFS & NFSv4, tested on OmniOS)
   - Linux (NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
-  - MacOS (HFS+, tested with MacOS 10.15)
+  - MacOS (HFS+ & NFSv4, tested with MacOS 10.15)
 
-All the above also support Extended Attributes.
+All the above also support Extended Attributes. 
 
 
 FILESYSTEMS SUPPORT
