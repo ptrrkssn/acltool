@@ -43,6 +43,10 @@
 #include <sys/extattr.h>
 #elif defined(__APPLE__)
 #include <sys/xattr.h>
+#elif defined(__sun__)
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
 #endif
 
 #define IN_ACLTOOL_VFS_C 1
@@ -167,8 +171,9 @@ vfs_fullpath(const char *path,
 int
 vfs_chdir(const char *path) {
   int rc;
+#ifdef ENABLE_SMB
   char buf[2048];
-
+#endif
   
   if (!path)
     path = "";
@@ -203,8 +208,9 @@ vfs_chdir(const char *path) {
 int
 vfs_lstat(const char *path,
 	  struct stat *sp) {
+#ifdef ENABLE_SMB
   char buf[2048];
-
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -231,8 +237,9 @@ VFS_DIR *
 vfs_opendir(const char *path) {
   VFS_DIR *vdp;
   DIR *dh;
+#ifdef ENABLE_SMB
   char buf[2048];
-
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -314,8 +321,16 @@ vfs_listxattr(const char *path,
 	      char *buf,
 	      size_t bufsize,
 	      int flags) {
+#ifdef ENABLE_SMB
   char pbuf[2048];
-
+#endif
+#if defined(__sun__)
+  int fd;
+  DIR *dirp;
+  struct dirent *dp;
+  size_t tlen, len;
+#endif
+  
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -330,13 +345,36 @@ vfs_listxattr(const char *path,
 #if defined(__linux__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
       return llistxattr(path, buf, bufsize);
-    return getxattr(path, buf, bufsize);
+    return listxattr(path, buf, bufsize);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
       return extattr_list_link(path, EXTATTR_NAMESPACE_USER, buf, bufsize);
     return extattr_list_file(path, EXTATTR_NAMESPACE_USER, buf, bufsize);
 #elif defined(__APPLE__)
     return listxattr(path, buf, bufsize, flags);
+#elif defined(__sun__)
+    fd = attropen(path, ".", O_RDONLY);
+    if (fd < 0)
+      return -1;
+
+    dirp = fdopendir(fd);
+    tlen = 0;
+    while ((dp = readdir(dirp)) != NULL) {
+      if (strcmp(dp->d_name, ".") == 0 ||
+	  strcmp(dp->d_name, "..") == 0)
+	continue;
+      
+      len = strlen(dp->d_name);
+      if (tlen+len+1 > bufsize) {
+	closedir(dirp);
+	errno = ERANGE;
+	return -1;
+      }
+      strcpy(buf+tlen, dp->d_name);
+      tlen += len+1;
+    }
+    closedir(dirp);
+    return tlen;
 #else
     errno = ENOSYS;
     return -1;
@@ -355,8 +393,13 @@ vfs_getxattr(const char *path,
 	     char *buf,
 	     size_t bufsize,
 	     int flags) {
+#ifdef ENABLE_SMB
   char pbuf[2048];
-
+#endif
+#if defined(__sun__)
+  int fd;
+  size_t len;
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -378,6 +421,14 @@ vfs_getxattr(const char *path,
     return extattr_get_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
 #elif defined(__APPLE__)
     return getxattr(path, attr, buf, bufsize, flags);
+#elif defined(__sun__)
+    fd = attropen(path, attr, O_RDONLY);
+    if (fd < 0)
+      return -1;
+
+    len = read(fd, buf, bufsize);
+    close(fd);
+    return len;
 #else
     errno = ENOSYS;
     return -1;
@@ -396,8 +447,13 @@ vfs_setxattr(const char *path,
 	     char *buf,
 	     size_t bufsize,
 	     int flags) {
+#ifdef ENABLE_SMB
   char pbuf[2048];
-
+#endif
+#if defined(__sun__)
+  int fd;
+  size_t len;
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -419,6 +475,14 @@ vfs_setxattr(const char *path,
     return extattr_set_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
 #elif defined(__APPLE__)
     return setxattr(path, attr, buf, bufsize, flags);
+#elif defined(__sun__)
+    fd = attropen(path, attr, O_CREAT|O_WRONLY, 0600);
+    if (fd < 0)
+      return -1;
+
+    len = write(fd, buf, bufsize);
+    close(fd);
+    return len;
 #else
     errno = ENOSYS;
     return -1;
@@ -435,9 +499,13 @@ int
 vfs_removexattr(const char *path,
 		const char *attr,
 		int flags) {
+#ifdef ENABLE_SMB
   char pbuf[2048];
-
-
+#endif
+#if defined(__sun__)
+  int fd, rc;
+#endif
+  
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
   case VFS_TYPE_SMB:
@@ -458,6 +526,21 @@ vfs_removexattr(const char *path,
     return extattr_delete_file(path, EXTATTR_NAMESPACE_USER, attr);
 #elif defined(__APPLE__)
     return removexattr(path, attr, flags);
+#elif defined(__sun__)
+    if (*attr == '/') {
+      errno = EINVAL;
+      return -1;
+    }
+      
+    fd = attropen(path, ".", O_RDONLY);
+    if (fd < 0) {
+      puts("FOO");
+      return -1;
+    }
+
+    rc = unlinkat(fd, attr, 0);
+    close(fd);
+    return rc;
 #else
     errno = ENOSYS;
     return -1;
@@ -475,8 +558,9 @@ vfs_removexattr(const char *path,
 GACL *
 vfs_acl_get_file(const char *path,
 		 GACL_TYPE type) {
+#ifdef ENABLE_SMB
   char buf[2048];
-
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
@@ -500,8 +584,9 @@ vfs_acl_get_file(const char *path,
 GACL *
 vfs_acl_get_link(const char *path,
 		 GACL_TYPE type) {
+#ifdef ENABLE_SMB
   char buf[2048];
-
+#endif
 
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB

@@ -301,15 +301,18 @@ listxattr_cmd(int argc,
     if (rc < 0)
       error(1, errno, "%s: Getting Extended Attributes", argv[i]);
 
-    if (i > 1)
-      putchar('\n');
-    printf("Extended Attributes of %s:\n", argv[i]);
+    if (config.f_verbose) {
+      if (i > 1)
+	putchar('\n');
+      printf("Extended Attributes of %s:\n", argv[i]);
+    } else
+      printf("%s:\n", argv[i]);
     bp = buf;
     while (rc > 0) {
       len = strlen(bp);
       printf("  %s\n", bp);
-      bp += len;
-      rc -= len;
+      bp += len+1;
+      rc -= len+1;
     }
   }
   
@@ -338,7 +341,12 @@ getxattr_cmd(int argc,
   int i, j;
 
 
-  printf("Extended Attributes of %s:\n", argv[1]);
+  if (argc < 3)
+    error(1, 0, "Missing required arguments");
+  
+  if (config.f_verbose)
+    printf("%s:\n", argv[1]);
+  
   for (i = 2; i < argc; i++) {
     char buf[2048];
     ssize_t rc;
@@ -376,6 +384,9 @@ setxattr_cmd(int argc,
   int i;
 
 
+  if (argc < 3)
+    error(1, 0, "Missing required arguments");
+  
   for (i = 2; i < argc; i++) {
     int rc;
     char *vp = strchr(argv[i], '=');
@@ -385,11 +396,12 @@ setxattr_cmd(int argc,
 
     *vp++ = '\0';
 
-    fprintf(stderr, "Setting xattr '%s' to '%s'\n", argv[i], vp);
-    
     rc = vfs_setxattr(argv[1], argv[i], vp, strlen(vp)+1, VFS_XATTR_FLAG_NOFOLLOW);
     if (rc < 0)
       error(1, errno, "%s: %s: Setting Extended Attribute", argv[1], argv[i]);
+    
+    if (config.f_verbose)
+      fprintf(stderr, "%s = \"%s\"\n", argv[i], vp);
   }
   
   return 0;
@@ -401,12 +413,18 @@ removexattr_cmd(int argc,
   int i;
 
 
+  if (argc < 3)
+    error(1, 0, "Missing required arguments");
+  
   for (i = 2; i < argc; i++) {
     int rc;
     
     rc = vfs_removexattr(argv[1], argv[i], VFS_XATTR_FLAG_NOFOLLOW);
     if (rc < 0)
-      error(1, errno, "%s: %s: Removeing Extended Attribute", argv[1], argv[i]);
+      error(1, errno, "%s: %s: Removing Extended Attribute", argv[1], argv[i]);
+
+    if (config.f_verbose)
+      printf("%s: Extended Attribute removed\n", argv[i]);
   }
   
   return 0;
