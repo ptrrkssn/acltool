@@ -1,15 +1,18 @@
 ACLTOOL
 
-  This is a tool to manage NFSv4/ZFS (and MacOS) ACLs - listing, creating,
-  editing, searching, stripping, sorting and removing redundant entries
-  and more. It currently does not support POSIX or other kinds of ACLs.
+  This is a tool to manage NFSv4/ZFS (also known as Extended on MacOS) ACLs.
+  That is listing, creating, editing, searching, stripping, sorting and
+  removing redundant entries and more.
+
+  It currently does not support old POSIX.1e or other kinds of ACLs and due to
+  missing support on Linux only works over NFSv4.
   
   Bits and pieces of command names (lac/edac/sac) and how abbreviations
   of command names and command name switches work is inspired by the now
   long defunct Prime/PRIMOS operating system.
 
-  There is also some limited support for managing extended attributes (might
-  be a useful tool to access low-level ACLs on some systems).
+  There is also some limited support for managing extended attributes which
+  might be a useful tool to access low-level ACLs on some systems.
 
 
 AUTHOR
@@ -17,25 +20,40 @@ AUTHOR
   Peter Eriksson <pen@lysator.liu.se>
 
 
-DOWNLOAD
+PRIMARY DOWNLOAD SITE
 
   https://github.com/ptrrkssn/acltool
   
 
-OPERATING SYSTEMS SUPPORTED (for now)
+OPERATING SYSTEMS SUPPORTED
 
   - FreeBSD (ZFS & NFSv4, tested on 11.3 & 12.1)
   - Solaris (ZFS & NFSv4, tested on OmniOS)
-  - Linux (for NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
-  - MacOS (local "extended" ACLs, tested with MacOS 10.15)
+  - Linux (NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
+  - MacOS (HFS+, tested with MacOS 10.15)
+
+All the above also support Extended Attributes.
+
+
+FILESYSTEMS SUPPORT
+
+  - NFSv4
+  - ZFS (but not on Linux sadly)
+  - SMB - if built with Samba (libsmbclient)
+  - HFS+ (MacOS)
 
 
 BUILD INSTRUCTIONS
 
-  Just type 'make' in the source directory and it will automatically
+  View and possibly adjust the Makefile. If you want to build with
+  SMB support via Samba you must adjust the paths and enable it.
+  
+  You may want to install the Gnu readline development libraries &
+  header files (if not already there) or compilation will fail.
+
+  Then type 'make' in the source directory and it will automatically
   detect and build on the supported operating systems. No need to run
-  a "configure" script. For Linux you may want to install the Gnu readline
-  development libraries & header files (if not already there).
+  a "configure" script.
 
 
 USAGE
@@ -63,6 +81,12 @@ USAGE
   binary like "ln -s acltool lac" and then be used as shortcuts
   to the commands.
 
+  There is a limited support in CLI mode for navigating a virtual
+  filesystem space, including over SMB (if built with Samba) using
+  commands like "cd", "dir" etc.
+
+
+MISCELLANEOUS INFORMATION
 
 FILE TYPES
   f = Regular file
@@ -94,9 +118,18 @@ MORE INFORMATION
 
 EXAMPLES
 
-  lac-access -r -t sf .
+  cd smb://user@server/share
+    Access a SMB share
+    
+  dir -v
+    List the content of the current directory (verbosely)
+  
+  list-access -r -t sf .
     Recursively display Access list for sockets and normal files
 
+  lac ${HOME}/some-dir
+    List the ACL for ~/some-dir
+    
   set-access -r peter86:rwx:f:allow dir
     Recursively set permissions "rwx" (and "f" flags to directories).
     
@@ -104,7 +137,8 @@ EXAMPLES
     Sort and merge the ACL entries for dir
 
   edit-access -r user:peter86:rwx:f:allow dir
-    Recursively set the ACE permission "rwx" on all objects matching "user:peter86" with flags "f" and type "allow"
+    Recursively set the ACE permission "rwx" on all objects matching "user:peter86"
+    with flags "f" and type "allow".
 
   edit-access -r peter86:-rwx:f:allow dir
     Recursively remove permissions "rwx" from all existing peter86:*:f:allow ACEs
@@ -122,6 +156,9 @@ EXAMPLES
     Replace all parst38-allow entries where rwx permissions is
     set with 'user:peter86:rwx:f:allow'
 
+  list-xattr some-file
+    List all extended (named) attributes (if any) for file "some-file"
+    
 
 MORE ADVANCED USAGE
 
