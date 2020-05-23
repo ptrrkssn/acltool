@@ -467,8 +467,8 @@ vfs_setxattr(const char *path,
   case VFS_TYPE_SYS:
 #if defined(__linux__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      return lsetxattr(path, attr, buf, bufsize);
-    return setxattr(path, attr, buf, bufsize);
+      return lsetxattr(path, attr, buf, bufsize, 0);
+    return setxattr(path, attr, buf, bufsize, 0);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
       return extattr_set_link(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
