@@ -8,6 +8,9 @@ ACLTOOL
   of command names and command name switches work is inspired by the now
   long defunct Prime/PRIMOS operating system.
 
+  There is also some limited support for managing extended attributes (might
+  be a useful tool to access low-level ACLs on some systems).
+
 
 AUTHOR
 

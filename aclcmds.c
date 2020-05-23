@@ -842,6 +842,7 @@ find_cmd(int argc,
 }
 
 
+#if 0
 static ACECR *edit_cr = NULL;
 
 int
@@ -878,6 +879,7 @@ editopt_handler(const char *name,
   }
   return 0;
 }
+#endif
 
 
 static int

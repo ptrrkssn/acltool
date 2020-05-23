@@ -84,13 +84,18 @@ vfs_acl_get_file(const char *path,
 		 GACL_TYPE type);
 
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 #include <sys/xattr.h>
 #define VFS_XATTR_FLAG_NOFOLLOW XATTR_NOFOLLOW
 #else
 #define VFS_XATTR_FLAG_NOFOLLOW 0x0001
 #endif
 
+#define VFS_XATTR_FLAG_SYSTEM   0x0100
+
+extern int
+vfs_str2xattrflags(const char *s,
+		   int *flags);
 
 ssize_t
 vfs_listxattr(const char *path,

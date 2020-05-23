@@ -1031,8 +1031,7 @@ editopt_handler(const char *name,
 		unsigned int type,
 		const void *svp,
 		void *dvp,
-		const char *a0) 
-{
+		const char *a0) {
   ACECR *cr = NULL;
 
   
@@ -1077,9 +1076,9 @@ editopt_handler(const char *name,
 
 static OPTION edit_options[] =
   {
-   { "execute", 'e', OPTS_TYPE_STR, editopt_handler, "Commands (from string)" },
-   { "file",    'E', OPTS_TYPE_STR, editopt_handler, "Commands (from file)" },
-   { NULL, 0, 0, NULL, NULL },
+   { "execute", 'e', OPTS_TYPE_STR, editopt_handler, NULL, "Commands (from string)" },
+   { "file",    'E', OPTS_TYPE_STR, editopt_handler, NULL, "Commands (from file)" },
+   { NULL, 0, 0, NULL, NULL, NULL },
   };
 
 

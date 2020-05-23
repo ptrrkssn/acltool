@@ -300,6 +300,42 @@ strnlen(const char *s,
 }
 #endif
 
+
+static int xattr_flags = 0;
+
+
+static int
+xattr_handler(const char *name,
+	      const char *vs,
+	      unsigned int type,
+	      const void *svp,
+	      void *dvp,
+	      const char *a0) {
+  if (!vs)
+    return -1;
+
+  if (strcmp(vs, "-") == 0) {
+    xattr_flags = 0;
+    return 0;
+  }
+  
+  if (vfs_str2xattrflags(vs, &xattr_flags) < 0) {
+    error(1, 0, "%s: Invalid extended attribute flags", vs);
+    return -1;
+  }
+
+  return 0;
+}
+
+
+
+static OPTION xattr_options[] =
+  {
+   { "xattr-options", 'X', OPTS_TYPE_STR, xattr_handler, NULL, "Extended attribute options" },
+   { NULL,            0,   0,             NULL,          NULL, NULL },
+  };
+
+
 int
 listxattr_cmd(int argc,
 	      char **argv) {
@@ -312,7 +348,7 @@ listxattr_cmd(int argc,
     int len;
 
     
-    rc = vfs_listxattr(argv[i], buf, sizeof(buf), VFS_XATTR_FLAG_NOFOLLOW);
+    rc = vfs_listxattr(argv[i], buf, sizeof(buf), xattr_flags);
     if (rc < 0)
       error(1, errno, "%s: Getting Extended Attributes", argv[i]);
 
@@ -367,7 +403,7 @@ getxattr_cmd(int argc,
     ssize_t rc;
     int p_flag = 0;
     
-    rc = vfs_getxattr(argv[1], argv[i], buf, sizeof(buf), VFS_XATTR_FLAG_NOFOLLOW);
+    rc = vfs_getxattr(argv[1], argv[i], buf, sizeof(buf), xattr_flags);
     if (rc < 0)
       error(1, errno, "%s: %s: Getting Extended Attribute", argv[1], argv[i]);
 
@@ -411,7 +447,7 @@ setxattr_cmd(int argc,
 
     *vp++ = '\0';
 
-    rc = vfs_setxattr(argv[1], argv[i], vp, strlen(vp)+1, VFS_XATTR_FLAG_NOFOLLOW);
+    rc = vfs_setxattr(argv[1], argv[i], vp, strlen(vp)+1, xattr_flags);
     if (rc < 0)
       error(1, errno, "%s: %s: Setting Extended Attribute", argv[1], argv[i]);
     
@@ -434,7 +470,7 @@ removexattr_cmd(int argc,
   for (i = 2; i < argc; i++) {
     int rc;
     
-    rc = vfs_removexattr(argv[1], argv[i], VFS_XATTR_FLAG_NOFOLLOW);
+    rc = vfs_removexattr(argv[1], argv[i], xattr_flags);
     if (rc < 0)
       error(1, errno, "%s: %s: Removing Extended Attribute", argv[1], argv[i]);
 
@@ -452,20 +488,20 @@ COMMAND exit_command =
 COMMAND echo_command =
   { "echo-text", echo_cmd,		NULL, "[<str>]*",	"Print some text" };
 COMMAND cd_command =
-  { "change-directory", cd_cmd,		NULL, "[<path>]*",	"Change working directory" };
+  { "change-directory", cd_cmd,		NULL, "[<path>]*",	"Change work directory" };
 COMMAND dir_command =
   { "directory-listing", dir_cmd,	NULL, "[<path>]*",	"List directory" };
 COMMAND pwd_command =
-  { "print-working-directory", pwd_cmd,	NULL, "",		"Print working directory" };
+  { "print-work-directory", pwd_cmd,	NULL, "",		"Print work directory" };
 
 COMMAND listxattr_command =
-  { "list-xattr", listxattr_cmd,	NULL, "[<path>]*",			"List extended attributes" };
+  { "list-xattr", listxattr_cmd,	xattr_options, "[<path>]*",			"List extended attributes" };
 COMMAND getxattr_command =
-  { "get-xattr", getxattr_cmd,		NULL, "<path>+ [<attr>]*",		"Get extended attributes" };
+  { "get-xattr", getxattr_cmd,		xattr_options, "<path>+ [<attr>]*",		"Get extended attributes" };
 COMMAND setxattr_command =
-  { "set-xattr", setxattr_cmd,		NULL, "<path>+ [<attr>=<val>]*",	"Set extended attributes" };
+  { "set-xattr", setxattr_cmd,		xattr_options, "<path>+ [<attr>=<val>]*",	"Set extended attributes" };
 COMMAND removexattr_command =
-  { "remove-xattr", removexattr_cmd,	NULL, "<path> [<attr>]*",		"Remove extended attributes" };
+  { "remove-xattr", removexattr_cmd,	xattr_options, "<path> [<attr>]*",		"Remove extended attributes" };
 
 
 COMMAND *basic_commands[] =

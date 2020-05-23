@@ -316,6 +316,31 @@ vfs_closedir(VFS_DIR *vdp) {
 }
 
 
+int
+vfs_str2xattrflags(const char *s,
+		   int *flags) {
+  *flags = 0;
+  
+  while (*s)
+    switch (*s++) {
+    case 'f':
+      *flags |= VFS_XATTR_FLAG_NOFOLLOW;
+      break;
+      
+#if defined(__FreeBSD__)
+    case 'S':
+      *flags |= VFS_XATTR_FLAG_SYSTEM;
+      break;
+#endif
+    default:
+      errno = EINVAL;
+      return -1;
+    }
+
+  return 0;
+}
+
+
 ssize_t
 vfs_listxattr(const char *path,
 	      char *buf,
@@ -352,9 +377,13 @@ vfs_listxattr(const char *path,
     return listxattr(path, buf, bufsize);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      rc = extattr_list_link(path, EXTATTR_NAMESPACE_USER, tbuf, sizeof(tbuf));
+      rc = extattr_list_link(path,
+			     (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			     tbuf, sizeof(tbuf));
     else
-      rc = extattr_list_file(path, EXTATTR_NAMESPACE_USER, tbuf, sizeof(tbuf));
+      rc = extattr_list_file(path,
+			     (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			     tbuf, sizeof(tbuf));
     if (rc < 0)
       return rc;
 
@@ -444,8 +473,12 @@ vfs_getxattr(const char *path,
     return getxattr(path, attr, buf, bufsize);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      return extattr_get_link(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
-    return extattr_get_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
+      return extattr_get_link(path,
+			      (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			      attr, buf, bufsize);
+    return extattr_get_file(path,
+			    (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			    attr, buf, bufsize);
 #elif defined(__APPLE__)
     return getxattr(path, attr, buf, bufsize, 0, flags);
 #elif defined(__sun__)
@@ -498,8 +531,12 @@ vfs_setxattr(const char *path,
     return setxattr(path, attr, buf, bufsize, 0);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      return extattr_set_link(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
-    return extattr_set_file(path, EXTATTR_NAMESPACE_USER, attr, buf, bufsize);
+      return extattr_set_link(path,
+			      (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			      attr, buf, bufsize);
+    return extattr_set_file(path,
+			    (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			    attr, buf, bufsize);
 #elif defined(__APPLE__)
     return setxattr(path, attr, buf, bufsize, 0, flags);
 #elif defined(__sun__)
@@ -549,8 +586,12 @@ vfs_removexattr(const char *path,
     return removexattr(path, attr);
 #elif defined(__FreeBSD__)
     if (flags & VFS_XATTR_FLAG_NOFOLLOW)
-      return extattr_delete_link(path, EXTATTR_NAMESPACE_USER, attr);
-    return extattr_delete_file(path, EXTATTR_NAMESPACE_USER, attr);
+      return extattr_delete_link(path,
+				 (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+				 attr);
+    return extattr_delete_file(path,
+			       (flags & VFS_XATTR_FLAG_SYSTEM ? EXTATTR_NAMESPACE_SYSTEM : EXTATTR_NAMESPACE_USER),
+			       attr);
 #elif defined(__APPLE__)
     return removexattr(path, attr, flags);
 #elif defined(__sun__)

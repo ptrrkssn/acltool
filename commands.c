@@ -82,6 +82,7 @@ cmd_register(COMMANDS *cmdlist,
   }
 
   qsort(&cmdlist->v[0], cmdlist->c, sizeof(cmdlist->v[0]), _cmp_cmdname);
+
   return 0;
 }
 
