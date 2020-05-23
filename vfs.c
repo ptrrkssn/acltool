@@ -332,6 +332,12 @@ vfs_str2xattrflags(const char *s,
       *flags |= VFS_XATTR_FLAG_SYSTEM;
       break;
 #endif
+      
+#if defined(__APPLE__)
+    case 'C':
+      *flags |= VFS_XATTR_FLAG_COMPRESSION;
+      break;
+#endif
     default:
       errno = EINVAL;
       return -1;

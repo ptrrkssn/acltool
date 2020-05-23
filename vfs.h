@@ -86,12 +86,14 @@ vfs_acl_get_file(const char *path,
 
 #if defined(__APPLE__)
 #include <sys/xattr.h>
-#define VFS_XATTR_FLAG_NOFOLLOW XATTR_NOFOLLOW
+#define VFS_XATTR_FLAG_NOFOLLOW    XATTR_NOFOLLOW
+#define VFS_XATTR_FLAG_COMPRESSION XATTR_SHOWCOMPRESSION
 #else
-#define VFS_XATTR_FLAG_NOFOLLOW 0x0001
+#define VFS_XATTR_FLAG_NOFOLLOW    0x0001
+#define VFS_XATTR_FLAG_COMPRESSION 0x0100
 #endif
 
-#define VFS_XATTR_FLAG_SYSTEM   0x0100
+#define VFS_XATTR_FLAG_SYSTEM      0x0200
 
 extern int
 vfs_str2xattrflags(const char *s,
