@@ -39,8 +39,8 @@ FILESYSTEMS SUPPORT
 
   - NFSv4
   - ZFS (but not on Linux sadly)
-  - SMB - if built with Samba (libsmbclient)
   - HFS+ (MacOS)
+  - SMB - if built with Samba (libsmbclient) - Not yet functional.
 
 
 BUILD INSTRUCTIONS
