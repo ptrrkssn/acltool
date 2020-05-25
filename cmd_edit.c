@@ -887,8 +887,6 @@ walker_edit(const char *path,
 
 	if (nm == 0) {
 	AddACE:
-	  fprintf(stderr, "Adding new ACE\n");
-	  
 	  /* Add ACE entry if no match found */
 	  if (acl_create_entry_np(&nap, &nae, pos) < 0) {
 	    fprintf(stderr, "Unable to create ACE at %d\n", pos);
