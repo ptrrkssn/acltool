@@ -38,6 +38,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 
 #include "gacl.h"
 
@@ -69,6 +70,10 @@ vfs_fullpath(const char *path,
 extern int
 vfs_lstat(const char *path,
 	  struct stat *sp);
+
+extern int
+vfs_statvfs(const char *path,
+	    struct statvfs *sp);
 
 extern VFS_DIR *
 vfs_opendir(const char *path);

@@ -349,7 +349,8 @@ print_acl(FILE *fp,
       fprintf(fp, "# changed:  %s", ctime(&sp->st_ctime));
       fprintf(fp, "# accessed: %s", ctime(&sp->st_atime));
 #ifdef st_birthtime
-      fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
+      if (sp->st_birthtime)
+	fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
 #endif
     }
 

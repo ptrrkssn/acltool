@@ -130,23 +130,26 @@ vfs_fullpath(const char *path,
       return NULL;
     }
     strcpy(buf, path);
+#if 0
     return buf;
+#endif
+  } else {
+
+    if (vfs_getcwd(buf, bufsize) == NULL)
+      return NULL;
+    
+    if (strcmp(path, ".") == 0)
+      return buf;
+    
+    len = strlen(buf)+1+strlen(path)+1;
+    if (len > bufsize) {
+      errno = ERANGE;
+      return NULL;
+    }
+    
+    strcat(buf, "/");
+    strcat(buf, path);
   }
-
-  if (vfs_getcwd(buf, bufsize) == NULL)
-    return NULL;
-
-  if (strcmp(path, ".") == 0)
-    return buf;
-
-  len = strlen(buf)+1+strlen(path)+1;
-  if (len > bufsize) {
-    errno = ERANGE;
-    return NULL;
-  }
-
-  strcat(buf, "/");
-  strcat(buf, path);
 
   i = 0;
   while (buf[i]) {
@@ -212,6 +215,7 @@ vfs_lstat(const char *path,
   char buf[2048];
 #endif
 
+  memset(sp, 0, sizeof(*sp));
   switch (vfs_get_type(path)) {
 #ifdef ENABLE_SMB
   case VFS_TYPE_SMB:
@@ -231,6 +235,35 @@ vfs_lstat(const char *path,
     return -1;
   }
 }
+
+
+int
+vfs_statvfs(const char *path,
+	    struct statvfs *sp) {
+#ifdef ENABLE_SMB
+  char buf[2048];
+#endif
+
+  switch (vfs_get_type(path)) {
+#ifdef ENABLE_SMB
+  case VFS_TYPE_SMB:
+    if (!vfs_fullpath(path, buf, sizeof(buf)))
+      return -1;
+    
+    return smb_statvfs(buf, sp);
+#endif
+    
+  case VFS_TYPE_SYS:
+    if (!path || !*path)
+      path = ".";
+    return statvfs(path, sp);
+
+  default:
+    errno = ENOSYS;
+    return -1;
+  }
+}
+
 
 
 VFS_DIR *

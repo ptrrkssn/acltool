@@ -128,14 +128,18 @@ dir_cmd(int argc,
     for (j = 0; j < nlist->c; j++) {
       if (config.f_verbose) {
 	char *path;
+	char pbuf[2048];
 	struct stat sb;
 	
 	if (argv[i])
 	  path = s_dupcat(argv[i], "/", nlist->v[j], NULL);
 	else
 	  path = s_dup(nlist->v[j]);
-	
-	if (vfs_lstat(path, &sb) < 0)
+
+	if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
+	  error(1, errno, "Unable to get full directory name");
+
+	if (vfs_lstat(pbuf, &sb) < 0)
 	  printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);
 	else {
 	  char tbuf[256];
@@ -220,14 +224,22 @@ dir_cmd(int argc,
     }
     slist_free(nlist);
     if (config.f_verbose > 1) {
+      struct statvfs vb;
+      unsigned long long avail = 0;
+      
+      if (vfs_statvfs(argv[i], &vb) == 0)
+	avail = vb.f_bavail * 512 / 1000000;
+
       printf("\n%15u File%s    %18llu Byte%s\n",
 	     n_files,
 	     n_files == 1 ? " " : "s",
 	     t_files,
 	     t_files == 1 ? "" : "s");
-      printf("%15u Director%s\n",
+      printf("%15u Director%s",
 	     n_dirs,
-	     n_dirs == 1 ? "y" : "ies");
+	     n_dirs == 1 ? "y  " : "ies");
+      if (avail)
+	printf("%16llu MB Free\n", avail);
     }
   }
   return 0;

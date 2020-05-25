@@ -84,6 +84,10 @@ smb_lstat(const char *path,
 	  struct stat *sp);
 
 extern int
+smb_statvfs(const char *path,
+	    struct statvfs *sp);
+
+extern int
 smb_chdir(const char *path);
 
 extern VFS_DIR *

@@ -35,8 +35,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/statvfs.h>
 
 #include "strings.h"
 #include "vfs.h"
@@ -119,6 +121,8 @@ smb_lstat(const char *path,
   const char *group_attr = "system.nt_sec_desc.group+";
   char buf[256];
   int rc;
+  struct passwd *pp;
+  struct group *gp;
   
 
   _smb_init();
@@ -127,17 +131,46 @@ smb_lstat(const char *path,
   if (rc < 0)
     return rc;
 
+  /*
+   * Hack to override the st_uid & st_gid with the real owner & group 
+   */
   if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) < 0)
     return -1;
-
-  fprintf(stderr, "%s: Owner='%s'\n", path, buf);
+  pp = getpwnam(buf);
+  if (!pp) {
+    int i;
+    for (i = 0; buf[i]; i++)
+      buf[i] = tolower(buf[i]);
+    pp = getpwnam(buf);
+  }
+  if (pp)
+    sp->st_uid = pp->pw_uid;
   
   if (smb_getxattr(path, group_attr, buf, sizeof(buf)) < 0)
     return -1;
 
-  fprintf(stderr, "%s: Group='%s'\n", path, buf);
+  gp = getgrnam(buf);
+  if (!gp) {
+    int i;
+    for (i = 0; buf[i]; i++)
+      buf[i] = tolower(buf[i]);
+    gp = getgrnam(buf);
+  }
+    
+  if (gp)
+    sp->st_gid = gp->gr_gid;
 
   return rc;
+}
+
+
+int
+smb_statvfs(const char *path,
+	    struct statvfs *sp) {
+  
+  _smb_init();
+  
+  return smbc_statvfs((char *) path, sp);
 }
 
 
@@ -215,7 +248,7 @@ smb_readdir(VFS_DIR *vdp) {
     return NULL;
 
   dep->d_reclen = sizeof(*dep);
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(DT_DIR)
   dep->d_fileno = 0;
   switch (sdep->smbc_type) {
   case SMBC_DIR:
