@@ -4,13 +4,14 @@ DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
-SMBDIR=/liu/pkg/samba/default
+SMBDIR=/usr/local/samba/default
+#SMBDIR=/liu/pkg/samba/default
 SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
 
 # Remove comment '#' character to enable SMB
-SMB_CFLAGS=# -I$(SMBINC) -DENABLE_SMB=1
-SMB_LDFLAGS=# -L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+SMB_CFLAGS=-I$(SMBINC) -DENABLE_SMB=1
+SMB_LDFLAGS=-L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
 
 
 TESTDIR=t
@@ -49,7 +50,7 @@ macos Darwin:
 
 all: acltool
 
-acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h Makefile
+acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h nfs4.h Makefile
 
 acltool.o: 	acltool.c acltool.h
 argv.o: 	argv.c argv.h acltool.h

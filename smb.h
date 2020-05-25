@@ -39,32 +39,45 @@
 #define SMB_ACL_TYPE_AUDIT 0x02
 #define SMB_ACL_TYPE_ALARM 0x03
 
-#define SMB_ACL_FLAG_OI 0x01 /* Object Inherit */
-#define SMB_ACL_FLAG_CI 0x02 /* Container Inherit */
-#define SMB_ACL_FLAG_NI 0x04 /* No Propagate Inherit */
-#define SMB_ACL_FLAG_IO 0x08 /* Inherit Only */
+#define SMB_ACL_FLAG_OI   0x01 			/* Object Inherit */
+#define SMB_ACL_FLAG_CI   0x02 			/* Container Inherit */
+#define SMB_ACL_FLAG_NI   0x04 			/* No Propagate Inherit */
+#define SMB_ACL_FLAG_IO   0x08 			/* Inherit Only */
 
-#define SMB_ACL_PERM_GA 0x10000000
-#define SMB_ACL_PERM_GX 0x20000000
-#define SMB_ACL_PERM_GW 0x40000000
-#define SMB_ACL_PERM_GR 0x80000000
+#define SMB_ACL_PERM_GA   0x10000000 		/* Generic All */
+#define SMB_ACL_PERM_GE   0x20000000 		/* Generic Execute */
+#define SMB_ACL_PERM_GW   0x40000000 		/* Generic Write */
+#define SMB_ACL_PERM_GR   0x80000000 		/* Generic Read */
 
-#define SMB_ACL_PERM_CC 0x00000001 /* Read/List */
-#define SMB_ACL_PERM_DC 0x00000002 /* Write/AddFile */
-#define SMB_ACL_PERM_LC 0x00000004 /* Append/AddSubDir */
-#define SMB_ACL_PERM_SW 0x00000008 /* ReadEA */
-#define SMB_ACL_PERM_RP 0x00000010 /* WriteEA */
-#define SMB_ACL_PERM_WP 0x00000020 /* Execute/Traverse */
-#define SMB_ACL_PERM_DT 0x00000040 /* DeleteChild */
-#define SMB_ACL_PERM_LO 0x00000080 /* ReadAttr */
-#define SMB_ACL_PERM_CR 0x00000100 /* WriteAttr */
+#define SMB_ACL_PERM_RD   0x00000001 		/* Read/List */
+#define SMB_ACL_PERM_WD   0x00000002 		/* Write/AddFile */
+#define SMB_ACL_PERM_AD   0x00000004 		/* Append/AddSubDir */
+#define SMB_ACL_PERM_REA  0x00000008 		/* ReadEA */
+#define SMB_ACL_PERM_WEA  0x00000010 		/* WriteEA */
+#define SMB_ACL_PERM_X    0x00000020 		/* Execute/Traverse */
+#define SMB_ACL_PERM_DC   0x00000040 		/* DeleteChild */
+#define SMB_ACL_PERM_RA   0x00000080 		/* ReadAttributes */
+#define SMB_ACL_PERM_WA   0x00000100 		/* WriteAttributes */
 
-#define SMB_ACL_PERM_SD 0x00010000 /* Standard Delete */
-#define SMB_ACL_PERM_RC 0x00020000 /* Standard ReadControl */
-#define SMB_ACL_PERM_WD 0x00040000 /* Standard WriteDAC */
-#define SMB_ACL_PERM_WO 0x00080000 /* Standard WriteOwner */
+#define SMB_ACL_PERM_D    0x00010000 		/* Standard Delete */
+#define SMB_ACL_PERM_RC   0x00020000 		/* Standard ReadControl */
+#define SMB_ACL_PERM_WDAC 0x00040000 		/* Standard WriteDAC */
+#define SMB_ACL_PERM_WO   0x00080000		/* Standard WriteOwner */
+#define SMB_ACL_PERM_S    0x00100000		/* Synchronize */
 
-#define SMB_ACL_PERM_SY 0x00100000 /* Synchronize */
+
+/* Standard permissions */
+#define SMB_ACL_PERM_R    (SMB_ACL_PERM_RD|SMB_ACL_PERM_RA|SMB_ACL_PERM_REA|SMB_ACL_PERM_RC|SMB_ACL_PERM_S)
+
+#define SMB_ACL_PERM_W    (SMB_ACL_PERM_WD|SMB_ACL_PERM_AD|SMB_ACL_PERM_WA|SMB_ACL_PERM_WEA|SMB_ACL_PERM_RC|SMB_ACL_PERM_S)
+
+#define SMB_ACL_PERM_RX   (SMB_ACL_PERM_R|SMB_ACL_PERM_X)
+#define SMB_ACL_PERM_LFC  SMB_ACL_PERM_RX
+
+#define SMB_ACL_PERM_M    (SMB_ACL_PERM_RX|SMB_ACL_PERM_W|SMB_ACL_PERM_D)
+
+#define SMB_ACL_PERM_FC   (SMB_ACL_PERM_M|SMB_ACL_PERM_DC|SMB_ACL_PERM_WDAC|SMB_ACL_PERM_WO)
+
 
 extern int
 smb_lstat(const char *path,

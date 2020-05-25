@@ -177,8 +177,9 @@ smb_readdir(VFS_DIR *vdp) {
   if (!dep)
     return NULL;
 
-  dep->d_fileno = 0;
   dep->d_reclen = sizeof(*dep);
+#if defined(__FreeBSD__)
+  dep->d_fileno = 0;
   switch (sdep->smbc_type) {
   case SMBC_DIR:
     dep->d_type = DT_DIR;
@@ -190,6 +191,8 @@ smb_readdir(VFS_DIR *vdp) {
     dep->d_type = DT_LNK;
     break;
   }
+#endif
+
   strcpy(dep->d_name, sdep->name); /* XXX: Check name length */
   return dep;
 }
@@ -293,7 +296,7 @@ smb_acl_get_file(const char *path) {
     struct passwd *pp;
     struct group *gp;
     GACE_TAG_TYPE at;
-    uid_t ugid;
+    uid_t ugid = -1;
     GACE_PERMSET ps;
     GACE_FLAGSET fs;
     
@@ -375,34 +378,34 @@ smb_acl_get_file(const char *path) {
     gacl_set_flagset_np(ep, &fs);
     
     gacl_clear_perms(&ps);
-    if (perms & SMB_ACL_PERM_CC)
+    if (perms & SMB_ACL_PERM_RD)
       gacl_add_perm(&ps, GACE_READ_DATA);
-    if (perms & SMB_ACL_PERM_DC)
+    if (perms & SMB_ACL_PERM_WD)
       gacl_add_perm(&ps, GACE_WRITE_DATA);
-    if (perms & SMB_ACL_PERM_WP)
+    if (perms & SMB_ACL_PERM_X)
       gacl_add_perm(&ps, GACE_EXECUTE);
-    if (perms & SMB_ACL_PERM_LC)
+    if (perms & SMB_ACL_PERM_AD)
       gacl_add_perm(&ps, GACE_APPEND_DATA);
-    if (perms & SMB_ACL_PERM_SW)
+    if (perms & SMB_ACL_PERM_REA)
       gacl_add_perm(&ps, GACE_READ_NAMED_ATTRS);
-    if (perms & SMB_ACL_PERM_RP)
+    if (perms & SMB_ACL_PERM_WEA)
       gacl_add_perm(&ps, GACE_WRITE_NAMED_ATTRS);
-    if (perms & SMB_ACL_PERM_DT)
+    if (perms & SMB_ACL_PERM_DC)
       gacl_add_perm(&ps, GACE_DELETE_CHILD);
-    if (perms & SMB_ACL_PERM_SD)
+    if (perms & SMB_ACL_PERM_D)
       gacl_add_perm(&ps, GACE_DELETE);
-    if (perms & SMB_ACL_PERM_LO)
+    if (perms & SMB_ACL_PERM_RA)
       gacl_add_perm(&ps, GACE_READ_ATTRIBUTES);
-    if (perms & SMB_ACL_PERM_CR)
+    if (perms & SMB_ACL_PERM_WA)
       gacl_add_perm(&ps, GACE_WRITE_ATTRIBUTES);
     
     if (perms & SMB_ACL_PERM_RC)
       gacl_add_perm(&ps, GACE_READ_ACL);
-    if (perms & SMB_ACL_PERM_WD)
+    if (perms & SMB_ACL_PERM_WDAC)
       gacl_add_perm(&ps, GACE_WRITE_ACL);
     if (perms & SMB_ACL_PERM_WO)
       gacl_add_perm(&ps, GACE_WRITE_OWNER);
-    if (perms & SMB_ACL_PERM_SY)
+    if (perms & SMB_ACL_PERM_S)
       gacl_add_perm(&ps, GACE_SYNCHRONIZE);
     
     gacl_set_permset(ep, &ps);
