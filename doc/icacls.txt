@@ -1,0 +1,46 @@
+The <perm> option is a permission mask that can be specified in one of the following forms:
+
+A sequence of simple rights:
+
+F  - Full access
+M  - Modify access
+RX - Read and execute access
+R  - Read-only access
+W  - Write-only access
+
+
+A comma-separated list in parenthesis of specific rights:
+
+D    - Delete
+RC   - Read control
+WDAC - Write DAC
+WO   - Write owner
+S    - Synchronize
+AS   - Access system security
+MA   - Maximum allowed
+GR   - Generic read
+GW   - Generic write
+GE   - Generic execute
+GA   - Generic all
+RD   - Read data/list directory
+WD   - Write data/add file
+AD   - Append data/add subdirectory
+REA  - Read extended attributes
+WEA  - Write extended attributes
+X    - Execute/traverse
+DC   - Delete child
+RA   - Read attributes
+WA   - Write attributes
+
+
+Inheritance rights may precede either <perm> form, and they are applied only to directories:
+
+(OI) - Object inherit
+(CI) - Container inherit
+(IO) - Inherit only
+(NP) - Do not propagate inherit
+
+
+Examples:
+
+> icacls test2 /grant *S-1-1-0:(d,wdac)
