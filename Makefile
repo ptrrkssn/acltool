@@ -4,14 +4,16 @@ DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
+SMBDIR=/usr/local/samba
 #SMBDIR=/usr/local/samba/default
-SMBDIR=/liu/pkg/samba/default
+#SMBDIR=/liu/pkg/samba/default
+
 SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
 
 # Remove comment '#' character to enable SMB
-SMB_CFLAGS=-I$(SMBINC) -DENABLE_SMB=1
-SMB_LDFLAGS=-L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+SMB_CFLAGS=# -I$(SMBINC) -DENABLE_SMB=1
+SMB_LDFLAGS=# -L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
 
 
 TESTDIR=t
