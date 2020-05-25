@@ -61,9 +61,15 @@ s_ndup(const char *s,
 extern char *
 s_dup(const char *s);
 
+char *
+s_ndup(const char *s,
+       size_t len);
+
+#if 0
 extern char *
 s_cat(const char *s,
       ...);
+#endif
 
 extern int
 s_match(const char *a,

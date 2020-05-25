@@ -97,6 +97,7 @@ smb_getxattr(const char *path,
 	     const char *attr,
 	     char *buf,
 	     size_t bufsize);
+
 extern int
 smb_setxattr(const char *path,
 	     const char *attr,

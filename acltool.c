@@ -460,10 +460,10 @@ opt_name_generator(const char *text,
     ++ci;
     
     if (s_match(text+2, cp))
-      return s_cat("--", cp,
-		   (((t & OPTS_TYPE_MASK) != OPTS_TYPE_NONE &&
-		     !(t & OPTS_TYPE_OPT)) ? "=" : NULL),
-		   NULL);
+      return s_dupcat("--", cp,
+		      (((t & OPTS_TYPE_MASK) != OPTS_TYPE_NONE &&
+			!(t & OPTS_TYPE_OPT)) ? "=" : NULL),
+		      NULL);
   }
   
   return NULL;

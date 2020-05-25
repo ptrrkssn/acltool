@@ -42,7 +42,7 @@
 #include "vfs.h"
 #include "smb.h"
 
-#ifdef ENABLE_SMB
+#if ENABLE_SMB
 #include <libsmbclient.h>
 
 static SMBCCTX *context = NULL;
@@ -462,8 +462,7 @@ int
 smb_getxattr(const char *path,
 	     const char *attr,
 	     char *buf,
-	     size_t bufsize,
-	     int flags) {
+	     size_t bufsize) {
   errno = ENOSYS;
   return -1;
 }

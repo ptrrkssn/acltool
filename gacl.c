@@ -2185,24 +2185,29 @@ _gacl_init_from_nfs4(const char *buf,
 
     if (ep->flags & NFS4_ACE_IDENTIFIER_GROUP) {
       if (strncmp(cp, "GROUP@", idlen) == 0) {
-	ep->tag = GACE_TAG_TYPE_GROUP_OBJ;
-	ep->id = -1;
+	ep->tag.name = s_dup("group@");
+	ep->tag.type = GACE_TAG_TYPE_GROUP_OBJ;
+	ep->tag.ugid = -1;
       } else {
-	ep->id = -1;
-	(void) _nfs4_id_to_gid(cp, idlen, &ep->id);
-	ep->tag = GACE_TAG_TYPE_GROUP;
+	ep->tag.ugid = -1;
+	ep->tag.name = s_ndup(cp, idlen);
+	(void) _nfs4_id_to_gid(cp, idlen, &ep->tag.ugid);
+	ep->tag.type = GACE_TAG_TYPE_GROUP;
       }
     } else {
       if (strncmp(cp, "OWNER@", idlen) == 0) {
-	ep->tag = GACE_TAG_TYPE_USER_OBJ;
-	ep->id = -1;
+	ep->tag.name = s_dup("group@");
+	ep->tag.type = GACE_TAG_TYPE_USER_OBJ;
+	ep->tag.ugid = -1;
       } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
-	ep->tag = GACE_TAG_TYPE_EVERYONE;
-	ep->id = -1;
+	ep->tag.name = s_dup("everyone@");
+	ep->tag.type = GACE_TAG_TYPE_EVERYONE;
+	ep->tag.ugid = -1;
       } else {
-	ep->id = -1;
-	(void) _nfs4_id_to_uid(cp, idlen, &ep->id);
-	ep->tag = GACE_TAG_TYPE_USER;
+	ep->tag.ugid = -1;
+	ep->tag.name = s_ndup(cp, idlen);
+	ep->tag.type = GACE_TAG_TYPE_USER;
+	(void) _nfs4_id_to_uid(cp, idlen, &ep->tag.ugid);
       }
     }
 
@@ -2316,7 +2321,8 @@ _gacl_to_nfs4(GACL *ap,
       errno = ENOMEM;
       return -1;
     }
-    *vp++ = htonl(ep->flags | (ep->tag == GACE_TAG_TYPE_GROUP || ep->tag == GACE_TAG_TYPE_GROUP_OBJ ? 
+    *vp++ = htonl(ep->flags | (ep->tag.type == GACE_TAG_TYPE_GROUP ||
+			       ep->tag.type == GACE_TAG_TYPE_GROUP_OBJ ? 
 			       NFS4_ACE_IDENTIFIER_GROUP : 0));
     
     if (vp >= endp) {
@@ -2325,7 +2331,7 @@ _gacl_to_nfs4(GACL *ap,
     }
     *vp++ = htonl(ep->perms);
 
-    switch (ep->tag) {
+    switch (ep->tag.type) {
     case GACE_TAG_TYPE_USER_OBJ:
       idname = "OWNER@";
       break;
@@ -2336,12 +2342,12 @@ _gacl_to_nfs4(GACL *ap,
       idname = "EVERYONE@";
       break;
     case GACE_TAG_TYPE_USER:
-      pp = getpwuid(ep->id);
+      pp = getpwuid(ep->tag.ugid);
       if (pp) {
 	idd = _nfs4_id_domain();
 	rc = snprintf(tbuf, sizeof(tbuf), "%s@%s", pp->pw_name, idd ? idd : "");
       } else
-	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->id);
+	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->tag.ugid);
       if (rc < 0) {
 	errno = EINVAL;
 	return -1;
@@ -2349,12 +2355,12 @@ _gacl_to_nfs4(GACL *ap,
       idname = tbuf;
       break;
     case GACE_TAG_TYPE_GROUP:
-      gp = getgrgid(ep->id);
+      gp = getgrgid(ep->tag.ugid);
       if (gp) {
 	idd = _nfs4_id_domain();
 	rc = snprintf(tbuf, sizeof(tbuf), "%s@%s", gp->gr_name, idd ? idd : "");
       } else
-	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->id);
+	rc = snprintf(tbuf, sizeof(tbuf), "%u", ep->tag.ugid);
       if (rc < 0) {
 	errno = EINVAL;
 	return -1;

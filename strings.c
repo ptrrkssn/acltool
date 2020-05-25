@@ -49,26 +49,6 @@
 
 
 char *
-s_ndup(const char *s,
-       size_t len)
-{
-  char *rs;
-  
-  
-  if (!s)
-    return NULL;
-  
-  rs = malloc(len+1);
-  if (!rs)
-    return NULL;
-  
-  strncpy(rs, s, len);
-  rs[len] = '\0';
-  
-  return rs;
-}
-
-char *
 s_dup(const char *s)
 {
   if (!s)
@@ -77,6 +57,17 @@ s_dup(const char *s)
   return strdup(s);
 }
 
+char *
+s_ndup(const char *s,
+       size_t len)
+{
+  if (!s)
+    return NULL;
+  
+  return strndup(s, len);
+}
+
+#if 0
 char *
 s_cat(const char *s,
       ...) {
@@ -103,6 +94,7 @@ s_cat(const char *s,
 
   return res;
 }
+#endif
 
 
 int

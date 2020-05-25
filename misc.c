@@ -864,7 +864,7 @@ _ft_foreach(const char *path,
 	strcmp(dep->d_name, "..") == 0)
       continue;
     
-    fpath = s_cat(path, "/", dep->d_name, NULL);
+    fpath = s_dupcat(path, "/", dep->d_name, NULL);
     if (!fpath) {
       rc = -1;
       goto End;
