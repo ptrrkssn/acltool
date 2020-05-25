@@ -2970,24 +2970,24 @@ _gacl_entry_from_acl_entry(GACE *nep,
 
     switch (ugtype) {
     case ID_TYPE_UID:
-      nep->tag = GACE_TAG_TYPE_USER;
+      nep->tag.type = GACE_TAG_TYPE_USER;
       pp = getpwuid(nep->tag.ugid);
       if (pp)
 	nep->tag.name = s_dup(pp->pw_name);
       else {
-	snprint(buf, sizeof(buf), "%d", net->tag.guid);
-	net->tag.name = s_dup(buf);
+	snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
+	nep->tag.name = s_dup(buf);
       }
       break;
       
     case ID_TYPE_GID:
-      nep->tag = GACE_TAG_TYPE_GROUP;
+      nep->tag.type = GACE_TAG_TYPE_GROUP;
       gp = getgrgid(nep->tag.ugid);
-      if (pp)
+      if (gp)
 	nep->tag.name = s_dup(gp->gr_name);
       else {
-	snprint(buf, sizeof(buf), "%d", net->tag.guid);
-	net->tag.name = s_dup(buf);
+	snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
+	nep->tag.name = s_dup(buf);
       }
       break;
 
@@ -3025,7 +3025,7 @@ _gacl_entry_from_acl_entry(GACE *nep,
 static int
 _acl_entry_from_gace(macos_acl_entry_t nep,
 		     GACE *oep) {
-  GACE_TAG etag;
+  GACE_TAG_TYPE etag;
   GACE_TYPE etype;
   GACE_PERMSET *ops;
   GACE_FLAGSET *ofs;
