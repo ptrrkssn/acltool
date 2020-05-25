@@ -95,12 +95,49 @@ _smb_init(void) {
 }
 
 
+
+/* Data via extended attributes
+ *                     system.nt_sec_desc.<attribute name>
+ *                     system.nt_sec_desc.*
+ *                     system.nt_sec_desc.*+
+ *
+ *                  where <attribute name> is one of:
+ *
+ *                     revision
+ *                     owner
+ *                     owner+
+ *                     group
+ *                     group+
+ *                     acl:<name or sid>
+ *                     acl+:<name or sid>
+ */
+
 int
 smb_lstat(const char *path,
 	  struct stat *sp) {
+  const char *owner_attr = "system.nt_sec_desc.owner+";
+  const char *group_attr = "system.nt_sec_desc.group+";
+  char buf[256];
+  int rc;
+  
+
   _smb_init();
   
-  return smbc_stat(path, sp);
+  rc = smbc_stat(path, sp);
+  if (rc < 0)
+    return rc;
+
+  if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) < 0)
+    return -1;
+
+  fprintf(stderr, "%s: Owner='%s'\n", path, buf);
+  
+  if (smb_getxattr(path, group_attr, buf, sizeof(buf)) < 0)
+    return -1;
+
+  fprintf(stderr, "%s: Group='%s'\n", path, buf);
+
+  return rc;
 }
 
 
@@ -295,10 +332,11 @@ smb_acl_get_file(const char *path) {
     GACE *ep = NULL;
     struct passwd *pp;
     struct group *gp;
-    GACE_TAG_TYPE at;
-    uid_t ugid = -1;
     GACE_PERMSET ps;
     GACE_FLAGSET fs;
+    GACE_TAG_TYPE e_type;
+    uid_t e_ugid;
+    char *e_name;
     
     
     if (!s_realm || !s_user  || !*s_user ||
@@ -307,8 +345,13 @@ smb_acl_get_file(const char *path) {
 	!s_perms || sscanf(s_perms, "0x%x", &perms) != 1)
       continue; /* Invalid entry - skip */
 
+    e_type = -1;
+    e_ugid = -1;
+    e_name = NULL;
+    
     if (!*s_realm && strcmp(s_user, "Everyone") == 0) {
-      at = GACE_TAG_TYPE_EVERYONE;
+      e_type = GACE_TAG_TYPE_EVERYONE;
+      e_name = s_dup("everyone@");
     }
     else {
       if (!s_realm) /* XXX TODO: Check realm */
@@ -326,27 +369,25 @@ smb_acl_get_file(const char *path) {
 	continue; 
 
       if (pp) {
-	at = GACE_TAG_TYPE_USER;
-	ugid = pp->pw_uid;
+	e_type = GACE_TAG_TYPE_USER;
+	e_ugid = pp->pw_uid;
       } else {
-	at = GACE_TAG_TYPE_GROUP;
-	ugid = gp->gr_gid;
+	e_type = GACE_TAG_TYPE_GROUP;
+	e_ugid = gp->gr_gid;
       }
+      
+      if (s_realm && *s_realm)
+	e_name = s_dupcat(s_realm, "\\", s_user, NULL);
+      else
+	e_name = s_dup(s_user);
     }
     
     if (gacl_create_entry(&ap, &ep) < 0)
       goto Fail;
 
-    ep->tag.type = at;
-    ep->tag.ugid = ugid;
-    if (s_realm)
-      ep->tag.name = s_dupcat(s_realm, "\\", s_user, NULL);
-    else
-      ep->tag.name = s_dup(s_user);
-#if 0      
-    gacl_set_tag_type(ep, at);
-    gacl_set_qualifier(ep, &ugid);
-#endif
+    ep->tag.type = e_type;
+    ep->tag.ugid = e_ugid;
+    ep->tag.name = e_name;
     
     switch (type) {
     case SMB_ACL_TYPE_ALLOW:
