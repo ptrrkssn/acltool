@@ -941,32 +941,3 @@ ft_foreach(const char *path,
 }
 
 
-char *
-strxcat(const char *str,
-	...) {
-  va_list ap;
-  char *buf, *cp;
-  size_t len;
-  
-  
-  if (!str)
-    return NULL;
-  
-  len = strlen(str)+1;
-  va_start(ap, str);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    len += strlen(cp);
-  va_end(ap);
-  
-  buf = malloc(len);
-  if (!buf)
-    return NULL;
-  
-  strcpy(buf, str);
-  va_start(ap, str);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    strcat(buf, cp);
-  va_end(ap);
-  
-  return buf;
-}

@@ -1,0 +1,11 @@
+# getfacl /export/staff/peter86/Test
+# file: /export/staff/peter86/Test
+# owner: peter86
+# group: domain_users
+            owner@:rwxpD-aARWcCo-:fdi----:allow
+      user:mikha02:rwx-----------:-------:deny
+group:employee-liu.se:------a-R-c---:fd-----:allow
+         everyone@:------a-R-c---:fdi----:allow
+            owner@:rwxp--aARWcCos:-------:allow
+            group@:r-x---a-R-c--s:-------:allow
+         everyone@:r-x---a-R-c--s:-------:allow

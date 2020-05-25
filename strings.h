@@ -77,4 +77,8 @@ s_nmatch(const char *a,
 extern int
 s_trim(char *s);
 
+extern char *
+s_dupcat(const char *str,
+	 ...);
+
 #endif

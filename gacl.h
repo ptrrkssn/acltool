@@ -375,18 +375,26 @@ typedef uint16_t GACE_FLAG;
 typedef uint32_t GACE_PERMSET;
 typedef uint32_t GACE_PERM;
 
-typedef enum gace_tag {
-  GACE_TAG_UNDEFINED = 0x0000,
-  GACE_TAG_USER_OBJ  = 0x0001,
-  GACE_TAG_USER      = 0x0002,
-  GACE_TAG_GROUP_OBJ = 0x0004,
-  GACE_TAG_GROUP     = 0x0008,
-  GACE_TAG_MASK      = 0x0010,
-  GACE_TAG_OTHER_OBJ = 0x0020,
-  GACE_TAG_EVERYONE  = 0x0040,
-} GACE_TAG;
+typedef enum gace_tag_type {
+  GACE_TAG_TYPE_UNKNOWN   = 0x0000,
+  GACE_TAG_TYPE_USER_OBJ  = 0x0001,
+  GACE_TAG_TYPE_USER      = 0x0002,
+  GACE_TAG_TYPE_GROUP_OBJ = 0x0004,
+  GACE_TAG_TYPE_GROUP     = 0x0008,
+  GACE_TAG_TYPE_MASK      = 0x0010, /* POSIX.1e */
+  GACE_TAG_TYPE_OTHER_OBJ = 0x0020, /* POSIX.1e */
+  GACE_TAG_TYPE_EVERYONE  = 0x0040,
+} GACE_TAG_TYPE;
 
 #define GACE_TAG_OTHER GACE_TAG_OTHER_OBJ
+
+
+typedef struct gacl_entry_tag {
+  GACE_TAG_TYPE type;
+  uid_t ugid;
+  char *name;
+} GACE_TAG;
+
 
 #define GACL_FIRST_ENTRY 0
 #define GACL_NEXT_ENTRY  1
@@ -394,7 +402,6 @@ typedef enum gace_tag {
 
 typedef struct gace {
   GACE_TAG tag;
-  uid_t id;
   GACE_PERMSET perms;
   GACE_FLAGSET flags;
   GACE_TYPE type;
@@ -549,11 +556,11 @@ gacl_set_fd(int fd,
 
 extern int
 gacl_set_tag_type(GACE *ep,
-		  GACE_TAG et);
+		  GACE_TAG_TYPE et);
 
 extern int
 gacl_get_tag_type(GACE *ep,
-		  GACE_TAG *etp);
+		  GACE_TAG_TYPE *etp);
 
 extern void *
 gacl_get_qualifier(GACE *ep);
@@ -684,6 +691,7 @@ gacl_to_text(GACL *ap,
 	     ssize_t *bsp);
 
 
+#if 0
 typedef unsigned long GACE_EDIT_FLAGS;
 
 #define GACE_EDIT_TAG_MASK  0x00000003
@@ -709,11 +717,14 @@ typedef unsigned long GACE_EDIT_FLAGS;
 #define GACE_EDIT_TYPE_ADD  0x00001000
 #define GACE_EDIT_TYPE_SUB  0x00002000
 #define GACE_EDIT_TYPE_ALL  0x00003000
+#endif
+
+#define GACL_TEXT_RELAXED  0x0001 /* Do not verify user/group names */
 
 extern int
 _gacl_entry_from_text(char *cp,
 		      GACE *ep,
-		      GACE_EDIT_FLAGS *edit);
+		      int flags);
 
 extern int
 gacl_entry_from_text(char *buf,
@@ -746,7 +757,7 @@ gacl_delete_def_link_np(const char *path);
 
 typedef GACL *acl_t;
 typedef GACE *acl_entry_t;
-typedef GACE_TAG acl_tag_t;
+typedef GACE_TAG_TYPE acl_tag_t;
 typedef GACE_PERM acl_perm_t;
 typedef GACE_FLAG acl_flag_t;
 typedef GACE_TYPE acl_entry_type_t;
@@ -763,15 +774,15 @@ typedef GACE_FLAGSET *acl_flagset_t;
 #define ACL_MAX_ENTRIES           GACL_MAX_ENTRIES
 #endif
 
-#define ACL_UNDEFINED_TAG         GACE_TAG_UNDEFINED
-#define ACL_USER_OBJ              GACE_TAG_USER_OBJ 
-#define ACL_USER                  GACE_TAG_USER     
-#define ACL_GROUP_OBJ             GACE_TAG_GROUP_OBJ
-#define ACL_GROUP                 GACE_TAG_GROUP    
-#define ACL_MASK                  GACE_TAG_MASK     
-#define ACL_OTHER_OBJ             GACE_TAG_OTHER_OBJ
-#define ACL_OTHER                 GACE_TAG_OTHER_OBJ
-#define ACL_EVERYONE              GACE_TAG_EVERYONE 
+#define ACL_UNDEFINED_TAG         GACE_TAG_TYPE_UNDEFINED
+#define ACL_USER_OBJ              GACE_TAG_TYPE_USER_OBJ 
+#define ACL_USER                  GACE_TAG_TYPE_USER     
+#define ACL_GROUP_OBJ             GACE_TAG_TYPE_GROUP_OBJ
+#define ACL_GROUP                 GACE_TAG_TYPE_GROUP    
+#define ACL_MASK                  GACE_TAG_TYPE_MASK     
+#define ACL_OTHER_OBJ             GACE_TAG_TYPE_OTHER_OBJ
+#define ACL_OTHER                 GACE_TAG_TYPE_OTHER_OBJ
+#define ACL_EVERYONE              GACE_TAG_TYPE_EVERYONE 
 
 #define ACL_ENTRY_TYPE_UNDEFINED  GACE_TYPE_UNDEFINED
 #define ACL_ENTRY_TYPE_ALLOW      GACE_TYPE_ALLOW

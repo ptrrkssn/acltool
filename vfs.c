@@ -101,7 +101,7 @@ vfs_getcwd(char *buf,
   if (getcwd(buf, bufsize)) {
     if (cwd)
       free(cwd);
-    cwd = strdup(buf);
+    cwd = s_dup(buf);
   }
 
   return buf;
@@ -186,14 +186,14 @@ vfs_chdir(const char *path) {
 
     rc = smb_chdir(path);
     if (rc >= 0)
-      cwd = strdup(path);
+      cwd = s_dup(path);
     return rc;
 #endif
     
   case VFS_TYPE_SYS:
     rc = chdir(path);
     if (rc >= 0)
-      cwd = strdup(path);
+      cwd = s_dup(path);
     return rc;
 
   default:
@@ -373,7 +373,7 @@ vfs_listxattr(const char *path,
     if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
       return -1;
     
-    return smb_listxattr(pbuf, buf, bufsize);
+    return smb_listxattr(pbuf, buf, bufsize, 0);
 #endif
 
   case VFS_TYPE_SYS:

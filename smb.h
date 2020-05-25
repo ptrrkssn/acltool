@@ -34,6 +34,38 @@
 #ifndef ACLTOOL_SMB_H
 #define ACLTOOL_SMB_H 1
 
+#define SMB_ACL_TYPE_ALLOW 0x00
+#define SMB_ACL_TYPE_DENY  0x01
+#define SMB_ACL_TYPE_AUDIT 0x02
+#define SMB_ACL_TYPE_ALARM 0x03
+
+#define SMB_ACL_FLAG_OI 0x01 /* Object Inherit */
+#define SMB_ACL_FLAG_CI 0x02 /* Container Inherit */
+#define SMB_ACL_FLAG_NI 0x04 /* No Propagate Inherit */
+#define SMB_ACL_FLAG_IO 0x08 /* Inherit Only */
+
+#define SMB_ACL_PERM_GA 0x10000000
+#define SMB_ACL_PERM_GX 0x20000000
+#define SMB_ACL_PERM_GW 0x40000000
+#define SMB_ACL_PERM_GR 0x80000000
+
+#define SMB_ACL_PERM_CC 0x00000001 /* Read/List */
+#define SMB_ACL_PERM_DC 0x00000002 /* Write/AddFile */
+#define SMB_ACL_PERM_LC 0x00000004 /* Append/AddSubDir */
+#define SMB_ACL_PERM_SW 0x00000008 /* ReadEA */
+#define SMB_ACL_PERM_RP 0x00000010 /* WriteEA */
+#define SMB_ACL_PERM_WP 0x00000020 /* Execute/Traverse */
+#define SMB_ACL_PERM_DT 0x00000040 /* DeleteChild */
+#define SMB_ACL_PERM_LO 0x00000080 /* ReadAttr */
+#define SMB_ACL_PERM_CR 0x00000100 /* WriteAttr */
+
+#define SMB_ACL_PERM_SD 0x00010000 /* Standard Delete */
+#define SMB_ACL_PERM_RC 0x00020000 /* Standard ReadControl */
+#define SMB_ACL_PERM_WD 0x00040000 /* Standard WriteDAC */
+#define SMB_ACL_PERM_WO 0x00080000 /* Standard WriteOwner */
+
+#define SMB_ACL_PERM_SY 0x00100000 /* Synchronize */
+
 extern int
 smb_lstat(const char *path,
 	  struct stat *sp);
@@ -54,10 +86,11 @@ extern GACL *
 smb_acl_get_file(const char *path);
 
 
-extern ssize_t
+extern int
 smb_listxattr(const char *path,
-	     char *buf,
-	      size_t bufsize);
+	      char *buf,
+	      size_t bufsize,
+	      int flags);
 
 extern int
 smb_getxattr(const char *path,

@@ -40,6 +40,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "strings.h"
+
 #define GACL_C_INTERNAL 1
 #include "gacl.h"
 
@@ -54,8 +56,8 @@ static struct gace_perm2c {
 		{ GACE_WRITE_DATA, 'w', "write_data" },
 		{ GACE_EXECUTE, 'x', "execute" },
 		{ GACE_APPEND_DATA, 'p', "append_data" },
-		{ GACE_DELETE, 'd', "delete" },
 		{ GACE_DELETE_CHILD, 'D', "delete_child" },
+		{ GACE_DELETE, 'd', "delete" },
 		{ GACE_READ_ATTRIBUTES, 'a', "read_attributes" },
 		{ GACE_WRITE_ATTRIBUTES, 'A', "write_attributes" },
 		{ GACE_READ_NAMED_ATTRS, 'R', "read_xattrs" },
@@ -123,21 +125,21 @@ _gacl_from_mode(mode_t mode) {
 
   if (gacl_create_entry_np(&ap, &ep, -1) < 0)
     goto Fail;
-  ep->tag   = GACE_TAG_USER_OBJ;
+  ep->tag.type = GACE_TAG_TYPE_USER_OBJ;
   ep->perms = ua;
   ep->flags = 0;
   ep->type  = GACE_TYPE_ALLOW;
 
   if (gacl_create_entry_np(&ap, &ep, -1) < 0)
     goto Fail;
-  ep->tag   = GACE_TAG_GROUP_OBJ;
+  ep->tag.type = GACE_TAG_TYPE_GROUP_OBJ;
   ep->perms = ga;
   ep->flags = 0;
   ep->type  = GACE_TYPE_ALLOW;
 
   if (gacl_create_entry_np(&ap, &ep, -1) < 0)
     goto Fail;
-  ep->tag   = GACE_TAG_EVERYONE;
+  ep->tag.type = GACE_TAG_TYPE_EVERYONE;
   ep->perms = ea;
   ep->flags = 0;
   ep->type  = GACE_TYPE_ALLOW;
@@ -527,7 +529,7 @@ _gacl_entry_compare(const void *va,
   GACE *a = (GACE *) va;
   GACE *b = (GACE *) vb;
   GACE_TYPE aet_a, aet_b;
-  GACE_TAG ta, tb;
+  GACE_TAG_TYPE ta, tb;
   GACE_FLAGSET *afs, *bfs;
   int v;
   int inherited_a, inherited_b;
@@ -558,7 +560,7 @@ _gacl_entry_compare(const void *va,
     return v;
 
   switch (ta) {
-  case GACE_TAG_USER:
+  case GACE_TAG_TYPE_USER:
     qa = (uid_t *) gacl_get_qualifier(a);
     qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
@@ -568,7 +570,7 @@ _gacl_entry_compare(const void *va,
       return v;
     break;
     
-  case GACE_TAG_GROUP:
+  case GACE_TAG_TYPE_GROUP:
     qa = (uid_t *) gacl_get_qualifier(a);
     qb = (uid_t *) gacl_get_qualifier(b);
     v = (*qa-*qb);
@@ -688,7 +690,7 @@ int
 gacl_is_trivial_np(GACL *ap,
 		   int *trivialp) {
   GACE *ep;
-  GACE_TAG t;
+  GACE_TAG_TYPE t;
   int i, rc, tf;
 
   
@@ -705,9 +707,9 @@ gacl_is_trivial_np(GACL *ap,
     switch (ap->type) {
     case GACL_TYPE_NFS4:
       switch (t) {
-      case GACE_TAG_USER_OBJ:
-      case GACE_TAG_GROUP_OBJ:
-      case GACE_TAG_EVERYONE:
+      case GACE_TAG_TYPE_USER_OBJ:
+      case GACE_TAG_TYPE_GROUP_OBJ:
+      case GACE_TAG_TYPE_EVERYONE:
 	break;
 	
       default:
@@ -731,7 +733,7 @@ gacl_strip_np(GACL *ap,
 	      int recalculate_mask) {
   GACL *nap;
   GACE *ep;
-  GACE_TAG t;
+  GACE_TAG_TYPE t;
   int i, rc;
   
   
@@ -744,9 +746,9 @@ gacl_strip_np(GACL *ap,
       return NULL;
 
     switch (t) {
-    case GACE_TAG_USER_OBJ:
-    case GACE_TAG_GROUP_OBJ:
-    case GACE_TAG_EVERYONE:
+    case GACE_TAG_TYPE_USER_OBJ:
+    case GACE_TAG_TYPE_GROUP_OBJ:
+    case GACE_TAG_TYPE_EVERYONE:
       gacl_add_entry_np(&nap, ep, -1);
       break;
     default:
@@ -763,7 +765,7 @@ int
 _gacl_entry_match(GACE *aep,
 		  GACE *mep,
 		  int how) {
-  GACE_TAG att, mtt;
+  GACE_TAG_TYPE att, mtt;
   GACE_PERMSET *apsp, *mpsp;
   GACE_FLAGSET *afsp, *mfsp;
   GACE_TYPE aet, met;
@@ -785,7 +787,7 @@ _gacl_entry_match(GACE *aep,
   if (att != mtt)
     return 0;
 
-  if (att == GACE_TAG_USER || att == GACE_TAG_GROUP) {
+  if (att == GACE_TAG_TYPE_USER || att == GACE_TAG_TYPE_GROUP) {
     uid_t *qa = (uid_t *) gacl_get_qualifier(aep);
     uid_t *qb = (uid_t *) gacl_get_qualifier(mep);
     
@@ -912,137 +914,10 @@ gacl_match(GACL *ap,
 
 
 
-#if ENABLE_SMB
-
-#include <libsmbclient.h>
-
-static void
-_smb_get_auth_data_fn(const char * pServer,
-		      const char * pShare,
-		      char * pWorkgroup,
-		      int maxLenWorkgroup,
-		      char * pUsername,
-		      int maxLenUsername,
-		      char * pPassword,
-		      int maxLenPassword)
-{
-    char            temp[128];
-    char            server[256] = { '\0' };
-    char            share[256] = { '\0' };
-    char            workgroup[256] = { '\0' };
-    char            username[256] = { '\0' };
-    char            password[256] = { '\0' };
-    char           *ret;
-
-    static int krb5_set = 1;
-
-    if (strcmp(server, pServer) == 0 &&
-        strcmp(share, pShare) == 0 &&
-        *workgroup != '\0' &&
-        *username != '\0')
-    {
-        strncpy(pWorkgroup, workgroup, maxLenWorkgroup - 1);
-        strncpy(pUsername, username, maxLenUsername - 1);
-        strncpy(pPassword, password, maxLenPassword - 1);
-        return;
-    }
-
-    if (krb5_set && getenv("KRB5CCNAME")) {
-      krb5_set = 0;
-      return;
-    }
-
-    fprintf(stdout, "Workgroup: [%s] ", pWorkgroup);
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pWorkgroup, temp, maxLenWorkgroup - 1);
-    }
-    
-    fprintf(stdout, "Username: [%s] ", pUsername);
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pUsername, temp, maxLenUsername - 1);
-    }
-    
-    fprintf(stdout, "Password: ");
-    ret = fgets(temp, sizeof(temp), stdin);
-    if (ret == NULL) {
-	    return;
-    }
-    
-    if (temp[strlen(temp) - 1] == '\n') /* A new line? */
-    {
-        temp[strlen(temp) - 1] = '\0';
-    }
-    
-    if (temp[0] != '\0')
-    {
-        strncpy(pPassword, temp, maxLenPassword - 1);
-    }
-
-    strncpy(workgroup, pWorkgroup, sizeof(workgroup) - 1);
-    strncpy(username, pUsername, sizeof(username) - 1);
-    strncpy(password, pPassword, sizeof(password) - 1);
-
-    krb5_set = 1;
-}
-#endif
-
-GACL *
-_gacl_get_smb_file(const char *path,
-		  int flags) {
-#if ENABLE_SMB
-  SMBCCTX *context;
-  char value[2048];
-  struct stat sb;
-  
-  
-  smbc_init(_smb_get_auth_data_fn, 0);
-  context = smbc_set_context(NULL);
-  smbc_setOptionFullTimeNames(context, 1);
-
-  if (smbc_stat(path, &sb) < 0)
-    return NULL;
-
-  if (smbc_getxattr(path, "system.nt_sec_desc.acl.*+", value, sizeof(value)) < 0)
-    return NULL;
-
-  fprintf(stderr, "SMB ACLS:\n%s\n", value);
-  /* Translate value into standard GACL */
-#endif
-  errno = ENOSYS;
-  return NULL;
-}
-
 
 GACL *
 gacl_get_file(const char *path,
 	      GACL_TYPE type) {
-#if ENABLE_SMB
-  if (strncmp(path, "smb://", 6) == 0)
-    return _gacl_get_smb_file(path, 0);
-#endif
-  
   return _gacl_get_fd_file(-1, path, type, 0);
 }
 
@@ -1050,11 +925,6 @@ gacl_get_file(const char *path,
 GACL *
 gacl_get_link_np(const char *path,
 		 GACL_TYPE type) {
-#if ENABLE_SMB
-  if (strncmp(path, "smb://", 6) == 0)
-    return _gacl_get_smb_file(path, GACL_F_SYMLINK_NOFOLLOW);
-#endif
-  
   return _gacl_get_fd_file(-1, path, type, GACL_F_SYMLINK_NOFOLLOW);
 }
 
@@ -1102,8 +972,8 @@ gacl_set_fd(int fd,
 
 
 int
-gacl_get_tag_type(GACE *ep,
-		  GACE_TAG *etp) {
+_gacl_get_tag(GACE *ep,
+	      GACE_TAG *etp) {
   if (!ep || !etp) {
     errno = EINVAL;
     return -1;
@@ -1113,26 +983,242 @@ gacl_get_tag_type(GACE *ep,
   return 0;
 }
 
+
+int
+_gacl_set_tag(GACE *ep,
+	      GACE_TAG *etp) {
+  if (!ep || !etp) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  ep->tag.type = etp->type;
+  ep->tag.ugid = etp->ugid;
+
+  if (ep->tag.name)
+    free(ep->tag.name);
+  
+  ep->tag.name = s_dup(etp->name);
+  return 0;
+}
+
+
+/* 
+ * Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ )
+ *
+ * Format: 
+ * [{user|group}:]<name>[:]
+ */
+int
+_gacl_entry_tag_from_text(GACE *ep,
+			  char **bufp,
+			  int flags) {
+  struct passwd *pp;
+  struct group *gp;
+  char *np, *cp = *bufp;
+  GACE_TAG *etp = &ep->tag;
+
+  
+  if (strncasecmp(cp, "user:", 5) == 0 || strncasecmp(cp, "u:", 2) == 0) {
+    etp->type = GACE_TAG_TYPE_USER;
+
+    cp = strchr(cp, ':')+1;
+    
+    /* Locate end of tag */
+    np = cp;
+    while (*np && *np != ':')
+      ++np;
+    
+    if (sscanf(cp, "%d", &etp->ugid) == 1) {
+      
+      pp = getpwuid(etp->ugid);
+      if (pp)
+	etp->name = s_dup(pp->pw_name);
+      else {
+	if (flags & GACL_TEXT_RELAXED)
+	  etp->name = s_ndup(cp, np-cp);
+	else {
+	  errno = EINVAL;
+	  return -1;
+	}
+      }
+      
+    } else {
+      
+      etp->name = s_ndup(cp, np-cp);
+      if ((pp = getpwnam(etp->name)) != NULL)
+	etp->ugid = pp->pw_uid;
+      else {
+	if (flags & GACL_TEXT_RELAXED)	
+	  etp->ugid = -1;
+	else {
+	  errno = EINVAL;
+	  return -1;
+	}
+      }
+      
+    } 
+    
+    if (*np)
+      ++np;
+    
+    *bufp = np;
+    return 0;
+  }
+
+  if (strncasecmp(cp, "group:", 6) == 0 || strncasecmp(cp, "g:", 2) == 0) {
+    etp->type = GACE_TAG_TYPE_GROUP;
+    
+    cp = strchr(cp, ':')+1;
+    
+    /* Locate end of tag */
+    np = cp;
+    while (*np && *np != ':')
+      ++np;
+    
+    if (sscanf(cp, "%d", &etp->ugid) == 1) {
+      
+      gp = getgrgid(etp->ugid);
+      if (gp)
+	etp->name = s_dup(gp->gr_name);
+      else {
+	if (flags & GACL_TEXT_RELAXED)	
+	  etp->name = s_ndup(cp, np-cp);
+	else {
+	  errno = EINVAL;
+	  return -1;
+	}
+      }
+      
+    } else {
+      etp->name = s_ndup(cp, np-cp);
+      if ((gp = getgrnam(etp->name)) != NULL)
+	etp->ugid = gp->gr_gid;
+      else {
+	if (flags & GACL_TEXT_RELAXED)	
+	  etp->ugid = -1;
+	else {
+	  errno = EINVAL;
+	  return -1;
+	}
+      }
+      
+    }
+    
+    if (*np)
+      ++np;
+    
+    *bufp = np;
+    return 0;
+  }
+
+
+  /* Locate end of tag */
+  np = strchr(cp, ':');
+
+  etp->name = s_ndup(cp, np-cp);
+  if (!etp->name) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (np)
+    ++np;
+  
+  if (strcasecmp(etp->name, "owner@") == 0) {
+    etp->type = GACE_TAG_TYPE_USER_OBJ;
+    etp->ugid = -1;
+
+    *bufp = np;
+    return 0;
+  }
+
+  if (strcasecmp(etp->name, "group@") == 0) {
+    etp->type = GACE_TAG_TYPE_GROUP_OBJ;
+    etp->ugid = -1;
+    
+    *bufp = np;
+    return 0;
+  }
+
+  if (strcasecmp(etp->name, "everyone@") == 0) {
+    etp->type = GACE_TAG_TYPE_EVERYONE;
+    etp->ugid = -1;
+
+    *bufp = np;
+    return 0;
+  } 
+
+  /* 
+   * Attempt to autodetect user/group - must be unique 
+   * user/group name or uid/gid to work!
+   */
+  etp->ugid = -1;
+  if (sscanf(etp->name, "%d", &etp->ugid) == 1) {
+    pp = getpwuid(etp->ugid);
+    gp = getgrgid(etp->ugid);
+  } else {
+    pp = getpwnam(etp->name);
+    gp = getgrnam(etp->name);
+  }
+  
+  if (pp && gp) {
+    errno = EINVAL;
+    return -1;
+  }
+  
+  if (pp) {
+    etp->type = GACE_TAG_TYPE_USER;
+    etp->ugid = pp->pw_uid;
+  } else if (gp) {
+    etp->type = GACE_TAG_TYPE_GROUP;
+    etp->ugid = gp->gr_gid;
+  } else {
+    if (flags & GACL_TEXT_RELAXED)
+      etp->type = GACE_TAG_TYPE_UNKNOWN;
+    else {
+      errno = EINVAL;
+      return -1;
+    }
+  }
+
+  *bufp = np;
+  return 0;
+}
+
+
+int
+gacl_get_tag_type(GACE *ep,
+		  GACE_TAG_TYPE *ettp) {
+  if (!ep || !ettp) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  *ettp = ep->tag.type;
+  return 0;
+}
+
 int
 gacl_set_tag_type(GACE *ep,
-		  GACE_TAG et) {
+		  GACE_TAG_TYPE et) {
   if (!ep) {
     errno = EINVAL;
     return -1;
   }
 
   switch (et) {
-  case GACE_TAG_USER_OBJ:
-  case GACE_TAG_USER:
-  case GACE_TAG_GROUP_OBJ:
-  case GACE_TAG_GROUP:
+  case GACE_TAG_TYPE_USER_OBJ:
+  case GACE_TAG_TYPE_USER:
+  case GACE_TAG_TYPE_GROUP_OBJ:
+  case GACE_TAG_TYPE_GROUP:
 
-  case GACE_TAG_MASK:
-  case GACE_TAG_OTHER_OBJ:
+  case GACE_TAG_TYPE_MASK:
+  case GACE_TAG_TYPE_OTHER_OBJ:
     _gacl_entry_set_brand_np(ep, GACL_BRAND_POSIX);
     break;
 
-  case GACE_TAG_EVERYONE:
+  case GACE_TAG_TYPE_EVERYONE:
     _gacl_entry_set_brand_np(ep, GACL_BRAND_NFS4);
     break;
 
@@ -1141,7 +1227,7 @@ gacl_set_tag_type(GACE *ep,
     return -1;
   }
 
-  ep->tag = et;
+  ep->tag.type = et;
   return 0;
 }
 
@@ -1155,14 +1241,14 @@ gacl_get_qualifier(GACE *ep) {
     return NULL;
   }
 
-  switch (ep->tag) {
-  case GACE_TAG_USER:
-  case GACE_TAG_GROUP:
+  switch (ep->tag.type) {
+  case GACE_TAG_TYPE_USER:
+  case GACE_TAG_TYPE_GROUP:
     idp = malloc(sizeof(*idp));
     if (!idp)
       return NULL;
 
-    *idp = ep->id;
+    *idp = ep->tag.ugid;
     return (void *) idp;
 
   default:
@@ -1179,10 +1265,10 @@ gacl_set_qualifier(GACE *ep,
     return -1;
   }
 
-  switch (ep->tag) {
-  case GACE_TAG_USER:
-  case GACE_TAG_GROUP:
-    ep->id = * (uid_t *) qp;
+  switch (ep->tag.type) {
+  case GACE_TAG_TYPE_USER:
+  case GACE_TAG_TYPE_GROUP:
+    ep->tag.ugid = * (uid_t *) qp;
     return 0;
 
   default:
@@ -1369,59 +1455,19 @@ gacl_entry_tag_to_text(GACE *ep,
 		       char *buf,
 		       size_t bufsize,
 		       int flags) {
-  GACE_TAG et;
-  struct passwd *pp;
-  struct group *gp;
+  GACE_TAG_TYPE et;
 
   
   if (gacl_get_tag_type(ep, &et) < 0)
     return -1;
+
+  if (et == GACE_TAG_TYPE_USER) {
+    return snprintf(buf, bufsize, "user:%s", ep->tag.name);
+  } else if (et == GACE_TAG_TYPE_GROUP) {
+    return snprintf(buf, bufsize, "group:%s", ep->tag.name);
+  } else
+    return snprintf(buf, bufsize, "%s", ep->tag.name);
   
-  switch (et) {
-  case GACE_TAG_UNDEFINED:
-  case GACE_TAG_MASK:
-  case GACE_TAG_OTHER_OBJ:
-    return -1;
-    
-  case GACE_TAG_USER_OBJ:
-    return snprintf(buf, bufsize, "owner@");
-    
-  case GACE_TAG_USER:
-    pp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getpwuid(ep->id);
-    if (pp) {
-      gp = getgrgid(ep->id);
-      if (gp || (flags & GACL_TEXT_STANDARD))
-	return snprintf(buf, bufsize, "%s:%s",
-			(flags & GACL_TEXT_COMPACT) ? "u" : "user", pp->pw_name);
-      else
-	return snprintf(buf, bufsize, "%s", pp->pw_name);
-    }
-    else
-      return snprintf(buf, bufsize, "%s:%d",
-		      (flags & GACL_TEXT_COMPACT) ? "u" : "user", ep->id);
-    
-  case GACE_TAG_GROUP_OBJ:
-    return snprintf(buf, bufsize, "group@");
-    
-  case GACE_TAG_GROUP:
-    gp = (flags & GACL_TEXT_NUMERIC_IDS) ? NULL : getgrgid(ep->id);
-    if (gp) {
-      pp = getpwuid(ep->id);
-      if (pp || (flags & GACL_TEXT_STANDARD))
-	return snprintf(buf, bufsize, "%s:%s",
-			(flags & GACL_TEXT_COMPACT) ? "g" : "group", gp->gr_name);
-      else
-	return snprintf(buf, bufsize, "%s", gp->gr_name);
-    }
-    else
-      return snprintf(buf, bufsize, "%s:%d",
-		      (flags & GACL_TEXT_COMPACT) ? "g" : "group", ep->id);
-    
-  case GACE_TAG_EVERYONE:
-    return snprintf(buf, bufsize, "everyone@");
-
-  }
-
   errno = EINVAL;
   return -1;
 }
@@ -1584,18 +1630,18 @@ gacl_entry_to_text(GACE *ep,
   }
   
   if (flags & GACL_TEXT_APPEND_ID) {
-    GACE_TAG et;
+    GACE_TAG_TYPE et;
     
     if (gacl_get_tag_type(ep, &et) < 0)
       return -1;
 
     rc = 0;
     switch (et) {
-    case GACE_TAG_USER:
-      rc = snprintf(bp, bufsize, "\t# uid=%d", ep->id);
+    case GACE_TAG_TYPE_USER:
+      rc = snprintf(bp, bufsize, "\t# uid=%d", ep->tag.ugid);
       break;
-    case GACE_TAG_GROUP:
-      rc = snprintf(bp, bufsize, "\t# gid=%d", ep->id);
+    case GACE_TAG_TYPE_GROUP:
+      rc = snprintf(bp, bufsize, "\t# gid=%d", ep->tag.ugid);
       break;
     default:
       break;
@@ -1630,7 +1676,7 @@ gacl_to_text_np(GACL *ap,
        i++) {
     char es[1024], *cp;
     ssize_t rc, len;
-    GACE_TAG et;
+    GACE_TAG_TYPE et;
     
     if (gacl_get_tag_type(ep, &et) < 0)
       goto Fail;
@@ -1642,7 +1688,7 @@ gacl_to_text_np(GACL *ap,
     cp = strchr(es, ':');
     if (cp) {
       len = cp-es;
-      if (len > 0 && (et == GACE_TAG_USER || et == GACE_TAG_GROUP)) {
+      if (len > 0 && (et == GACE_TAG_TYPE_USER || et == GACE_TAG_TYPE_GROUP)) {
 	cp = strchr(cp+1, ':');
 	if (cp)
 	  len = cp-es;
@@ -1763,7 +1809,8 @@ gacl_delete_fd_np(int fd,
 
 int
 _gacl_permset_from_text(const char *buf,
-			GACE_PERMSET *psp) {
+			GACE_PERMSET *psp,
+			int flags) {
   int i;
   char c;
   GACE_PERMSET nps = 0;
@@ -1816,7 +1863,8 @@ _gacl_permset_from_text(const char *buf,
 
 int
 _gacl_flagset_from_text(const char *buf,
-		       GACE_FLAGSET *fsp) {
+			GACE_FLAGSET *fsp,
+			int flags) {
   int i;
   char c;
   GACE_FLAGSET nfs = 0;
@@ -1852,160 +1900,24 @@ _gacl_flagset_from_text(const char *buf,
 int
 _gacl_entry_from_text(char *cp,
 		      GACE *ep,
-		      GACE_EDIT_FLAGS *editflags) {
+		      int flags) {
   char *np;
   int f_none;
 
   
-  if (editflags) {
-    *editflags = 0;
-    
-    switch (*cp) {
-    case '+':
-      *editflags |= GACE_EDIT_TAG_ADD;
-      ++cp;
-      break;
-      
-    case '-':
-      *editflags |= GACE_EDIT_TAG_SUB;
-      ++cp;
-      break;
-
-    case '*':
-      *editflags |= GACE_EDIT_TAG_ALL;
-      ++cp;
-      break;
-    }
-  }
-
-  /* 1. Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ ) */
-  np = strchr(cp, ':');
-  if (!np) {
-    errno = EINVAL;
+  /* 1. Get tag */
+  
+  if (_gacl_entry_tag_from_text(ep, &cp, flags) < 0)
     return -1;
-  }
-  *np++ = '\0';
-
-  if (strcasecmp(cp, "user") == 0 || strcasecmp(cp, "u") == 0) {
-    struct passwd *pp;
-    uid_t uid;
-
-    cp = np;
-    np = strchr(cp, ':');
-    if (!np) {
-      errno = EINVAL;
-      return -1;
-    }
-    *np++ = '\0';
-    
-    if (sscanf(cp, "%d", &uid) == 1) {
-      ep->tag = GACE_TAG_USER;
-      ep->id = uid;
-    } else if ((pp = getpwnam(cp)) != NULL) {
-      ep->tag = GACE_TAG_USER;
-      ep->id = pp->pw_uid;
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
-
-  } else if (strcasecmp(cp, "group") == 0 || strcasecmp(cp, "g") == 0) {
-    struct group *gp;
-    gid_t gid;
-    
-    cp = np;
-    np = strchr(cp, ':');
-    if (!np) {
-      errno = EINVAL;
-      return -1;
-    }
-    *np++ = '\0';
-    
-    if (sscanf(cp, "%d", &gid) == 1) {
-      ep->tag = GACE_TAG_GROUP;
-      ep->id = gid;
-    } else if ((gp = getgrnam(cp)) != NULL) {
-      ep->tag = GACE_TAG_GROUP;
-      ep->id = gp->gr_gid;
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
-
-  } else if (strcasecmp(cp, "owner@") == 0) {
-    
-    ep->tag = GACE_TAG_USER_OBJ;
-    ep->id = -1;
-
-  } else if (strcasecmp(cp, "group@") == 0) {
-    
-    ep->tag = GACE_TAG_GROUP_OBJ;
-    ep->id = -1;
-
-  } else if (strcasecmp(cp, "everyone@") == 0) {
-
-    ep->tag = GACE_TAG_EVERYONE;
-    ep->id = -1;
-
-  } else {
-
-    /* Attempt to autodetect user/group - must be unique user/group name or uid/gid to work! */
-    struct passwd *pp;
-    struct group *gp;
-    uid_t id;
-    
-    
-    if (sscanf(cp, "%d", &id) == 1) {
-      pp = getpwuid(id);
-      gp = getgrgid(id);
-    } else {
-      pp = getpwnam(cp);
-      gp = getgrnam(cp);
-    }
-
-    if (pp && gp) {
-      errno = EINVAL;
-      return -1;
-    }
-
-    if (pp) {
-      ep->tag = GACE_TAG_USER;
-      ep->id = pp->pw_uid;
-    } else if (gp) {
-      ep->tag = GACE_TAG_GROUP;
-      ep->id = gp->gr_gid;
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
-
-  }
 
   /* 2. Get permset */
-  cp = np;
   np = strchr(cp, ':');
   if (np)
     *np++ = '\0';
   
   f_none = (strcasecmp(cp, "none") == 0);
 
-  if (editflags && cp)
-    switch (*cp) {
-    case '+':
-      *editflags |= GACE_EDIT_PERM_ADD;
-      ++cp;
-      break;
-    case '-':
-      *editflags |= GACE_EDIT_PERM_SUB;
-      ++cp;
-      break;
-    case '*':
-      *editflags |= GACE_EDIT_PERM_ALL;
-      ++cp;
-      break;
-    }
-  
-  if (_gacl_permset_from_text(cp, &ep->perms) < 0)
+  if (_gacl_permset_from_text(cp, &ep->perms, flags) < 0)
     return -1;
   cp = np;
 
@@ -2015,27 +1927,11 @@ _gacl_entry_from_text(char *cp,
 	     strcmp(cp, "deny") != 0 &&
 	     strcmp(cp, "audit") != 0 &&
 	     strcmp(cp, "alarm") != 0)) {
-    if (editflags)
-      switch (*cp) {
-      case '+':
-	*editflags |= GACE_EDIT_FLAG_ADD;
-	++cp;
-	break;
-      case '-':
-	*editflags |= GACE_EDIT_FLAG_SUB;
-	++cp;
-	break;
-      case '*':
-	*editflags |= GACE_EDIT_FLAG_ALL;
-	++cp;
-	break;
-      }
-    
     np = strchr(cp, ':');
     if (np)
       *np++ = '\0';
     /* Parse flags in cp */
-    if (_gacl_flagset_from_text(cp, &ep->flags) < 0)
+    if (_gacl_flagset_from_text(cp, &ep->flags, flags) < 0)
       return -1;
   } else {
     ep->flags = 0;
@@ -2044,22 +1940,6 @@ _gacl_entry_from_text(char *cp,
   cp = np;
   /* 4. Get type (allow, deny, alarm, audit) */
   if (cp) {
-    if (editflags)
-      switch (*cp) {
-      case '+':
-	*editflags |= GACE_EDIT_TYPE_ADD;
-	++cp;
-	break;
-      case '-':
-	*editflags |= GACE_EDIT_TYPE_SUB;
-	++cp;
-	break;
-      case '*':
-	*editflags |= GACE_EDIT_TYPE_ALL;
-	++cp;
-	break;
-      }
-    
     np = strchr(cp, ':');
     if (np) {
       errno = EINVAL;
@@ -2092,7 +1972,7 @@ _gacl_entry_from_text(char *cp,
 int
 gacl_entry_from_text(char *cp,
 		     GACE *ep) {
-  return _gacl_entry_from_text(cp, ep, NULL);
+  return _gacl_entry_from_text(cp, ep, 0);
 }
 
 
@@ -2102,7 +1982,7 @@ gacl_from_text(const char *buf) {
   char *bp, *tbuf, *es;
 
 
-  bp = tbuf = strdup(buf);
+  bp = tbuf = s_dup(buf);
 
   ap = gacl_init(GACL_MAX_ENTRIES);
   if (!ap) {
@@ -2188,7 +2068,7 @@ _nfs4_id_domain(void) {
 	return NULL;
       }
 	
-      saved_domain = strdup(t);
+      saved_domain = s_dup(t);
       break;
     }
   }
@@ -2305,31 +2185,27 @@ _gacl_init_from_nfs4(const char *buf,
 
     if (ep->flags & NFS4_ACE_IDENTIFIER_GROUP) {
       if (strncmp(cp, "GROUP@", idlen) == 0) {
-	ep->tag = GACE_TAG_GROUP_OBJ;
+	ep->tag = GACE_TAG_TYPE_GROUP_OBJ;
 	ep->id = -1;
       } else {
 	ep->id = -1;
 	(void) _nfs4_id_to_gid(cp, idlen, &ep->id);
-	ep->tag = GACE_TAG_GROUP;
+	ep->tag = GACE_TAG_TYPE_GROUP;
       }
     } else {
       if (strncmp(cp, "OWNER@", idlen) == 0) {
-	ep->tag = GACE_TAG_USER_OBJ;
+	ep->tag = GACE_TAG_TYPE_USER_OBJ;
 	ep->id = -1;
       } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
-	ep->tag = GACE_TAG_EVERYONE;
+	ep->tag = GACE_TAG_TYPE_EVERYONE;
 	ep->id = -1;
       } else {
 	ep->id = -1;
 	(void) _nfs4_id_to_uid(cp, idlen, &ep->id);
-	ep->tag = GACE_TAG_USER;
+	ep->tag = GACE_TAG_TYPE_USER;
       }
     }
 
-#if 0
-    printf(" - T=%d, F=%08x, P=%08x, ID=%d (%.*s)\n", 
-	   ep->type, ep->flags, ep->perms, ep->id, idlen, cp);
-#endif
 
     vp += idlen / sizeof(u_int32_t);
     if (idlen % sizeof(u_int32_t))
@@ -2440,7 +2316,7 @@ _gacl_to_nfs4(GACL *ap,
       errno = ENOMEM;
       return -1;
     }
-    *vp++ = htonl(ep->flags | (ep->tag == GACE_TAG_GROUP || ep->tag == GACE_TAG_GROUP_OBJ ? 
+    *vp++ = htonl(ep->flags | (ep->tag == GACE_TAG_TYPE_GROUP || ep->tag == GACE_TAG_TYPE_GROUP_OBJ ? 
 			       NFS4_ACE_IDENTIFIER_GROUP : 0));
     
     if (vp >= endp) {
@@ -2450,16 +2326,16 @@ _gacl_to_nfs4(GACL *ap,
     *vp++ = htonl(ep->perms);
 
     switch (ep->tag) {
-    case GACE_TAG_USER_OBJ:
+    case GACE_TAG_TYPE_USER_OBJ:
       idname = "OWNER@";
       break;
-    case GACE_TAG_GROUP_OBJ:
+    case GACE_TAG_TYPE_GROUP_OBJ:
       idname = "GROUP@";
       break;
-    case GACE_TAG_EVERYONE:
+    case GACE_TAG_TYPE_EVERYONE:
       idname = "EVERYONE@";
       break;
-    case GACE_TAG_USER:
+    case GACE_TAG_TYPE_USER:
       pp = getpwuid(ep->id);
       if (pp) {
 	idd = _nfs4_id_domain();
@@ -2472,7 +2348,7 @@ _gacl_to_nfs4(GACL *ap,
       }
       idname = tbuf;
       break;
-    case GACE_TAG_GROUP:
+    case GACE_TAG_TYPE_GROUP:
       gp = getgrgid(ep->id);
       if (gp) {
 	idd = _nfs4_id_domain();
@@ -2554,8 +2430,53 @@ _gacl_set_fd_file(int fd,
 static int
 _gacl_entry_from_acl_entry(GACE *nep,
 			   freebsd_acl_entry_t oep) {
-  nep->tag   = oep->ae_tag;
-  nep->id    = oep->ae_id;
+  struct passwd *pp;
+  struct group *gp;
+
+  
+  nep->tag.type = oep->ae_tag;
+  nep->tag.ugid = oep->ae_id;
+
+  switch (nep->tag.type) {
+  case GACE_TAG_TYPE_UNKNOWN:
+  case GACE_TAG_TYPE_MASK:
+  case GACE_TAG_TYPE_OTHER_OBJ:
+    errno = EINVAL;
+    return -1;
+
+  case GACE_TAG_TYPE_USER_OBJ:
+    nep->tag.name = s_dup("owner@");
+    break;
+  case GACE_TAG_TYPE_GROUP_OBJ:
+    nep->tag.name = s_dup("group@");
+    break;
+  case GACE_TAG_TYPE_EVERYONE:
+    nep->tag.name = s_dup("everyone@");
+    break;
+    
+  case GACE_TAG_TYPE_USER:
+    pp = getpwuid(nep->tag.ugid);
+    if (pp)
+      nep->tag.name = s_dup(pp->pw_name);
+    else {
+      char buf[256];
+      snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
+      nep->tag.name = s_dup(buf);
+    }
+    break;
+    
+  case GACE_TAG_TYPE_GROUP:
+    gp = getgrgid(nep->tag.ugid);
+    if (gp)
+      nep->tag.name = s_dup(gp->gr_name);
+    else {
+      char buf[256];
+      snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
+      nep->tag.name = s_dup(buf);
+    }
+    break;
+  }
+  
   nep->perms = oep->ae_perm;
   nep->flags = oep->ae_flags;
   nep->type  = oep->ae_entry_type;
@@ -2566,8 +2487,15 @@ _gacl_entry_from_acl_entry(GACE *nep,
 static int
 _acl_entry_from_gace(freebsd_acl_entry_t nep,
 		     GACE *oep) {
-  nep->ae_tag        = oep->tag;
-  nep->ae_id         = oep->id;
+  if (oep->tag.type == GACE_TAG_TYPE_UNKNOWN ||
+      ((oep->tag.type == GACE_TAG_TYPE_USER || oep->tag.type == GACE_TAG_TYPE_GROUP) &&
+       oep->tag.ugid == -1)) {
+    errno = EINVAL;
+    return -1;
+  }
+    
+  nep->ae_tag        = oep->tag.type;
+  nep->ae_id         = oep->tag.ugid;
   nep->ae_perm       = oep->perms;
   nep->ae_flags      = oep->flags;
   nep->ae_entry_type = oep->type;
@@ -2677,22 +2605,22 @@ _gacl_entry_to_ace(GACE *ep,
   }
 
   switch (ep->tag) {
-  case GACE_TAG_USER_OBJ:
+  case GACE_TAG_TYPE_USER_OBJ:
     ap->a_flags = ACE_OWNER;
     break;
 
-  case GACE_TAG_GROUP_OBJ:
+  case GACE_TAG_TYPE_GROUP_OBJ:
     ap->a_flags = (ACE_GROUP|ACE_IDENTIFIER_GROUP);
     break;
 
-  case GACE_TAG_EVERYONE:
+  case GACE_TAG_TYPE_EVERYONE:
     ap->a_flags = ACE_EVERYONE;
     break;
 
-  case GACE_TAG_USER:
+  case GACE_TAG_TYPE_USER:
     break;
 
-  case GACE_TAG_GROUP:
+  case GACE_TAG_TYPE_GROUP:
     ap->a_flags = ACE_IDENTIFIER_GROUP;
     break;
 
@@ -2719,22 +2647,22 @@ _gacl_entry_from_ace(GACE *ep,
 
   switch (ap->a_flags & (ACE_OWNER|ACE_GROUP|ACE_EVERYONE)) {
   case ACE_OWNER:
-    ep->tag = GACE_TAG_USER_OBJ;
+    ep->tag = GACE_TAG_TYPE_USER_OBJ;
     break;
 
   case ACE_GROUP:
-    ep->tag = GACE_TAG_GROUP_OBJ;
+    ep->tag = GACE_TAG_TYPE_GROUP_OBJ;
     break;
 
   case ACE_EVERYONE:
-    ep->tag = GACE_TAG_EVERYONE;
+    ep->tag = GACE_TAG_TYPE_EVERYONE;
     break;
 
   default:
     if (ap->a_flags & ACE_IDENTIFIER_GROUP)
-      ep->tag = GACE_TAG_GROUP;
+      ep->tag = GACE_TAG_TYPE_GROUP;
     else
-      ep->tag = GACE_TAG_USER;
+      ep->tag = GACE_TAG_TYPE_USER;
   }
   
   ep->id    = ap->a_who;
@@ -2754,9 +2682,6 @@ _gacl_get_fd_file(int fd,
 		  int flags) {
   GACL *ap;
   int i, n;
-#if 0
-  aclent_t *aep;
-#endif
   ace_t *acp;
 
   
@@ -2879,9 +2804,6 @@ _gacl_set_fd_file(int fd,
 		  int flags) {
   int i, rc;
   ace_t *acp;
-#if 0
-  aclent_t *aep;
-#endif
   
   if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
     struct stat sb;
@@ -2990,9 +2912,10 @@ _gacl_entry_from_acl_entry(GACE *nep,
   macos_acl_tag_t at;
   macos_acl_permset_t ops;
   macos_acl_flagset_t ofs;
-#if 0
   struct passwd *pp;
-#endif
+  struct group *gp;
+  char buf[256];
+
   
   if (acl_get_tag_type(oep, &at) < 0)
     return -1;
@@ -3006,21 +2929,30 @@ _gacl_entry_from_acl_entry(GACE *nep,
     guidp = acl_get_qualifier(oep);
     nep->type = (at == ACL_EXTENDED_ALLOW ? GACE_TYPE_ALLOW : GACE_TYPE_DENY);
 
-    if (mbr_uuid_to_id((const unsigned char *) guidp, &nep->id, &ugtype) < 0)
+    if (mbr_uuid_to_id((const unsigned char *) guidp, &nep->tag.ugid, &ugtype) < 0)
       return -1;
 
     switch (ugtype) {
     case ID_TYPE_UID:
-#if 0
-      /* XXX: Verify the returned id? */
-      pp = getpwuid(nep->id);
-      fprintf(stderr, "user=%s\n", pp->pw_name);
-#endif
-      nep->tag = GACE_TAG_USER;
+      nep->tag = GACE_TAG_TYPE_USER;
+      pp = getpwuid(nep->tag.ugid);
+      if (pp)
+	nep->tag.name = s_dup(pp->pw_name);
+      else {
+	snprint(buf, sizeof(buf), "%d", net->tag.guid);
+	net->tag.name = s_dup(buf);
+      }
       break;
       
     case ID_TYPE_GID:
-      nep->tag = GACE_TAG_GROUP;
+      nep->tag = GACE_TAG_TYPE_GROUP;
+      gp = getgrgid(nep->tag.ugid);
+      if (pp)
+	nep->tag.name = s_dup(gp->gr_name);
+      else {
+	snprint(buf, sizeof(buf), "%d", net->tag.guid);
+	net->tag.name = s_dup(buf);
+      }
       break;
 
     default:
@@ -3088,12 +3020,12 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
     return -1;
 
   switch (etag) {
-  case GACE_TAG_USER:
-    if (mbr_uid_to_uuid(oep->id, (unsigned char *) &guid) < 0)
+  case GACE_TAG_TYPE_USER:
+    if (mbr_uid_to_uuid(oep->tag.ugid, (unsigned char *) &guid) < 0)
       return -1;
     break;
-  case GACE_TAG_GROUP:
-    if (mbr_gid_to_uuid(oep->id, (unsigned char *) &guid) < 0)
+  case GACE_TAG_TYPE_GROUP:
+    if (mbr_gid_to_uuid(oep->tag.ugid, (unsigned char *) &guid) < 0)
       return -1;
     break;
   default:

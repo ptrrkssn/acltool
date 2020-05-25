@@ -131,9 +131,9 @@ dir_cmd(int argc,
 	struct stat sb;
 	
 	if (argv[i])
-	  path = strxcat(argv[i], "/", nlist->v[j], NULL);
+	  path = s_dupcat(argv[i], "/", nlist->v[j], NULL);
 	else
-	  path = strdup(nlist->v[j]);
+	  path = s_dup(nlist->v[j]);
 	
 	if (vfs_lstat(path, &sb) < 0)
 	  printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);

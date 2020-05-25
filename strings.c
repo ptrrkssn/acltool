@@ -172,6 +172,37 @@ s_match(const char *a,
   return 0;
 }
 
+
+char *
+s_dupcat(const char *str,
+	 ...) {
+  va_list ap;
+  char *buf, *cp;
+  size_t len;
+  
+  
+  if (!str)
+    return NULL;
+  
+  len = strlen(str)+1;
+  va_start(ap, str);
+  while ((cp = va_arg(ap, char *)) != NULL)
+    len += strlen(cp);
+  va_end(ap);
+  
+  buf = malloc(len);
+  if (!buf)
+    return NULL;
+  
+  strcpy(buf, str);
+  va_start(ap, str);
+  while ((cp = va_arg(ap, char *)) != NULL)
+    strcat(buf, cp);
+  va_end(ap);
+  
+  return buf;
+}
+
 /*
  * "lac" vs "list-access" = OK
  * "list" vs "list-access" = OK
@@ -255,7 +286,7 @@ slist_add(SLIST *sp,
     sp->s += 256;
   }
 
-  sp->v[sp->c++] = strdup(s);
+  sp->v[sp->c++] = s_dup(s);
   return sp->c;
 }
 

@@ -59,13 +59,14 @@ typedef struct ace_cr {
   mode_t ftypes;
   RANGE *range;
   struct {
+    int type; /* 0 = regex, '=' = exact, '+' positive match, '-' = negative match */
+    
     /* Regex style */
     int avail;
     regex_t preg;
 
     /* Simple style */
     acl_entry_t ep;
-    GACE_EDIT_FLAGS flags;
   } filter;
   struct {
     /* Generic data */
@@ -73,7 +74,6 @@ typedef struct ace_cr {
 
     /* ACE entry */
     acl_entry_t ep;
-    GACE_EDIT_FLAGS flags;
   } change;
   int cmd;
   char *modifiers;
@@ -116,7 +116,7 @@ acecr_from_text(ACECR **head,
 
   
   tbuf = NULL;
-  bp = tbuf = strdup(buf);
+  bp = tbuf = s_dup(buf);
   if (!tbuf)
     return -1;
 
@@ -162,21 +162,25 @@ acecr_from_text(ACECR **head,
     /* Get filter */
     if (*es == '/' && (ep = strchr(++es, '/')) != NULL) {
       int rflags = REG_EXTENDED;
+      int m_type = 0;
+      int c;
+
       
       *ep++ = '\0';
       
       cur->filter.avail = 1;
-      while (strspn(ep, "iv"))
-	switch (*ep++) {
-	case 'i': /* Ignore case */
-	  rflags |= REG_ICASE;
-	  break;
-	case 'v': /* Inverse match */
+      if (strchr("!=+-", *ep))
+	switch (c = *ep++) {
+	case '!': /* Inverse match */
 	  cur->filter.avail = -1;
+	  break;
+	  
+	default:
+	  m_type = c;
 	  break;
 	}
     
-      if (config.f_regex) {
+      if (!m_type) {
 	int ec;
 	
 	ec = regcomp(&cur->filter.preg, es, rflags);
@@ -191,8 +195,10 @@ acecr_from_text(ACECR **head,
 	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
 	if (!cur->filter.ep)
 	  goto Fail;
+
+	cur->filter.type = m_type;
 	
-	if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
+	if (_gacl_entry_from_text(es, cur->filter.ep, 0) < 0)
 	  goto Fail;
       }
       es = ep;
@@ -212,7 +218,7 @@ acecr_from_text(ACECR **head,
     if (*ep)
       *ep++ = '\0';
     if (*es)
-      cur->modifiers = strdup(es);
+      cur->modifiers = s_dup(es);
 
     es = ep;
     if (isspace(*es)) {
@@ -220,7 +226,7 @@ acecr_from_text(ACECR **head,
 	++es;
     }
     if (*es) {
-      cur->change.data = strdup(es);
+      cur->change.data = s_dup(es);
       if (!cur->change.data)
 	goto Fail;
       
@@ -228,7 +234,7 @@ acecr_from_text(ACECR **head,
       if (!cur->change.ep)
 	goto Fail;
 
-      if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0) {
+      if (_gacl_entry_from_text(es, cur->change.ep, 0) < 0) {
 	goto Fail;
       }
     }
@@ -280,7 +286,7 @@ acecr_from_simple_text(ACECR **head,
   if (!*buf)
     return -1;
   
-  bp = tbuf = strdup(buf);
+  bp = tbuf = s_dup(buf);
   if (!tbuf)
     return -1;
 
@@ -315,7 +321,7 @@ acecr_from_simple_text(ACECR **head,
     if (!cur->filter.ep)
       goto Fail;
     
-    if (_gacl_entry_from_text(es, cur->filter.ep, &cur->filter.flags) < 0)
+    if (_gacl_entry_from_text(es, cur->filter.ep, GACL_TEXT_RELAXED) < 0)
       goto Fail;
     
     cur->filter.avail = 1;
@@ -338,11 +344,12 @@ acecr_from_simple_text(ACECR **head,
       if (!cur->change.ep)
 	goto Fail;
       
-      if (_gacl_entry_from_text(es, cur->change.ep, &cur->change.flags) < 0)
+      if (_gacl_entry_from_text(es, cur->change.ep, 0) < 0)
 	goto Fail;
       
-      if (ep)
-	cur->modifiers = strdup(ep);
+      cur->modifiers = s_dup(ep);
+      cur->cmd = 's';
+      
     } else {
       /* Simple change - only update permissions on matching ACEs
        *
@@ -350,31 +357,15 @@ acecr_from_simple_text(ACECR **head,
        *
        * format: <acl>[,<acl>]*
        */
-      acl_permset_t ps;
-      
       cur->change.ep = malloc(sizeof(*(cur->change.ep)));
       if (!cur->change.ep)
 	goto Fail;
       
       *(cur->change.ep) = *(cur->filter.ep);
-      cur->change.flags = cur->filter.flags;
-      
-      switch (cur->filter.flags & GACE_EDIT_TAG_MASK) {
-      case GACE_EDIT_TAG_ADD:
-      case GACE_EDIT_TAG_ALL:
-	acl_get_permset(cur->filter.ep, &ps);
-	acl_clear_perms(ps);
-	acl_set_permset(cur->filter.ep, ps);
-	acl_free(ps);
-	cur->filter.flags &= ~GACE_EDIT_PERM_MASK;
-	cur->filter.flags |= GACE_EDIT_PERM_ALL;
-	break;
-      case GACE_EDIT_TAG_SUB:
-	puts("SUB");
-      }
+      cur->filter.type = 0; /* Ignore 'permissions part at match' */
+      cur->cmd = 'S';
     }
 
-    cur->cmd = 's';
     
     *next = cur;
     next = &cur->next;
@@ -452,51 +443,32 @@ ace_match(acl_entry_t oae,
     return 0;
 
   /* Check the ACE type set */
-  switch (mflags & GACE_EDIT_TYPE_MASK) {
-  case GACE_EDIT_TYPE_NONE:
-  case GACE_EDIT_TYPE_ADD:
-    if (met != oet)
+  if (met != oet)
       return 0;
-    break;
-    
-  case GACE_EDIT_TYPE_SUB:
-    if (met == oet)
-      return 0;
-    break;
-  }
 
   /* Check the flag set */
-  switch (mflags & GACE_EDIT_FLAG_MASK) {
-  case GACE_EDIT_FLAG_NONE:
-    if (*mfs != *ofs)
-      return 0;
-    break;
-    
-  case GACE_EDIT_FLAG_ADD:
-    if (*mfs && (*ofs & *mfs) == 0)
-      return 0;
-    break;
-    
-  case GACE_EDIT_FLAG_SUB:
-    if (*mfs && (*ofs & ~*mfs) != 0)
-      return 0;
-    break;
-  }
+  if (*mfs != *ofs)
+    return 0;
 
-  /* Check the permissions set */
-  switch (mflags & GACE_EDIT_PERM_MASK) {
-  case GACE_EDIT_PERM_NONE:
+  switch (mflags) {
+  case 0:
+    break;
+    
+  case '=':
+    fprintf(stderr, "=Match: o=%08x, m=%08x\n", *ops, *mps);
     if (*mps != *ops)
       return 0;
     break;
-    
-  case GACE_EDIT_PERM_ADD:
-    if (*mps && (*ops & *mps) == 0)
+
+  case '+':
+    fprintf(stderr, "+Match: o=%08x, m=%08x\n", *ops, *mps);
+    if ((*ops & *mps) != *mps)
       return 0;
     break;
     
-  case GACE_EDIT_PERM_SUB:
-    if (*mps && (*ops & ~*mps) != 0)
+  case '-':
+    fprintf(stderr, "-Match: o=%08x, m=%08x, r=%08x\n", *ops, *mps, (*ops & *mps));
+    if ((*ops & *mps) != 0)
       return 0;
     break;
   }
@@ -508,8 +480,7 @@ ace_match(acl_entry_t oae,
 
 static int
 cmd_edit_ace(acl_entry_t oae,
-	     acl_entry_t nae,
-	     GACE_EDIT_FLAGS flags) {
+	     acl_entry_t nae) {
   /* Old ACE */
   acl_tag_t ott;
   acl_entry_type_t oet;
@@ -542,65 +513,21 @@ cmd_edit_ace(acl_entry_t oae,
     return -1;
 
   /* Update the tag type */
-  switch (flags & GACE_EDIT_TAG_MASK) {
-  case GACE_EDIT_TAG_SUB:
+  if (acl_set_tag_type(oae, ntt) < 0)
     goto Fail;
-    
-  case GACE_EDIT_TAG_ADD:
-  case GACE_EDIT_TAG_NONE:
-    acl_set_tag_type(oae, ntt);
-    if (nip)
-      acl_set_qualifier(oae, nip);
-  }
   
-  /* Update the permissions set */
-  switch (flags & GACE_EDIT_PERM_MASK) {
-  case GACE_EDIT_PERM_ADD:
-    acl_merge_permset(ops, nps, +1);
-    if (acl_set_permset(oae, ops) < 0)
+  if (nip)
+    if (acl_set_qualifier(oae, nip) < 0)
       goto Fail;
-    break;
-    
-  case GACE_EDIT_PERM_SUB:
-    acl_merge_permset(ops, nps, -1);
-    if (acl_set_permset(oae, ops) < 0)
-      goto Fail;
-    break;
-    
-  case GACE_EDIT_PERM_NONE:
-    if (acl_set_permset(oae, nps) < 0)
-      goto Fail;
-  }
   
-  /* Update the flag set */
-  switch (flags & GACE_EDIT_FLAG_MASK) {
-  case GACE_EDIT_FLAG_ADD:
-    acl_merge_flagset(ofs, nfs, +1);
-    if (acl_set_flagset_np(oae, ofs) < 0)
-      goto Fail;
-    break;
-    
-  case GACE_EDIT_FLAG_SUB:
-    acl_merge_flagset(ofs, nfs, -1);
-    if (acl_set_flagset_np(oae, ofs) < 0)
-      goto Fail;
-    break;
-    
-  case GACE_EDIT_FLAG_NONE:
-    if (acl_set_flagset_np(oae, nfs) < 0)
-      goto Fail;
-  }
-  
-  /* Update the type */
-  switch (flags & GACE_EDIT_TYPE_MASK) {
-  case GACE_EDIT_TYPE_SUB:
+  if (acl_set_permset(oae, nps) < 0)
     goto Fail;
-    
-  case GACE_EDIT_TYPE_ADD:
-  case GACE_EDIT_TAG_NONE:
-    acl_set_entry_type_np(oae, net);
-    break;
-  }
+  
+  if (acl_set_flagset_np(oae, nfs) < 0)
+    goto Fail;
+  
+  if (acl_set_entry_type_np(oae, net) < 0)
+    goto Fail;
 
   return 1;
 
@@ -611,7 +538,7 @@ cmd_edit_ace(acl_entry_t oae,
 static int
 cmd_edit_crace(ACECR *cr,
 	       acl_entry_t oae) {
-  return cmd_edit_ace(oae, cr->change.ep, cr->change.flags);
+  return cmd_edit_ace(oae, cr->change.ep);
   
 }
 RANGE *
@@ -767,10 +694,10 @@ walker_edit(const char *path,
 
       if (cr->filter.avail) {
 	if (cr->filter.ep)
-	  range = range_filter(cr->range, cr->filter.ep, cr->filter.flags, nap);
+	  range = range_filter(cr->range, cr->filter.ep, cr->filter.type, nap);
 	else
-	  range = range_filter_regex(cr->range, &cr->filter.preg, cr->filter.flags, nap);
-	if (!range) {
+	  range = range_filter_regex(cr->range, &cr->filter.preg, cr->filter.type, nap);
+	if (!range && cr->cmd != 'S') {
 	  if (config.f_debug)
 	    fprintf(stderr, "*** Range filter mismatch - skipping\n");
 	  continue;
@@ -871,10 +798,37 @@ walker_edit(const char *path,
 	break;
 	
       case 's': /* Substitue ACEs */
+      case 'S': /* Substitue ACEs (simple-change) */
+	if (!range && cr->cmd == 'S') {
+	  GACE *oep = cr->change.ep;
+
+	  /* 
+	   * Try to find optimal insertion point for a new ACE. This code assumes the 
+	   * ACL is sorted where users < groups < everyone and with deny < allow.
+	   */
+	  for (pos = 0; pos < nap->ac; ++pos) {
+	    GACE *nep = &nap->av[pos];
+	    
+	    if (oep->tag.type < nep->tag.type)
+	      break;
+	    if (oep->tag.type > nep->tag.type)
+	      continue;
+	    if (oep->tag.type == GACE_TAG_TYPE_USER || oep->tag.type == GACE_TAG_TYPE_GROUP) {
+	      if (oep->tag.ugid < nep->tag.ugid)
+		break;
+	      if (oep->tag.ugid > nep->tag.ugid)
+		break;
+	    }
+	    if (oep->type > nep->type)
+	      break;
+	  }
+	  goto AddACE;
+	}
+	
 	if (range_len(range) > 0) {
 	  acl_entry_t ae;
 	  int p = RANGE_NONE;
-	  
+
 	  while (range_next(range, &p) == 1) {
 	    if (p == RANGE_END)
 	      p = nap->ac-1;
@@ -899,8 +853,9 @@ walker_edit(const char *path,
 	  }
 	} else {
 	  acl_entry_t ae;
-	  
-	  for (p = 0; acl_get_entry(nap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
+
+	  p = 0;
+	  while (_gacl_get_entry(nap, p, &ae) == 1) {
 	    pos = p;
 	    
 	    rc = cmd_edit_crace(cr, ae);
@@ -916,18 +871,31 @@ walker_edit(const char *path,
 	      if (cr->modifiers && !strchr(cr->modifiers, 'g'))
 		break;
 	    }
+
+	    if (cr->cmd == 'S' && !ae->perms) {
+	      rc = gacl_delete_entry_np(nap, p);
+	      if (rc < 0)
+		break;
+	      continue;
+	    }
+
+	    ++p;
 	  }
 	  if (rc > 0)
 	    rc = 0;
 	}
 
-	/* Add ACE entry if no match found? */
-	if (nm == 0 && cr->change.flags & GACE_EDIT_TAG_ADD) {
+	if (nm == 0) {
+	AddACE:
+	  fprintf(stderr, "Adding new ACE\n");
+	  
+	  /* Add ACE entry if no match found */
 	  if (acl_create_entry_np(&nap, &nae, pos) < 0) {
 	    fprintf(stderr, "Unable to create ACE at %d\n", pos);
 	    rc = -1;
 	  }
-	  else if (acl_copy_entry(nae, cr->change.ep) < 0) {
+
+	  if (acl_copy_entry(nae, cr->change.ep) < 0) {
 	    fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
 	    rc = -1;
 	  }
@@ -1092,14 +1060,16 @@ edit_cmd(int argc,
   if (argc < 2) {
     script_free(&edit_script);
     error(1, 0, "Missing required arguments");
-    return 1;
   }
 
   i = 1;
   if (!edit_script && argc > 2) {
     cr = NULL;
-    acecr_from_simple_text(&cr, argv[i++]);
-    script_add(&edit_script, cr);
+    if (acecr_from_simple_text(&cr, argv[i]) < 0)
+      error(1, 0, "%s: Invalid simple change request", argv[i]);
+    if (script_add(&edit_script, cr) < 0)
+      error(1, 0, "%s: Unable to add simple change request", argv[i]);
+    ++i;
   }
   
   if (!edit_script) {

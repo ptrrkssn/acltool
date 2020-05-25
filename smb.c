@@ -35,8 +35,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 
+#include "strings.h"
 #include "vfs.h"
+#include "smb.h"
 
 #ifdef ENABLE_SMB
 #include <libsmbclient.h>
@@ -225,7 +229,7 @@ smb_getxattr(const char *path,
 	     char *buf,
 	     size_t bufsize) {
   _smb_init();
-  
+
   return smbc_getxattr(path, attr, buf, bufsize);
 }
 
@@ -241,26 +245,173 @@ smb_setxattr(const char *path,
 
 int
 smb_removexattr(const char *path,
-	     const char *attr,
-	     char *buf,
-	     size_t bufsize) {
+		const char *attr) {
   _smb_init();
   
   return smbc_removexattr(path, attr);
 }
 
 
+/*
+  AD\peter86:0/11/0x001e01ff
+  AD\employee-liu.se:0/3/0x00120088
+  \Everyone:0/11/0x00120088
+  AD\peter86:0/0/0x001e01ff
+  AD\Domain_Users:0/0/0x001200a9
+  \Everyone:0/0/0x001200a9
+*/
+
 GACL *
 smb_acl_get_file(const char *path) {
-  char buf[2048];
+  char buf[2048], *bp, *cp;
+  const char *aclattr = "system.nt_sec_desc.acl.*+";
+  GACL *ap;
+  int n_ace;
 
 
-  if (smb_getxattr(path, "system.nt_sec_desc.acl.*+", buf, sizeof(buf)) < 0)
+  if (smb_getxattr(path, aclattr, buf, sizeof(buf)) < 0)
     return NULL;
 
-  fprintf(stderr, "SMB ACL:\t%s\n", buf);
-  /* Translate value into standard GACL */
+  n_ace = 1;
+  for (bp = buf; *bp; bp++)
+    if (*bp == ',')
+      ++n_ace;
+  
+  ap = gacl_init(n_ace);
+  if (!ap)
+    return NULL;
+		 
+  bp = buf;
+  while ((cp = strsep(&bp, ",")) != NULL) {
+    char *s_realm = strsep(&cp, "\\");
+    char *s_user  = strsep(&cp, ":");
+    char *s_type  = strsep(&cp, "/");
+    char *s_flags = strsep(&cp, "/");
+    char *s_perms = strsep(&cp, "/");
+    int type, flags, perms;
+    GACE *ep = NULL;
+    struct passwd *pp;
+    struct group *gp;
+    GACE_TAG_TYPE at;
+    uid_t ugid;
+    GACE_PERMSET ps;
+    GACE_FLAGSET fs;
+    
+    
+    if (!s_realm || !s_user  || !*s_user ||
+	!s_type  || sscanf(s_type, "%d", &type) != 1 ||
+	!s_flags || sscanf(s_flags, "%d", &flags) != 1 ||
+	!s_perms || sscanf(s_perms, "0x%x", &perms) != 1)
+      continue; /* Invalid entry - skip */
 
+    if (!*s_realm && strcmp(s_user, "Everyone") == 0) {
+      at = GACE_TAG_TYPE_EVERYONE;
+    }
+    else {
+      if (!s_realm) /* XXX TODO: Check realm */
+	continue;
+      
+      pp = getpwnam(s_user);
+      gp = getgrnam(s_user);
+
+      if (pp && gp) { /* Name matches both user and group */
+	errno = EINVAL;
+	return NULL;
+      }
+
+      if (!pp && !gp) /* Skip unknown users */
+	continue; 
+
+      if (pp) {
+	at = GACE_TAG_TYPE_USER;
+	ugid = pp->pw_uid;
+      } else {
+	at = GACE_TAG_TYPE_GROUP;
+	ugid = gp->gr_gid;
+      }
+    }
+    
+    if (gacl_create_entry(&ap, &ep) < 0)
+      goto Fail;
+
+    ep->tag.type = at;
+    ep->tag.ugid = ugid;
+    if (s_realm)
+      ep->tag.name = s_dupcat(s_realm, "\\", s_user, NULL);
+    else
+      ep->tag.name = s_dup(s_user);
+#if 0      
+    gacl_set_tag_type(ep, at);
+    gacl_set_qualifier(ep, &ugid);
+#endif
+    
+    switch (type) {
+    case SMB_ACL_TYPE_ALLOW:
+      gacl_set_entry_type_np(ep, GACE_TYPE_ALLOW);
+      break;
+    case SMB_ACL_TYPE_DENY:
+      gacl_set_entry_type_np(ep, GACE_TYPE_DENY);
+      break;
+    case SMB_ACL_TYPE_AUDIT:
+      gacl_set_entry_type_np(ep, GACE_TYPE_AUDIT);
+      break;
+    case SMB_ACL_TYPE_ALARM:
+      gacl_set_entry_type_np(ep, GACE_TYPE_ALARM);
+      break;
+    default:
+      errno = EINVAL;
+      goto Fail;
+    }
+
+    gacl_clear_flags_np(&fs);
+    if (flags & SMB_ACL_FLAG_OI)
+      gacl_add_flag_np(&fs, GACE_FLAG_FILE_INHERIT);
+    if (flags & SMB_ACL_FLAG_CI)
+      gacl_add_flag_np(&fs, GACE_FLAG_DIRECTORY_INHERIT);
+    if (flags & SMB_ACL_FLAG_NI)
+      gacl_add_flag_np(&fs, GACE_FLAG_NO_PROPAGATE_INHERIT);
+    if (flags & SMB_ACL_FLAG_IO)
+      gacl_add_flag_np(&fs, GACE_FLAG_INHERIT_ONLY);
+    gacl_set_flagset_np(ep, &fs);
+    
+    gacl_clear_perms(&ps);
+    if (perms & SMB_ACL_PERM_CC)
+      gacl_add_perm(&ps, GACE_READ_DATA);
+    if (perms & SMB_ACL_PERM_DC)
+      gacl_add_perm(&ps, GACE_WRITE_DATA);
+    if (perms & SMB_ACL_PERM_WP)
+      gacl_add_perm(&ps, GACE_EXECUTE);
+    if (perms & SMB_ACL_PERM_LC)
+      gacl_add_perm(&ps, GACE_APPEND_DATA);
+    if (perms & SMB_ACL_PERM_SW)
+      gacl_add_perm(&ps, GACE_READ_NAMED_ATTRS);
+    if (perms & SMB_ACL_PERM_RP)
+      gacl_add_perm(&ps, GACE_WRITE_NAMED_ATTRS);
+    if (perms & SMB_ACL_PERM_DT)
+      gacl_add_perm(&ps, GACE_DELETE_CHILD);
+    if (perms & SMB_ACL_PERM_SD)
+      gacl_add_perm(&ps, GACE_DELETE);
+    if (perms & SMB_ACL_PERM_LO)
+      gacl_add_perm(&ps, GACE_READ_ATTRIBUTES);
+    if (perms & SMB_ACL_PERM_CR)
+      gacl_add_perm(&ps, GACE_WRITE_ATTRIBUTES);
+    
+    if (perms & SMB_ACL_PERM_RC)
+      gacl_add_perm(&ps, GACE_READ_ACL);
+    if (perms & SMB_ACL_PERM_WD)
+      gacl_add_perm(&ps, GACE_WRITE_ACL);
+    if (perms & SMB_ACL_PERM_WO)
+      gacl_add_perm(&ps, GACE_WRITE_OWNER);
+    if (perms & SMB_ACL_PERM_SY)
+      gacl_add_perm(&ps, GACE_SYNCHRONIZE);
+    
+    gacl_set_permset(ep, &ps);
+  }
+
+  return ap;
+  
+ Fail:
+  gacl_free(ap);
   errno = ENOSYS;
   return NULL;
 }

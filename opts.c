@@ -132,7 +132,7 @@ opts_set_value(OPTION *op,
     }
     svp = (const void *) value;
     if (op->dvp && !op->handler)
-      *(char **)(op->dvp) = strdup(value);
+      *(char **)(op->dvp) = s_dup(value);
     break;
 
   default:

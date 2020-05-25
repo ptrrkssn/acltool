@@ -122,6 +122,21 @@ set_print(const char *name,
 }
 
 int
+set_relaxed(const char *name,
+	    const char *value,
+	    unsigned int type,
+	    const void *svp,
+	    void *dvp,
+	    const char *a0) {
+  if (svp)
+    config.f_relaxed = * (int *) svp;
+  else
+    config.f_relaxed++;
+  
+  return 0;
+}
+
+int
 set_sort(const char *name,
 	 const char *value,
 	 unsigned int type,
@@ -145,17 +160,6 @@ set_merge(const char *name,
   return 0;
 }
 
-int
-set_regex(const char *name,
-	  const char *value,
-	  unsigned int type,
-	  const void *svp,
-	  void *dvp,
-	  const char *a0) {
-  config.f_regex++;
-  
-  return 0;
-}
 
 int
 set_recurse(const char *name,
@@ -275,13 +279,13 @@ OPTION global_options[] =
    { "print",     		'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
    { "sort",      		's', OPTS_TYPE_NONE,               set_sort,      NULL, "Sort ACLs" },
    { "merge",     		'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redunant ACL entries" },
+   { "relaxed",      		'R', OPTS_TYPE_NONE,               set_relaxed,   NULL, "Relaxed mode" },
    { "recurse",   		'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
    { "depth",     		'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
    { "style",     		'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
    { "type",      		't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
    { "no-update", 		'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
    { "no-prefix", 		'N', OPTS_TYPE_NONE,               set_no_prefix, NULL, "Do not prefix filenames" }, 
-   { "regular-expressions",     'R', OPTS_TYPE_NONE,               set_regex,     NULL, "Enable regular expressions" },
   { NULL,        		-1,  0,                            NULL,          NULL, NULL },
   };
 
@@ -343,6 +347,7 @@ config_cmd(int argc,
     printf("  Update:             %s\n", config.f_noupdate ? "No" : "Yes");
     printf("  Prefix:             %s\n", config.f_noprefix ? "No" : "Yes");
     printf("  Style:              %s\n", style2str(config.f_style));
+    printf("  Relaxed Mode:       %s\n", config.f_relaxed ? "Yes" : "No");
   } else {
     int i;
 
@@ -546,7 +551,7 @@ main(int argc,
   else
     aname = argv[0];
 
-  argv0 = strdup(argv[0]);
+  argv0 = s_dup(argv[0]);
 
   cmd_register(&commands, basic_commands);
   cmd_register(&commands, acltool_commands);

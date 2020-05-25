@@ -168,10 +168,10 @@ cmd_run(COMMANDS *cmdlist,
   }
 
   tmp_a0a = argv[0];
-  argv[0] = strdup(scp->name);
+  argv[0] = s_dup(scp->name);
 #if 0
   tmp_a0b = argv0;
-  argv0 = strxcat(argv0, ": ", argv[0], NULL);
+  argv0 = s_dupcat(argv0, ": ", argv[0], NULL);
 #endif
   i = opts_parse_argv(argc, argv, global_options, scp->options, NULL);
 
