@@ -167,10 +167,21 @@ smb_lstat(const char *path,
 int
 smb_statvfs(const char *path,
 	    struct statvfs *sp) {
+  int rc;
   
   _smb_init();
+
+  memset(sp, 0, sizeof(*sp));
+  rc = smbc_statvfs((char *) path, sp);
+
+  /* 
+   * HACK: Samba sets this to some silly small value sometimes
+   */
+  if (sp->f_frsize < 1024) {
+    sp->f_frsize = 1024;
+  }
   
-  return smbc_statvfs((char *) path, sp);
+  return rc;
 }
 
 

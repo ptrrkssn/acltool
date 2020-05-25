@@ -12,8 +12,8 @@ SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
 
 # Remove comment '#' character to enable SMB
-SMB_CFLAGS=#-I$(SMBINC) -DENABLE_SMB=1
-SMB_LDFLAGS=#-L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
+# SMB_CFLAGS=-I$(SMBINC) -DENABLE_SMB=1
+# SMB_LDFLAGS=-L$(SMBLIB) -Wl,-rpath,$(SMBLIB) -lsmbclient
 
 
 TESTDIR=t
