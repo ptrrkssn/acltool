@@ -2610,7 +2610,7 @@ _gacl_entry_to_ace(GACE *ep,
     return -1;
   }
 
-  switch (ep->tag) {
+  switch (ep->tag.type) {
   case GACE_TAG_TYPE_USER_OBJ:
     ap->a_flags = ACE_OWNER;
     break;
@@ -2635,7 +2635,7 @@ _gacl_entry_to_ace(GACE *ep,
     return -1;
   }
   
-  ap->a_who = ep->id;
+  ap->a_who = ep->tag.ugid;
   ap->a_access_mask = ep->perms;
   ap->a_flags |= ep->flags;
   ap->a_type  = ep->type;
@@ -2646,6 +2646,10 @@ _gacl_entry_to_ace(GACE *ep,
 static int
 _gacl_entry_from_ace(GACE *ep,
 		     ace_t *ap) {
+  struct passwd *pp;
+  struct group *gp;
+
+  
   if (!ep || !ap) {
     errno = EINVAL;
     return -1;
@@ -2653,25 +2657,51 @@ _gacl_entry_from_ace(GACE *ep,
 
   switch (ap->a_flags & (ACE_OWNER|ACE_GROUP|ACE_EVERYONE)) {
   case ACE_OWNER:
-    ep->tag = GACE_TAG_TYPE_USER_OBJ;
+    ep->tag.type = GACE_TAG_TYPE_USER_OBJ;
+    ep->tag.name = s_dup("owner@");
+    ep->tag.ugid = -1;
     break;
 
   case ACE_GROUP:
-    ep->tag = GACE_TAG_TYPE_GROUP_OBJ;
+    ep->tag.type = GACE_TAG_TYPE_GROUP_OBJ;
+    ep->tag.name = s_dup("group@");
+    ep->tag.ugid = -1;
     break;
 
   case ACE_EVERYONE:
-    ep->tag = GACE_TAG_TYPE_EVERYONE;
+    ep->tag.type = GACE_TAG_TYPE_EVERYONE;
+    ep->tag.name = s_dup("everyone@");
+    ep->tag.ugid = -1;
     break;
 
   default:
-    if (ap->a_flags & ACE_IDENTIFIER_GROUP)
-      ep->tag = GACE_TAG_TYPE_GROUP;
-    else
-      ep->tag = GACE_TAG_TYPE_USER;
+    if (ap->a_flags & ACE_IDENTIFIER_GROUP) {
+      ep->tag.type = GACE_TAG_TYPE_GROUP;
+      ep->tag.ugid = ap->a_who;
+      gp = getgrgid(ap->a_who);
+      if (gp)
+	ep->tag.name = s_dup(gp->gr_name);
+      else {
+	char buf[256];
+	
+	snprintf(buf, sizeof(buf), "%d", ap->a_who);
+	ep->tag.name = s_dup(buf);
+      }
+    } else {
+      ep->tag.type = GACE_TAG_TYPE_USER;
+      ep->tag.ugid = ap->a_who;
+      pp = getpwuid(ap->a_who);
+      if (pp)
+	ep->tag.name = s_dup(pp->pw_name);
+      else {
+	char buf[256];
+	
+	snprintf(buf, sizeof(buf), "%d", ap->a_who);
+	ep->tag.name = s_dup(buf);
+      }
+    }
   }
   
-  ep->id    = ap->a_who;
   ep->perms = ap->a_access_mask;
   ep->flags = (ap->a_flags & GACE_FLAGS_ALL);
   ep->type  = ap->a_type;
