@@ -227,8 +227,9 @@ dir_cmd(int argc,
       struct statvfs vb;
       unsigned long long avail = 0;
       
-      if (vfs_statvfs(argv[i], &vb) == 0)
-	avail = vb.f_bavail * 512 / 1000000;
+      if (vfs_statvfs(argv[i], &vb) == 0) {
+	avail = (unsigned long long) vb.f_bavail * vb.f_frsize / 1000000;
+      }
 
       printf("\n%15u File%s    %18llu Byte%s\n",
 	     n_files,
