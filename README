@@ -45,21 +45,21 @@ FILESYSTEMS SUPPORT
 
 DEPENDENCIES
 
-  Ubuntu/Debian:
+  Ubuntu/Debian (apt install):
     libreadline-dev
     libsmbclient-dev (if SMB support)
 
-  CentOS
+  CentOS (yum install)
     readline-devel
-    libsmbclient
+    libsmbclient-devel (if SMB support)
     
-  FreeBSD
+  FreeBSD (pkg install)
     readline (if SMB support)
     samba
 
-  Illumos
+  Illumos (pkg install)
     readline
-
+    (you'll have to build Samba yourself)
 
     
 BUILD INSTRUCTIONS
