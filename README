@@ -43,10 +43,30 @@ FILESYSTEMS SUPPORT
   - SMB - if built with Samba (libsmbclient) - Read-Only for now
 
 
+DEPENDENCIES
+
+  Ubuntu/Debian:
+    libreadline-dev
+    libsmbclient-dev (if SMB support)
+
+  CentOS
+    readline-devel
+    libsmbclient
+    
+  FreeBSD
+    readline (if SMB support)
+    samba
+
+  Illumos
+    readline
+
+
+    
 BUILD INSTRUCTIONS
 
   View and possibly adjust the Makefile.
-  
+
+    
   You may want to install the Gnu readline development libraries &
   header files (if not already there) or compilation will fail.
 
