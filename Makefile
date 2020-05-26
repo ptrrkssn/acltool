@@ -15,6 +15,9 @@ TESTDIR=t
 
 ALIASES=lac sac edac
 
+# Solaris
+SOLCC=gcc
+
 # CC=gcc
 CFLAGS=-O -g -Wall
 LDFLAGS=-lreadline
@@ -34,7 +37,7 @@ help:
 	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, macos, clean" ; exit 0
 
 SunOS solaris omnios illumos:
-	@$(MAKE) CC="$(SOLARIS_CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lcurses $(LDFLAGS)" all
+	@$(MAKE) CC="$(SOLCC)" CFLAGS="$(CFLAGS) -I/usr/local/include" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lcurses $(LDFLAGS)" all
 
 Linux linux:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
