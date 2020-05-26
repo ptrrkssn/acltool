@@ -27,7 +27,7 @@ OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o
 auto build:
 	@if [ -f "$(SMBLIB)/libsmbclient.so" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
 		$(MAKE) CFLAGS="$(CFLAGS) -I$(SMBINC) -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) -Wl,-rpath,$(SMBLIB) -L$(SMBLIB) -lsmbclient" `uname -s` ; \
-	elif pkg-config --exists smbclient ; then \
+	elif pkg-config --exists smbclient 2>/dev/null ; then \
 		$(MAKE) CFLAGS="$(CFLAGS) `pkg-config --cflags smbclient` -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) `pkg-config --libs smbclient`" `uname -s` ; \
 	else \
 		$(MAKE) `uname -s`; \
