@@ -139,9 +139,10 @@ dir_cmd(int argc,
 	if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
 	  error(1, errno, "Unable to get full directory name");
 
-	if (vfs_lstat(pbuf, &sb) < 0)
-	  printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);
-	else {
+	if (vfs_lstat(pbuf, &sb) < 0) {
+	  if (config.f_debug)
+	    printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);
+	} else {
 	  char tbuf[256];
 	  struct tm *tp;
 

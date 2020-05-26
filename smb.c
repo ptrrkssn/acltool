@@ -80,8 +80,8 @@ _smb_init(void) {
   smbc_setFunctionAuthDataWithContext(context,
 				      get_auth_data_with_context_fn);
   
-  smbc_setOptionUserData(context, strdup("hello world"));
   smbc_setOptionUseKerberos(context, 1);
+  smbc_setOptionUseCCache(context, 1);
   smbc_setOptionFallbackAfterKerberos(context, 1);
 
     if (!smbc_init_context(context)) {
