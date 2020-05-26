@@ -6,7 +6,7 @@ DESTBIN=$(DEST)/bin
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
 SMBDIR=/usr/local/samba
 #SMBDIR=/usr/local/samba/default
-#SMBDIR=/liu/pkg/samba/default
+SMBDIR=/liu/pkg/samba/default
 
 SMBINC=$(SMBDIR)/include
 SMBLIB=$(SMBDIR)/lib
@@ -22,8 +22,8 @@ LDFLAGS=-lreadline
 OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
 
 auto build:
-	@if [ -f "$(SMBLIB)/libsmbclient.a" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
-		$(MAKE) CFLAGS="$(CFLAGS) -I$(SMBINC) -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) -Wl,-rpath,$(SMBLIB) -lsmbclient" `uname -s` ; \
+	@if [ -f "$(SMBLIB)/libsmbclient.so" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
+		$(MAKE) CFLAGS="$(CFLAGS) -I$(SMBINC) -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) -Wl,-rpath,$(SMBLIB) -L$(SMBLIB) -lsmbclient" `uname -s` ; \
 	elif pkg-config --exists smbclient ; then \
 		$(MAKE) CFLAGS="$(CFLAGS) `pkg-config --cflags smbclient` -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) `pkg-config --libs smbclient`" `uname -s` ; \
 	else \
@@ -37,13 +37,13 @@ SunOS solaris omnios illumos:
 	@$(MAKE) CC="$(SOLARIS_CC)" CFLAGS="$(CFLAGS) -I/usr/local/include" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lcurses $(LDFLAGS)" all
 
 Linux linux:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
 
 FreeBSD freebsd:
-	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lncurses" all
+	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lncurses $(LDFLAGS)" all
 
 macos Darwin:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
 
 
 all: acltool
