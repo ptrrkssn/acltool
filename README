@@ -40,7 +40,7 @@ FILESYSTEMS SUPPORT
   - NFSv4
   - ZFS (but not on Linux sadly - lacks kernel support)
   - HFS+ (MacOS)
-  - SMB - if built with Samba (libsmbclient) - Read-Only for now
+  - SMB - if built with Samba (libsmbclient)
 
 
 DEPENDENCIES
