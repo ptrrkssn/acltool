@@ -265,6 +265,8 @@ typedef enum gacl_entry_type {
 /*
  * The OS interfaces that get or set an ACL
  */
+#define GACL_F_SYMLINK_NOFOLLOW 0x0001
+
 GACL *
 _gacl_get_fd_file(int fd,
 		  const char *path,

@@ -1125,10 +1125,10 @@ _gacl_set_fd_file(int fd,
 
 #include <membership.h>
 
-struct perm_mapping {
-  macos_acl_perm_t macos;
-  GACL_PERM gacl;
-} pmap[] =
+static struct permtab {
+  macos_acl_perm_t m;
+  GACL_PERM g;
+} permtab[] =
   {
    { __DARWIN_ACL_READ_DATA,           GACL_PERM_READ_DATA },
    { __DARWIN_ACL_WRITE_DATA,          GACL_PERM_WRITE_DATA },
@@ -1144,20 +1144,18 @@ struct perm_mapping {
    { __DARWIN_ACL_WRITE_SECURITY,      GACL_PERM_WRITE_ACL },
    { __DARWIN_ACL_CHANGE_OWNER,        GACL_PERM_WRITE_OWNER },
    { __DARWIN_ACL_SYNCHRONIZE,         GACL_PERM_SYNCHRONIZE },
-   { -1, -1 },
   };
 
-struct flag_mapping {
-  macos_acl_flag_t macos;
-  GACL_FLAG gacl;
-} fmap[] =
+struct flagtab {
+  macos_acl_flag_t m;
+  GACL_FLAG g;
+} flagtab[] =
   {
    { __DARWIN_ACL_FLAG_NO_INHERIT,         GACL_FLAG_NO_PROPAGATE_INHERIT },
    { __DARWIN_ACL_ENTRY_INHERITED,         GACL_FLAG_INHERITED },
    { __DARWIN_ACL_ENTRY_FILE_INHERIT,      GACL_FLAG_FILE_INHERIT },
    { __DARWIN_ACL_ENTRY_DIRECTORY_INHERIT, GACL_FLAG_DIRECTORY_INHERIT },
    { __DARWIN_ACL_ENTRY_ONLY_INHERIT,      GACL_FLAG_INHERIT_ONLY },
-   { -1, -1 },
   };
 
 
@@ -1225,9 +1223,9 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
   
   gacl_clear_perms(&nep->perms);
 
-  for (i = 0; pmap[i].macos != -1; i++) {
-    if (acl_get_perm_np(ops, pmap[i].macos))
-      gacl_add_perm(&nep->perms, pmap[i].gacl);
+  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++) {
+    if (acl_get_perm_np(ops, permtab[i].m))
+      gacl_add_perm(&nep->perms, permtab[i].g);
   }
   
   if (acl_get_flagset_np(oep, &ofs) < 0)
@@ -1235,9 +1233,9 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
 
   gacl_clear_flags_np(&nep->flags);
   
-  for (i = 0; fmap[i].macos != -1; i++) {
-    if (acl_get_flag_np(ofs, fmap[i].macos))
-      gacl_add_flag_np(&nep->flags, fmap[i].gacl);
+  for (i = 0; i < sizeof(flagtab)/sizeof(flagtab[0]); i++) {
+    if (acl_get_flag_np(ofs, flagtab[i].m))
+      gacl_add_flag_np(&nep->flags, flagtab[i].g);
   }
 
   return 1;
@@ -1302,9 +1300,9 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
   
   acl_clear_perms(perms);
 
-  for (i = 0; pmap[i].macos != -1; i++) {
-    if (gacl_get_perm_np(ops, pmap[i].gacl))
-      acl_add_perm(perms, pmap[i].macos);
+  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++) {
+    if (gacl_get_perm_np(ops, permtab[i].g))
+      acl_add_perm(perms, permtab[i].m);
   }
   
   if (acl_set_permset(nep, perms) < 0)
@@ -1319,9 +1317,9 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
 
   acl_clear_flags_np(flags);
   
-  for (i = 0; fmap[i].macos != -1; i++) {
-    if (gacl_get_flag_np(ofs, fmap[i].gacl))
-      acl_add_flag_np(flags, fmap[i].macos);
+  for (i = 0; sizeof(flagtab)/sizeof(flagtab[0]); i++) {
+    if (gacl_get_flag_np(ofs, flagtab[i].g))
+      acl_add_flag_np(flags, flagtab[i].m);
   }
 
   if (acl_set_flagset_np(nep, flags) < 0)
@@ -1333,7 +1331,7 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
 GACL *
 _gacl_get_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  int flags) {
   GACL *nap;
   macos_acl_t oap;
@@ -1342,7 +1340,7 @@ _gacl_get_fd_file(int fd,
   macos_acl_type_t at = ACL_TYPE_EXTENDED;
 
 
-  if (type != GACL_ENTRY_TYPE_NFS4) {
+  if (type != GACL_TYPE_NFS4) {
     errno = ENOSYS;
     return NULL;
   }
@@ -1385,7 +1383,7 @@ _gacl_get_fd_file(int fd,
 int
 _gacl_set_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  GACL *ap,
 		  int flags) {
   GACL_ENTRY *oep;
@@ -1393,7 +1391,7 @@ _gacl_set_fd_file(int fd,
   int i, rc;
   macos_acl_type_t at = ACL_TYPE_EXTENDED;
 
-  if (type != GACL_ENTRY_TYPE_NFS4) {
+  if (type != GACL_TYPE_NFS4) {
     errno = EINVAL;
     return -1;
   }

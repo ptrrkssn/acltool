@@ -35,6 +35,7 @@
 #define GACL_H 1
 
 #include <stdint.h>
+#include <sys/types.h>
 
 
 typedef enum gacl_brand {
@@ -274,21 +275,6 @@ gacl_get_entry(GACL *ap,
 	       int eid,
 	       GACL_ENTRY **epp);
 
-
-#define GACL_F_SYMLINK_NOFOLLOW 0x0001
-
-GACL *
-_gacl_get_fd_file(int fd,
-		  const char *path,
-		  GACL_TYPE type,
-		  int flags);
-
-int
-_gacl_set_fd_file(int fd,
-		  const char *path,
-		  GACL_TYPE type,
-		  GACL *ap,
-		  int flags);
 
 extern GACL *
 gacl_get_file(const char *path,
