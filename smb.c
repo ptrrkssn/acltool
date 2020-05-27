@@ -720,6 +720,8 @@ smb_acl_set_file(const char *path,
   if (!abuf)
     goto Fail;
 
+  fprintf(stderr, "setxattr(\"%s\", \"%s\")\n", SECATTR, abuf);
+  
   if (smb_setxattr(path, SECATTR, abuf, strlen(abuf)) < 0)
     goto Fail;
 

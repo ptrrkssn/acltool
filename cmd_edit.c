@@ -455,19 +455,16 @@ ace_match(gacl_entry_t oae,
     break;
     
   case '=':
-    fprintf(stderr, "=Match: o=%08x, m=%08x\n", *ops, *mps);
     if (*mps != *ops)
       return 0;
     break;
 
   case '+':
-    fprintf(stderr, "+Match: o=%08x, m=%08x\n", *ops, *mps);
     if ((*ops & *mps) != *mps)
       return 0;
     break;
     
   case '-':
-    fprintf(stderr, "-Match: o=%08x, m=%08x, r=%08x\n", *ops, *mps, (*ops & *mps));
     if ((*ops & *mps) != 0)
       return 0;
     break;

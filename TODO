@@ -13,3 +13,4 @@ Some stuff that needs to be done (in no particular order):
 - Integrate with Sambas 'libsmbclient' in order to talk directly with SMB servers
 - Implement support for POSIX.1e ACLs
 - A more general "vfs_stat" that handles symbolic st_uid & st_gid fields (strings)
+- Fix the User/Group check code in cmd_edit.c (check strings instead of uid/gid)
