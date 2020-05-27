@@ -1162,7 +1162,7 @@ struct flagtab {
 static int
 _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
 			   macos_acl_entry_t oep) {
-  int ugtype, i;
+  int ugtype, i, n;
   guid_t *guidp;
   macos_acl_tag_t at;
   macos_acl_permset_t ops;
@@ -1223,7 +1223,8 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
   
   gacl_clear_perms(&nep->perms);
 
-  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++) {
+  n = sizeof(permtab)/sizeof(permtab[0]);
+  for (i = 0; i < n; i++) {
     if (acl_get_perm_np(ops, permtab[i].m))
       gacl_add_perm(&nep->perms, permtab[i].g);
   }
@@ -1233,7 +1234,8 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
 
   gacl_clear_flags_np(&nep->flags);
   
-  for (i = 0; i < sizeof(flagtab)/sizeof(flagtab[0]); i++) {
+  n = sizeof(flagtab)/sizeof(flagtab[0]);
+  for (i = 0; i < n; i++) {
     if (acl_get_flag_np(ofs, flagtab[i].m))
       gacl_add_flag_np(&nep->flags, flagtab[i].g);
   }
@@ -1251,9 +1253,9 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
   guid_t guid;
   macos_acl_permset_t perms;
   macos_acl_flagset_t flags;
-  int i;
+  int i, n;
   
-  
+
   if (gacl_get_entry_type_np(oep, &etype) < 0)
     return -1;
 
@@ -1287,7 +1289,7 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
     errno = EINVAL;
     return -1;
   }
-  
+
   if (acl_set_qualifier(nep, &guid) < 0)
     return -1;
 
@@ -1300,7 +1302,8 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
   
   acl_clear_perms(perms);
 
-  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++) {
+  n = sizeof(permtab)/sizeof(permtab[0]);
+  for (i = 0; i < n; i++) {
     if (gacl_get_perm_np(ops, permtab[i].g))
       acl_add_perm(perms, permtab[i].m);
   }
@@ -1317,7 +1320,8 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
 
   acl_clear_flags_np(flags);
   
-  for (i = 0; sizeof(flagtab)/sizeof(flagtab[0]); i++) {
+  n = sizeof(flagtab)/sizeof(flagtab[0]);
+  for (i = 0; i < n; i++) {
     if (gacl_get_flag_np(ofs, flagtab[i].g))
       acl_add_flag_np(flags, flagtab[i].m);
   }
@@ -1397,29 +1401,21 @@ _gacl_set_fd_file(int fd,
   }
     
   nap = acl_init(ap->ac);
-  if (!nap) {
-    fprintf(stderr, "acl_init failed\n");
+  if (!nap)
     return -1;
-  }
 
   for (i = 0; (rc = gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &oep)) == 1; i++) {
     macos_acl_entry_t nep;
 
-    if (acl_create_entry_np(&nap, &nep, i) < 0) {
-      fprintf(stderr, "acl_create_entry_np failed\n");
+    if (acl_create_entry_np(&nap, &nep, i) < 0)
       goto Fail;
-    }
 
-    if (_acl_entry_from_gace(nep, oep) < 0) {
-      fprintf(stderr, "_acl_entry_from_gace failed\n");
+    if (_acl_entry_from_gace(nep, oep) < 0)
       goto Fail;
-    }
   }
 
-  if (rc < 0) {
-    fprintf(stderr, "gacl_get_entry failed\n");
+  if (rc < 0)
     goto Fail;
-  }
   
   if (path) {
     if (flags & GACL_F_SYMLINK_NOFOLLOW)
@@ -1429,9 +1425,6 @@ _gacl_set_fd_file(int fd,
   } else
     rc = acl_set_fd_np(fd, nap, at);
 
-  if (rc < 0)
-    fprintf(stderr, "acl_set_xxx failed: rc=%d\n", rc);
-  
   acl_free(nap);
   return rc;
 

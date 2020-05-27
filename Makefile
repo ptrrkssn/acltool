@@ -103,6 +103,6 @@ check-sac: auto
 	./acltool sac -vp "user:nobody:rwx,user:$$USER:all" t
 
 check-edac: auto
-	./acltool edac -vpRe '/user:nobody:r.*/d' t
+	./acltool edac -vp -e '/user:nobody:r.*/d' t
 
 distcheck: check
