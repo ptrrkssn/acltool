@@ -656,7 +656,7 @@ int
 smb_acl_set_file(const char *path,
 		 GACL *ap) {
   errno = ENOSYS;
-  return NULL;
+  return -1;
 }
 
 #endif
