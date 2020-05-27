@@ -404,15 +404,16 @@ smb_acl_get_file(const char *path) {
       pp = getpwnam(s_user);
       gp = getgrnam(s_user);
 
-      if (pp && gp) { /* Name matches both user and group */
-	errno = EINVAL;
-	return NULL;
-      }
-
-      if (!pp && !gp) /* Skip unknown users */
+      if (!pp && !gp) /* Skip unknown users & group */
 	continue; 
 
-      if (pp) {
+      if (pp && gp) { /* Name matches both user and group */
+	e_type = GACL_TAG_TYPE_UNKNOWN;
+	if (pp->pw_uid == gp->gr_gid)
+	  e_ugid = pp->pw_uid;
+	else
+	  e_ugid = -1;
+      } else if (pp) {
 	e_type = GACL_TAG_TYPE_USER;
 	e_ugid = pp->pw_uid;
       } else {
@@ -447,7 +448,6 @@ smb_acl_get_file(const char *path) {
       gacl_set_entry_type_np(ep, GACL_ENTRY_TYPE_ALARM);
       break;
     default:
-      errno = EINVAL;
       goto Fail;
     }
 
@@ -500,7 +500,7 @@ smb_acl_get_file(const char *path) {
   
  Fail:
   gacl_free(ap);
-  errno = ENOSYS;
+  errno = EINVAL;
   return NULL;
 }
 

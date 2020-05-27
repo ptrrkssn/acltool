@@ -206,7 +206,7 @@ _gacl_init_from_nfs4(const char *buf,
   if (!ap)
     return NULL;
 
-  ap->type = GACL_ENTRY_TYPE_NFS4;
+  ap->type = GACL_TYPE_NFS4;
   
   for (i = 0; i < na; i++) {
     u_int32_t idlen;
@@ -265,7 +265,7 @@ _gacl_init_from_nfs4(const char *buf,
 GACL *
 _gacl_get_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  int flags) {
   char *buf;
   ssize_t bufsize, rc;
@@ -434,7 +434,7 @@ _gacl_to_nfs4(GACL *ap,
 int
 _gacl_set_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  GACL *ap,
 		  int flags) {
   char buf[8192];

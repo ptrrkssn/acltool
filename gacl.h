@@ -34,9 +34,7 @@
 #ifndef GACL_H
 #define GACL_H 1
 
-#if 0
 #include <stdint.h>
-#endif
 
 
 typedef enum gacl_brand {
