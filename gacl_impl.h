@@ -188,9 +188,6 @@ typedef enum gacl_entry_type {
 #elif defined(__APPLE__)
 /* ---------------------------------------- MacOS - START ---------------------------------------- */
 
-#define GACL_LINUX_EMULATION   1
-#define GACL_SOLARIS_EMULATION 1
-
 #define acl_t            macos_acl_t
 #define acl_entry_t      macos_acl_entry_t
 #define acl_entry_type_t macos_acl_entry_type_t
@@ -201,10 +198,6 @@ typedef enum gacl_entry_type {
 #define acl_flag_t       macos_acl_flag_t
 #define acl_flagset_t    macos_acl_flagset_t
 #define acl_entry_id_t   macos_acl_entry_id_t
-
-#ifdef GACL_C_INTERNAL
-#define _ACL_PRIVATE 1
-#endif
 
 #include <sys/acl.h>
 
@@ -218,43 +211,6 @@ typedef enum gacl_entry_type {
 #undef acl_flag_t
 #undef acl_flagset_t
 #undef acl_entry_id_t
-
-#if 0
-typedef enum gacl_entry_type {
-  GACL_TYPE_UNDEFINED = -1,
-  GACL_TYPE_ALLOW = __DARWIN_ACL_EXTENDED_ALLOW,
-  GACL_TYPE_DENY  = __DARWIN_ACL_EXTENDED_DENY,
-  GACL_TYPE_AUDIT,
-  GACL_TYPE_ALARM,
-} GACL_ENTRY_TYPE;
-
-#define GACL_PERM_READ_DATA           	__DARWIN_ACL_READ_DATA
-#define GACL_PERM_LIST_DIRECTORY      	__DARWIN_ACL_LIST_DIRECTORY
-#define GACL_PERM_WRITE_DATA          	__DARWIN_ACL_WRITE_DATA
-#define GACL_PERM_ADD_FILE            	__DARWIN_ACL_ADD_FILE
-#define GACL_PERM_APPEND_DATA         	__DARWIN_ACL_APPEND_DATA
-#define GACL_PERM_ADD_SUBDIRECTORY    	__DARWIN_ACL_ADD_SUBDIRECTORY
-#define GACL_PERM_READ_NAMED_ATTRS    	__DARWIN_ACL_READ_EXTATTRIBUTES
-#define GACL_PERM_WRITE_NAMED_ATTRS   	__DARWIN_ACL_WRITE_EXTATTRIBUTES
-#define GACL_PERM_EXECUTE             	__DARWIN_ACL_EXECUTE
-#define GACL_PERM_DELETE_CHILD        	__DARWIN_ACL_DELETE_CHILD
-#define GACL_PERM_READ_ATTRIBUTES     	__DARWIN_ACL_READ_ATTRIBUTES
-#define GACL_PERM_WRITE_ATTRIBUTES    	__DARWIN_ACL_WRITE_ATTRIBUTES
-#define GACL_PERM_DELETE              	__DARWIN_ACL_DELETE
-#define GACL_PERM_READ_ACL            	__DARWIN_ACL_READ_SECURITY
-#define GACL_PERM_WRITE_ACL           	__DARWIN_ACL_WRITE_SECURITY
-#define GACL_PERM_WRITE_OWNER         	__DARWIN_ACL_CHANGE_OWNER
-#define GACL_PERM_SYNCHRONIZE         	__DARWIN_ACL_SYNCHRONIZE
-
-#define GACL_FLAG_FILE_INHERIT          __DARWIN_ACL_ENTRY_FILE_INHERIT
-#define GACL_FLAG_DIRECTORY_INHERIT     __DARWIN_ACL_ENTRY_DIRECTORY_INHERIT
-#define GACL_FLAG_NO_PROPAGATE_INHERIT  __DARWIN_ACL_ENTRY_LIMIT_INHERIT /* And/Or __DARWIN_ACL_FLAG_NO_INHERIT? */
-#define GACL_FLAG_INHERIT_ONLY          __DARWIN_ACL_ENTRY_ONLY_INHERIT
-#define GACL_FLAG_SUCCESSFUL_ACCESS     0 /* Not implemented */
-#define GACL_FLAG_FAILED_ACCESS         0 /* Not implemented */
-#define GACL_FLAG_INHERITED             __DARWIN_ACL_ENTRY_INHERITED
-
-#endif
 
 /* ---------------------------------------- MacOS - END ---------------------------------------- */
 
