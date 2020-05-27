@@ -713,3 +713,32 @@ vfs_acl_get_link(const char *path,
     return NULL;
   }
 }
+
+
+int
+vfs_acl_set_file(const char *path,
+		 GACL_TYPE type,
+		 GACL *ap) {
+#ifdef ENABLE_SMB
+  char buf[2048];
+#endif
+
+  switch (vfs_get_type(path)) {
+#ifdef ENABLE_SMB
+  case VFS_TYPE_SMB:
+    if (!vfs_fullpath(path, buf, sizeof(buf)))
+      return -1;
+    
+    return smb_acl_set_file(buf, ap);
+#endif
+
+  case VFS_TYPE_SYS:
+    return gacl_set_file(path, type, ap);
+
+  default:
+    errno = ENOSYS;
+    return -1;
+  }
+}
+
+

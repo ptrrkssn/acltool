@@ -151,7 +151,7 @@ set_acl(const char *path,
     if (S_ISLNK(sp->st_mode))
       rc = gacl_set_link_np(path, GACL_TYPE_NFS4, ap);
     else
-      rc = gacl_set_file(path, GACL_TYPE_NFS4, ap);
+      rc = vfs_acl_set_file(path, GACL_TYPE_NFS4, ap);
   }
 
   if (rc < 0) {

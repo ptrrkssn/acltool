@@ -102,6 +102,10 @@ smb_closedir(VFS_DIR *dp);
 extern GACL *
 smb_acl_get_file(const char *path);
 
+extern int
+smb_acl_set_file(const char *path,
+		 GACL *ap);
+
 
 extern int
 smb_listxattr(const char *path,

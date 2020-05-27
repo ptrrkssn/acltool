@@ -98,6 +98,109 @@ _smb_init(void) {
 
 
 
+static int
+_smb_name_to_uid(const char *name,
+		 uid_t *uidp) {
+  struct passwd *pp;
+  const char *dp;
+
+
+  pp = getpwnam(name);
+  if (!pp) {
+    dp = strchr(name, '\\');
+    if (dp) {
+      /* XXX: Verify that WORKGROUP is "our" */
+      name = dp+1;
+      pp = getpwnam(name);
+    }
+
+    if (!pp) {
+      char *cp, *nbuf;
+      int fixflag = 0;
+      
+      nbuf = s_dup(name);
+      if (!nbuf)
+	return -1;
+      
+      for (cp = nbuf; *cp; cp++)
+	if (isspace(*cp)) {
+	  fixflag = 1;
+	  *cp = '_';
+	}
+      
+      if (fixflag)
+	pp = getpwnam(nbuf);
+      
+      if (!pp) {
+	for (cp = nbuf; *cp; cp++)
+	  if (isupper(*cp))
+	    *cp = tolower(*cp);
+	
+	pp = getpwnam(nbuf);
+	if (!pp) {
+	  free(nbuf);
+	  return -1;
+	}
+      }
+    }
+  }
+  
+  *uidp = pp->pw_uid;
+  return 0;
+}
+
+
+static int
+_smb_name_to_gid(const char *name,
+		 gid_t *gidp) {
+  struct group *gp;
+  const char *dp;
+
+  
+  gp = getgrnam(name);
+  if (!gp) {
+    dp = strchr(name, '\\');
+    if (dp) {
+      /* XXX: Verify that WORKGROUP is "our" */
+      name = dp+1;
+      gp = getgrnam(name);
+    }
+    if (!gp) {
+      char *cp, *nbuf;
+      int fixflag = 0;
+      
+      nbuf = s_dup(name);
+      if (!nbuf)
+	return -1;
+      
+      for (cp = nbuf; *cp; cp++)
+	if (isspace(*cp)) {
+	  fixflag = 1;
+	  *cp = '_';
+	}
+
+      if (fixflag)
+	gp = getgrnam(nbuf);
+      
+      if (!gp) {
+	for (cp = nbuf; *cp; cp++)
+	  if (isupper(*cp))
+	    *cp = tolower(*cp);
+	
+	gp = getgrnam(nbuf);
+	if (!gp) {
+	  free(nbuf);
+	  return -1;
+	}
+      }
+    }
+  }
+
+  *gidp = gp->gr_gid;
+  return 0;
+}
+
+
 /* Data via extended attributes
  *                     system.nt_sec_desc.<attribute name>
  *                     system.nt_sec_desc.*
@@ -121,8 +224,6 @@ smb_lstat(const char *path,
   const char *group_attr = "system.nt_sec_desc.group+";
   char buf[256];
   int rc;
-  struct passwd *pp;
-  struct group *gp;
   
 
   _smb_init();
@@ -134,31 +235,11 @@ smb_lstat(const char *path,
   /*
    * Hack to override the st_uid & st_gid with the real owner & group 
    */
-  if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) < 0)
-    return -1;
-  pp = getpwnam(buf);
-  if (!pp) {
-    int i;
-    for (i = 0; buf[i]; i++)
-      buf[i] = tolower(buf[i]);
-    pp = getpwnam(buf);
-  }
-  if (pp)
-    sp->st_uid = pp->pw_uid;
+  if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) >= 0)
+    _smb_name_to_uid(buf, &sp->st_uid);
   
-  if (smb_getxattr(path, group_attr, buf, sizeof(buf)) < 0)
-    return -1;
-
-  gp = getgrnam(buf);
-  if (!gp) {
-    int i;
-    for (i = 0; buf[i]; i++)
-      buf[i] = tolower(buf[i]);
-    gp = getgrnam(buf);
-  }
-    
-  if (gp)
-    sp->st_gid = gp->gr_gid;
+  if (smb_getxattr(path, group_attr, buf, sizeof(buf)) >= 0)
+    _smb_name_to_gid(buf, &sp->st_gid);
 
   return rc;
 }
@@ -367,15 +448,12 @@ smb_acl_get_file(const char *path) {
 		 
   bp = buf;
   while ((cp = strsep(&bp, ",")) != NULL) {
-    char *s_realm = strsep(&cp, "\\");
     char *s_user  = strsep(&cp, ":");
     char *s_type  = strsep(&cp, "/");
     char *s_flags = strsep(&cp, "/");
     char *s_perms = strsep(&cp, "/");
     int type, flags, perms;
     GACL_ENTRY *ep = NULL;
-    struct passwd *pp;
-    struct group *gp;
     GACL_PERMSET ps;
     GACL_FLAGSET fs;
     GACL_TAG_TYPE e_type;
@@ -383,7 +461,7 @@ smb_acl_get_file(const char *path) {
     char *e_name;
     
     
-    if (!s_realm || !s_user  || !*s_user ||
+    if (!s_user  || !*s_user ||
 	!s_type  || sscanf(s_type, "%d", &type) != 1 ||
 	!s_flags || sscanf(s_flags, "%d", &flags) != 1 ||
 	!s_perms || sscanf(s_perms, "0x%x", &perms) != 1)
@@ -392,37 +470,41 @@ smb_acl_get_file(const char *path) {
     e_type = -1;
     e_ugid = -1;
     e_name = NULL;
-    
-    if (!*s_realm && strcmp(s_user, "Everyone") == 0) {
+
+    if (strcmp(s_user, "\\Everyone") == 0) {
       e_type = GACL_TAG_TYPE_EVERYONE;
       e_name = s_dup("everyone@");
     }
     else {
-      if (!s_realm) /* XXX TODO: Check realm */
-	continue;
+      int rc_uid, rc_gid;
+      uid_t uid = -1;
+      gid_t gid = -1;
       
-      pp = getpwnam(s_user);
-      gp = getgrnam(s_user);
-
-      if (!pp && !gp) /* Skip unknown users & group */
-	continue; 
-
-      if (pp && gp) { /* Name matches both user and group */
+      rc_uid = _smb_name_to_uid(s_user, &uid);
+      rc_gid = _smb_name_to_gid(s_user, &gid);
+      
+      if ((rc_uid < 0 && rc_gid < 0) ||
+	  (rc_uid == 0 && rc_gid == 0)) {
+	
+	/* Name matches both user and group, or totally unknown */
 	e_type = GACL_TAG_TYPE_UNKNOWN;
-	if (pp->pw_uid == gp->gr_gid)
-	  e_ugid = pp->pw_uid;
+	if (uid == gid)
+	  e_ugid = uid;
 	else
 	  e_ugid = -1;
-      } else if (pp) {
+	
+      } else if (rc_uid == 0) {
+	
 	e_type = GACL_TAG_TYPE_USER;
-	e_ugid = pp->pw_uid;
+	e_ugid = uid;
+	
       } else {
 	e_type = GACL_TAG_TYPE_GROUP;
-	e_ugid = gp->gr_gid;
+	e_ugid = gid;
       }
-      
-      if (s_realm && *s_realm)
-	e_name = s_dupcat(s_realm, "\\", s_user, NULL);
+
+      if ((rc_uid == 0 || rc_gid == 0) && (cp = strchr(s_user, '\\')))
+	e_name = s_dup(cp+1);
       else
 	e_name = s_dup(s_user);
     }
@@ -504,6 +586,15 @@ smb_acl_get_file(const char *path) {
   return NULL;
 }
 
+
+int
+smb_acl_set_file(const char *path,
+		 GACL *ap) {
+  /* Not implemented */
+  errno = ENOSYS;
+  return -1;
+}
+
 #else
 
 int
@@ -557,6 +648,13 @@ smb_getxattr(const char *path,
 
 GACL *
 smb_acl_get_file(const char *path) {
+  errno = ENOSYS;
+  return NULL;
+}
+
+int
+smb_acl_set_file(const char *path,
+		 GACL *ap) {
   errno = ENOSYS;
   return NULL;
 }

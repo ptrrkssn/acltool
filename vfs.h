@@ -88,6 +88,15 @@ extern GACL *
 vfs_acl_get_file(const char *path,
 		 GACL_TYPE type);
 
+extern GACL *
+vfs_acl_get_link(const char *path,
+		 GACL_TYPE type);
+
+extern int
+vfs_acl_set_file(const char *path,
+		 GACL_TYPE type,
+		 GACL *ap);
+
 
 #if defined(__APPLE__)
 #include <sys/xattr.h>
@@ -127,10 +136,6 @@ extern int
 vfs_removexattr(const char *path,
 		const char *attr,
 		int flags);
-
-extern GACL *
-vfs_acl_get_link(const char *path,
-		 GACL_TYPE type);
 
 
 #ifndef IN_ACLTOOL_VFS_C
