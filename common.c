@@ -310,14 +310,18 @@ print_acl(FILE *fp,
   }
   
   if (!pp) {
-    snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
-    us = s_dup(ubuf);
+    if (sp->st_uid != -1) {
+      snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
+      us = s_dup(ubuf);
+    }
   } else
     us = s_dup(pp->pw_name);
   
   if (!gp) {
-    snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
-    gs = s_dup(gbuf);
+    if (sp->st_gid != -1) {
+      snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
+      gs = s_dup(gbuf);
+    }
   } else
     gs = s_dup(gp->gr_name);
   
@@ -330,16 +334,20 @@ print_acl(FILE *fp,
     }
 
     fprintf(fp, "# file: %s\n", path);
-    
-    if (config.f_verbose)
-      fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);
-    else
-      fprintf(fp, "# owner: %s\n", us);
-    
-    if (config.f_verbose)
-      fprintf(fp, "# group: %s (%d)\n", gs, sp->st_gid);
-    else
-      fprintf(fp, "# group: %s\n", gs);
+
+    if (us) {
+      if (config.f_verbose)
+	fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);
+      else
+	fprintf(fp, "# owner: %s\n", us);
+    }
+
+    if (gs) {
+      if (config.f_verbose)
+	fprintf(fp, "# group: %s (%d)\n", gs, sp->st_gid);
+      else
+	fprintf(fp, "# group: %s\n", gs);
+    }
     
     if (config.f_verbose)
       fprintf(fp, "# type: %s\n", mode2typestr(sp->st_mode));

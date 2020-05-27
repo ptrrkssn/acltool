@@ -235,11 +235,15 @@ smb_lstat(const char *path,
   /*
    * Hack to override the st_uid & st_gid with the real owner & group 
    */
-  if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) >= 0)
+  if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) >= 0) {
+    sp->st_uid = -1;
     _smb_name_to_uid(buf, &sp->st_uid);
+  }
   
-  if (smb_getxattr(path, group_attr, buf, sizeof(buf)) >= 0)
+  if (smb_getxattr(path, group_attr, buf, sizeof(buf)) >= 0) {
+    sp->st_gid = -1;
     _smb_name_to_gid(buf, &sp->st_gid);
+  }
 
   return rc;
 }
