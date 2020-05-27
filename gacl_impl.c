@@ -722,12 +722,57 @@ _gacl_set_fd_file(int fd,
  */
 #ifdef __sun__
 
+static struct permtab {
+  GACL_PERM g;
+  uint32_t s;
+} permtab[] =
+  {
+   { GACL_PERM_READ_DATA,           ACE_READ_DATA },
+   { GACL_PERM_LIST_DIRECTORY,      ACE_LIST_DIRECTORY },
+   { GACL_PERM_WRITE_DATA,          ACE_WRITE_DATA },
+   { GACL_PERM_ADD_FILE,            ACE_ADD_FILE },
+   { GACL_PERM_APPEND_DATA,         ACE_APPEND_DATA },
+   { GACL_PERM_ADD_SUBDIRECTORY,    ACE_ADD_SUBDIRECTORY },
+   { GACL_PERM_READ_NAMED_ATTRS,    ACE_READ_NAMED_ATTRS },
+   { GACL_PERM_WRITE_NAMED_ATTRS,   ACE_WRITE_NAMED_ATTRS },
+   { GACL_PERM_EXECUTE,             ACE_EXECUTE },
+   { GACL_PERM_DELETE_CHILD,        ACE_DELETE_CHILD },
+   { GACL_PERM_READ_ATTRIBUTES,     ACE_READ_ATTRIBUTES },
+   { GACL_PERM_WRITE_ATTRIBUTES,    ACE_WRITE_ATTRIBUTES },
+   { GACL_PERM_DELETE,              ACE_DELETE },
+   { GACL_PERM_READ_ACL,            ACE_READ_ACL },
+   { GACL_PERM_WRITE_ACL,           ACE_WRITE_ACL },
+   { GACL_PERM_WRITE_OWNER,         ACE_WRITE_OWNER },
+   { GACL_PERM_SYNCHRONIZE,         ACE_SYNCHRONIZE },
+  };
+
+static struct flagtab {
+  GACL_FLAG g;
+  uint16_t s;
+} flagtab[] =
+  {
+   { GACL_FLAG_FILE_INHERIT,          ACE_FILE_INHERIT_ACE },
+   { GACL_FLAG_DIRECTORY_INHERIT,     ACE_DIRECTORY_INHERIT_ACE },
+   { GACL_FLAG_NO_PROPAGATE_INHERIT,  ACE_NO_PROPAGATE_INHERIT_ACE },
+   { GACL_FLAG_INHERIT_ONLY,          ACE_INHERIT_ONLY_ACE },
+   { GACL_FLAG_SUCCESSFUL_ACCESS,     ACE_SUCCESSFUL_ACCESS_ACE_FLAG },
+   { GACL_FLAG_FAILED_ACCESS,         ACE_FAILED_ACCESS_ACE_FLAG },
+#ifdef ACE_INHERITED_ACE
+   { GACL_FLAG_INHERITED,             ACE_INHERITED_ACE },
+#endif
+  };
+
+
+
 /* 
  * Convert GACL_ENTRY to Solaris ace_t
  */
 static int
 _gacl_entry_to_ace(GACL_ENTRY *ep,
 		   ace_t *ap) {
+  int i;
+
+  
   if (!ep || !ap) {
     errno = EINVAL;
     return -1;
@@ -761,10 +806,33 @@ _gacl_entry_to_ace(GACL_ENTRY *ep,
   
   ap->a_who = ep->tag.ugid;
 
-  /* XXX: Convert */
-  ap->a_access_mask = ep->perms;
-  ap->a_flags |= ep->flags;
-  ap->a_type  = ep->type;
+  ap->a_access_mask = 0;
+  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++)
+    if (ep->perms & permtab[i].g)
+      ap->a_access_mask |= permtab[i].s;
+  
+  ap->a_flags = 0;
+  for (i = 0; i < sizeof(flagtab)/sizeof(flagtab[0]); i++)
+    if (ep->flags & flagtab[i].g)
+      ap->a_flags |= flagtab[i].s;
+
+  switch (ep->type) {
+  case GACL_ENTRY_TYPE_UNDEFINED:
+    errno = EINVAL;
+    return -1;
+  case GACL_ENTRY_TYPE_ALLOW:
+    ap->a_type = ACE_ACCESS_ALLOWED_ACE_TYPE;
+    break;
+  case GACL_ENTRY_TYPE_DENY:
+    ap->a_type = ACE_ACCESS_DENIED_ACE_TYPE;
+    break;
+  case GACL_ENTRY_TYPE_AUDIT:
+    ap->a_type = ACE_SYSTEM_AUDIT_ACE_TYPE;
+    break;
+  case GACL_ENTRY_TYPE_ALARM:
+    ap->a_type = ACE_SYSTEM_ALARM_ACE_TYPE;
+    break;
+  }
   
   return 0;
 }
@@ -778,7 +846,8 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
 		     ace_t *ap) {
   struct passwd *pp;
   struct group *gp;
-
+  int i;
+  
   
   if (!ep || !ap) {
     errno = EINVAL;
@@ -832,9 +901,30 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
     }
   }
 
-  /* XXX: Convert values */
-  ep->perms = ap->a_access_mask;
-  ep->flags = (ap->a_flags & GACL_FLAGS_ALL);
+  ep->perms = 0;
+  for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++)
+    if (ap->a_access_mask & permtab[i].s)
+      ep->perms |= permtab[i].g;
+  
+  ep->flags = 0;
+  for (i = 0; i < sizeof(flagtab)/sizeof(flagtab[0]); i++)
+    if (ap->a_flags & flagtab[i].s)
+      ep->flags |= flagtab[i].g;
+  
+  switch (ap->a_type) {
+  case ACE_ACCESS_ALLOWED_ACE_TYPE:
+    ep->type = GACL_ENTRY_TYPE_ALLOW;
+    break;
+  case ACE_ACCESS_DENIED_ACE_TYPE:
+    ep->type = GACL_ENTRY_TYPE_DENY;
+    break;
+  case ACE_SYSTEM_AUDIT_ACE_TYPE:
+    ep->type = GACL_ENTRY_TYPE_AUDIT;
+    break;
+  case ACE_SYSTEM_ALARM_ACE_TYPE:
+    ep->type = GACL_ENTRY_TYPE_ALARM;
+    break;
+  }
   ep->type  = ap->a_type;
   
   return 0;
@@ -845,7 +935,7 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
 GACL *
 _gacl_get_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  int flags) {
   GACL *ap;
   int i, n;
@@ -866,10 +956,10 @@ _gacl_get_fd_file(int fd,
   }
   
   switch (type) {
-  case GACL_ENTRY_TYPE_NONE:
+  case GACL_TYPE_NONE:
     return gacl_init(0);
 
-  case GACL_ENTRY_TYPE_NFS4:
+  case GACL_TYPE_NFS4:
     if (path)
       n = acl(path, ACE_GETACLCNT, 0, NULL);
     else
@@ -966,7 +1056,7 @@ _gacl_get_fd_file(int fd,
 int
 _gacl_set_fd_file(int fd,
 		  const char *path,
-		  GACL_ENTRY_TYPE type,
+		  GACL_TYPE type,
 		  GACL *ap,
 		  int flags) {
   int i, rc;
@@ -986,12 +1076,12 @@ _gacl_set_fd_file(int fd,
   }
   
   switch (type) {
-  case GACL_ENTRY_TYPE_NONE:
+  case GACL_TYPE_NONE:
     /* XXX: Remove ACL? */
     errno = ENOSYS;
     return -1;
     
-  case GACL_ENTRY_TYPE_NFS4:
+  case GACL_TYPE_NFS4:
     acp = calloc(ap->ac, sizeof(*acp));
     if (!acp)
       return -1;
