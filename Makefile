@@ -22,7 +22,7 @@ SOLCC=gcc
 CFLAGS=-O -g -Wall
 LDFLAGS=-lreadline
 
-OBJS=gacl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
+OBJS=gacl.o gacl_impl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
 
 auto build:
 	@if [ -f "$(SMBLIB)/libsmbclient.so" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
@@ -62,7 +62,8 @@ strings.o:	strings.c strings.h acltool.h
 commands.o:	commands.c commands.h acltool.h
 basic.o:	basic.c basic.h acltool.h
 aclcmds.o:	aclcmds.c aclcmds.h acltool.h
-gacl.o:		gacl.c gacl.h acltool.h
+gacl.o:		gacl.c gacl.h
+gacl_impl.o:	gacl_impl.c gacl_impl.h
 
 
 acltool: $(OBJS)

@@ -53,26 +53,26 @@ static size_t w_c = 0;
 
 
 int
-_acl_filter_file(acl_t ap) {
-  acl_entry_t ae;
+_acl_filter_file(gacl_t ap) {
+  gacl_entry_t ae;
   int i;
   
 
-  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-    acl_flagset_t fs;
+  for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
+    gacl_flagset_t fs;
     int fi;
 
-    if (acl_get_flagset_np(ae, &fs) < 0)
+    if (gacl_get_flagset_np(ae, &fs) < 0)
       return -1;
 
-    fi = acl_get_flag_np(fs, ACL_ENTRY_INHERITED);
+    fi = gacl_get_flag_np(fs, GACL_FLAG_INHERITED);
 
     /* Remove all flags except for the INHERITED one */
-    acl_clear_flags_np(fs);
+    gacl_clear_flags_np(fs);
     if (fi)
-      acl_add_flag_np(fs, ACL_ENTRY_INHERITED);
+      gacl_add_flag_np(fs, GACL_FLAG_INHERITED);
 
-    if (acl_set_flagset_np(ae, fs) < 0)
+    if (gacl_set_flagset_np(ae, fs) < 0)
       return -1;
   }
 
@@ -90,7 +90,7 @@ walker_strip(const char *path,
 	     size_t level,
 	     void *vp) {
   int rc;
-  acl_t ap, na;
+  gacl_t ap, na;
   int tf;
   
 
@@ -99,25 +99,25 @@ walker_strip(const char *path,
     return 1;
 
   tf = 0;
-  if (acl_is_trivial_np(ap, &tf) < 0) {
+  if (gacl_is_trivial_np(ap, &tf) < 0) {
     int s_errno = errno;
     
-    acl_free(ap);
-    error(0, s_errno, "%s: Internal Error (acl_is_trivial_np)", path);
+    gacl_free(ap);
+    error(0, s_errno, "%s: Internal Error (gacl_is_trivial_np)", path);
     return 1;
   }
 
   if (tf) {
-    acl_free(ap);
+    gacl_free(ap);
     return 0;
   }
   
-  na = acl_strip_np(ap, 0);
+  na = gacl_strip_np(ap, 0);
 
   rc = set_acl(path, sp, na, ap);
 
-  acl_free(na);
-  acl_free(ap);
+  gacl_free(na);
+  gacl_free(ap);
 
   if (rc < 0)
     return 1;
@@ -135,9 +135,9 @@ walker_delete(const char *path,
   
   
   if (S_ISLNK(sp->st_mode))
-    rc = acl_delete_link_np(path, ACL_TYPE_NFS4);
+    rc = gacl_delete_link_np(path, GACL_TYPE_NFS4);
   else
-    rc = acl_delete_file_np(path, ACL_TYPE_NFS4);
+    rc = gacl_delete_file_np(path, GACL_TYPE_NFS4);
   
   if (rc < 0) {
     fprintf(stderr, "%s: Error: %s: Deleting ACL\n", argv0, path);
@@ -158,7 +158,7 @@ walker_sort(const char *path,
 	    size_t level,
 	    void *vp) {
   int rc;
-  acl_t ap, na;
+  gacl_t ap, na;
 
 
   ap = get_acl(path, sp);
@@ -167,7 +167,7 @@ walker_sort(const char *path,
     return 1;
   }
 
-  na = acl_sort(ap);
+  na = gacl_sort(ap);
   if (!na) {
     fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
     return 1;
@@ -175,8 +175,8 @@ walker_sort(const char *path,
 
   rc = set_acl(path, sp, na, ap);
 
-  acl_free(na);
-  acl_free(ap);
+  gacl_free(na);
+  gacl_free(ap);
 
   if (rc < 0)
     return 1;
@@ -191,7 +191,7 @@ walker_touch(const char *path,
 	     size_t level,
 	     void *vp) {
   int rc;
-  acl_t ap;
+  gacl_t ap;
 
 
   ap = get_acl(path, sp);
@@ -201,7 +201,7 @@ walker_touch(const char *path,
   }
 
   rc = set_acl(path, sp, ap, ap);
-  acl_free(ap);
+  gacl_free(ap);
 
   if (rc < 0)
     return 1;
@@ -212,8 +212,8 @@ walker_touch(const char *path,
 
 
 typedef struct {
-  acl_t da;
-  acl_t fa;
+  gacl_t da;
+  gacl_t fa;
 } DACL;
 
 
@@ -248,9 +248,9 @@ walker_find(const char *path,
 	    size_t base,
 	    size_t level,
 	    void *vp) {
-  acl_t ap, map = (acl_t) vp;
+  gacl_t ap, map = (gacl_t) vp;
   int i, j;
-  acl_entry_t ae, mae;
+  gacl_entry_t ae, mae;
 
 
   ap = get_acl(path, sp);
@@ -259,11 +259,11 @@ walker_find(const char *path,
     return 0;
   }
 
-  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-    for (j = 0; acl_get_entry(map, j == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &mae) == 1; j++) {
+  for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
+    for (j = 0; gacl_get_entry(map, j == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &mae) == 1; j++) {
       int rc;
       
-      rc = acl_entry_match(ae, mae);
+      rc = gacl_entry_match(ae, mae);
       if (rc < 0)
 	return -1;
 
@@ -289,7 +289,7 @@ walker_print(const char *path,
 	     size_t base,
 	     size_t level,
 	     void *vp) {
-  acl_t ap;
+  gacl_t ap;
   FILE *fp;
   int *np = (int *) vp;
 
@@ -306,7 +306,7 @@ walker_print(const char *path,
     putchar('\n');
   
   print_acl(fp, ap, path, sp);
-  acl_free(ap);
+  gacl_free(ap);
   
   ++w_c;
   
@@ -331,7 +331,7 @@ get_cmd(int argc,
   
   
   for (i = 1; i < argc; i++) {
-    acl_t ap;
+    gacl_t ap;
     char *pp, *as;
 
     pp = strchr(argv[i], '=');
@@ -347,10 +347,10 @@ get_cmd(int argc,
       return 1;
     }
 
-    as = acl_to_text_np(ap, NULL, ACL_TEXT_COMPACT_NP);
+    as = gacl_to_text_np(ap, NULL, GACL_TEXT_COMPACT);
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Converting ACL to text: %s\n", argv0, pp, strerror(errno));
-      acl_free(ap);
+      gacl_free(ap);
       return 1;
     }
 
@@ -358,18 +358,18 @@ get_cmd(int argc,
     nv = malloc(ns);
     if (!nv) {
       fprintf(stderr, "%s: Error: %s: Malloc(%d): %s\n", argv0, argv[i], (int) ns, strerror(errno));
-      acl_free(ap);
+      gacl_free(ap);
       return 1;
     }
     
     snprintf(nv, ns, "%s=%s", argv[i], as);
     if (putenv(nv) < 0) {
       fprintf(stderr, "%s: Error: %s: Putenv: %s\n", argv0, argv[i], strerror(errno));
-      acl_free(ap);
+      gacl_free(ap);
       return 1;
     }
-    acl_free(as);
-    acl_free(ap);
+    gacl_free(as);
+    gacl_free(ap);
   }
 
   return 0;
@@ -396,10 +396,10 @@ copy_cmd(int argc,
     return 1;
   }
 
-  a.fa = acl_dup(a.da);
+  a.fa = gacl_dup(a.da);
   if (!a.fa) {
-    acl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Internal Fault (acl_dup): %s\n", argv[0], argv[1], strerror(errno));
+    gacl_free(a.da);
+    fprintf(stderr, "%s: Error: %s: Internal Fault (gacl_dup): %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
  
@@ -407,8 +407,8 @@ copy_cmd(int argc,
 
   rc = aclcmd_foreach(argc-2, argv+2, walker_set, (void *) &a);
   
-  acl_free(a.da);
-  acl_free(a.fa);
+  gacl_free(a.da);
+  gacl_free(a.fa);
   return rc;
 }
 
@@ -451,15 +451,15 @@ set_cmd(int argc,
   }
 
 
-  a.da = acl_from_text(argv[1]);
+  a.da = gacl_from_text(argv[1]);
   if (!a.da) {
     fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
 
-  a.fa = acl_dup(a.da);
+  a.fa = gacl_dup(a.da);
   if (!a.fa) {
-    acl_free(a.da);
+    gacl_free(a.da);
     fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
     return 1;
   }
@@ -468,8 +468,8 @@ set_cmd(int argc,
 
   rc = aclcmd_foreach(argc-2, argv+2, walker_set, (void *) &a);
 
-  acl_free(a.da);
-  acl_free(a.fa);
+  gacl_free(a.da);
+  gacl_free(a.fa);
 
   return rc;
 }
@@ -494,8 +494,8 @@ walker_rename(const char *path,
 	      void *vp) {
   int rc, i, j;
   RENAMELIST *r = (RENAMELIST *) vp;
-  acl_t ap;
-  acl_entry_t ae;
+  gacl_t ap;
+  gacl_entry_t ae;
   int f_updated = 0;
 
   
@@ -505,25 +505,25 @@ walker_rename(const char *path,
     return 1;
   }
 
-  for (i = 0; acl_get_entry(ap, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
-    acl_tag_t tt;
+  for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
+    gacl_tag_t tt;
     uid_t *oip = NULL;
     
-    acl_get_tag_type(ae, &tt);
-    if (tt == ACL_USER || tt == ACL_GROUP)
-      oip = acl_get_qualifier(ae);
+    gacl_get_tag_type(ae, &tt);
+    if (tt == GACL_TAG_TYPE_USER || tt == GACL_TAG_TYPE_GROUP)
+      oip = gacl_get_qualifier(ae);
     
     for (j = 0; j < r->c; j++) {
       if (tt == r->v[j].type && oip && *oip == r->v[j].old) {
-	acl_free(oip);
-	acl_set_qualifier(ae, &r->v[j].new);
-	oip = acl_get_qualifier(ae);
+	gacl_free(oip);
+	gacl_set_qualifier(ae, &r->v[j].new);
+	oip = gacl_get_qualifier(ae);
 	f_updated = 1;
       }
     }
     
     if (oip)
-      acl_free(oip);
+      gacl_free(oip);
   }
   
   if (f_updated) {
@@ -573,7 +573,7 @@ str2renamelist(char *str,
 	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
 	  return -1;
 	
-	r->v[r->c++].type = ACL_GROUP;
+	r->v[r->c++].type = GACL_TAG_TYPE_GROUP;
 	
       } else if (strcasecmp(str, "u") == 0 ||
 		 strcasecmp(str, "user") == 0) {
@@ -590,7 +590,7 @@ str2renamelist(char *str,
 	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
 	  return -1;
 	
-	r->v[r->c++].type = ACL_USER;
+	r->v[r->c++].type = GACL_TAG_TYPE_USER;
       }
     } else {
       s2 = s1;
@@ -625,7 +625,7 @@ str2renamelist(char *str,
       
       r->v[r->c].new = (p_new ? p_new->pw_uid : g_new->gr_gid);
       
-      r->v[r->c++].type = p_old ? ACL_USER : ACL_GROUP;
+      r->v[r->c++].type = p_old ? GACL_TAG_TYPE_USER : GACL_TAG_TYPE_GROUP;
     }
     
     str = strtok(NULL, ",");
@@ -660,7 +660,7 @@ rename_cmd(int argc,
 int
 find_cmd(int argc,
 	 char **argv) {
-  acl_t ap;
+  gacl_t ap;
 
 
   if (argc < 2) {
@@ -669,7 +669,7 @@ find_cmd(int argc,
   }
 
 
-  ap = acl_from_text(argv[1]);
+  ap = gacl_from_text(argv[1]);
 
   return aclcmd_foreach(argc-2, argv+2, walker_find, (void *) ap);
 }
@@ -684,7 +684,7 @@ walker_inherit(const char *path,
 	   size_t level,
 	   void *vp) {
   DACL *a = (DACL *) vp;
-  acl_t ap = NULL;
+  gacl_t ap = NULL;
 
 
   if (!a) {
@@ -693,57 +693,57 @@ walker_inherit(const char *path,
   }
   
   if (!a->da) {
-    acl_entry_t ep;
+    gacl_entry_t ep;
     int p;
     
     ap = get_acl(path, sp);
     if (!ap)
       return -1;
 
-    a->da = acl_dup(ap);
+    a->da = gacl_dup(ap);
     if (!a->da)
       goto Fail;
     
-    for (p = ACL_FIRST_ENTRY; acl_get_entry(a->da, p, &ep) == 1; p = ACL_NEXT_ENTRY) {
-      acl_flagset_t fs;
+    for (p = GACL_FIRST_ENTRY; gacl_get_entry(a->da, p, &ep) == 1; p = GACL_NEXT_ENTRY) {
+      gacl_flagset_t fs;
 
-      if (acl_get_flagset_np(ep, &fs) < 0)
+      if (gacl_get_flagset_np(ep, &fs) < 0)
 	goto Fail;
 
       if (S_ISDIR(sp->st_mode)) {
-	acl_add_flag_np(fs, ACL_ENTRY_FILE_INHERIT);
-	acl_add_flag_np(fs, ACL_ENTRY_DIRECTORY_INHERIT);
+	gacl_add_flag_np(fs, GACL_FLAG_FILE_INHERIT);
+	gacl_add_flag_np(fs, GACL_FLAG_DIRECTORY_INHERIT);
       }
-      acl_delete_flag_np(fs, ACL_ENTRY_NO_PROPAGATE_INHERIT);
+      gacl_delete_flag_np(fs, GACL_FLAG_NO_PROPAGATE_INHERIT);
       
-      if (acl_set_flagset_np(ep, fs) < 0)
+      if (gacl_set_flagset_np(ep, fs) < 0)
 	goto Fail;
     }
 
     /* Update the ACL with FILE & DIR INHERIT (if a directory) */
     if (set_acl(path, sp, a->da, ap) < 0) {
       /* XXX TODO: FIXME */
-      char *s = acl_to_text(a->da, NULL);
+      char *s = gacl_to_text(a->da, NULL);
       puts(s);
       
       fprintf(stderr, "set_acl(%s): %s\n", path, strerror(errno));
       goto Fail;
     }
     
-    for (p = ACL_FIRST_ENTRY; acl_get_entry(a->da, p, &ep) == 1; p = ACL_NEXT_ENTRY) {
-      acl_flagset_t fs;
+    for (p = GACL_FIRST_ENTRY; gacl_get_entry(a->da, p, &ep) == 1; p = GACL_NEXT_ENTRY) {
+      gacl_flagset_t fs;
 
-      if (acl_get_flagset_np(ep, &fs) < 0)
+      if (gacl_get_flagset_np(ep, &fs) < 0)
 	goto Fail;
 
-      acl_delete_flag_np(fs, ACL_ENTRY_INHERIT_ONLY);
-      acl_add_flag_np(fs, ACL_ENTRY_INHERITED);
+      gacl_delete_flag_np(fs, GACL_FLAG_INHERIT_ONLY);
+      gacl_add_flag_np(fs, GACL_FLAG_INHERITED);
       
-      if (acl_set_flagset_np(ep, fs) < 0)
+      if (gacl_set_flagset_np(ep, fs) < 0)
 	goto Fail;
     }
 
-    a->fa = acl_dup(a->da);
+    a->fa = gacl_dup(a->da);
     if (!a->fa)
       goto Fail;
     
@@ -752,7 +752,7 @@ walker_inherit(const char *path,
     
     return 0;
   } else {
-    acl_t oap = get_acl(path, sp);
+    gacl_t oap = get_acl(path, sp);
     int rc;
 
     
@@ -766,7 +766,7 @@ walker_inherit(const char *path,
     if (rc < 0)
       return rc;
     
-    acl_free(oap);
+    gacl_free(oap);
     return 0;
   }
 
@@ -774,9 +774,9 @@ walker_inherit(const char *path,
   
  Fail:
   if (a && a->da)
-    acl_free(a->da);
+    gacl_free(a->da);
   if (ap)
-    acl_free(ap);
+    gacl_free(ap);
   return -1;
 }
 
@@ -799,9 +799,9 @@ inherit_cmd(int argc,
 		    config.f_recurse ? -1 : config.max_depth, config.f_filetype);
     
     if (a.da)
-      acl_free(a.da);
+      gacl_free(a.da);
     if (a.fa)
-      acl_free(a.fa);
+      gacl_free(a.fa);
   }
 
   return rc;

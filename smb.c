@@ -373,12 +373,12 @@ smb_acl_get_file(const char *path) {
     char *s_flags = strsep(&cp, "/");
     char *s_perms = strsep(&cp, "/");
     int type, flags, perms;
-    GACE *ep = NULL;
+    GACL_ENTRY *ep = NULL;
     struct passwd *pp;
     struct group *gp;
-    GACE_PERMSET ps;
-    GACE_FLAGSET fs;
-    GACE_TAG_TYPE e_type;
+    GACL_PERMSET ps;
+    GACL_FLAGSET fs;
+    GACL_TAG_TYPE e_type;
     uid_t e_ugid;
     char *e_name;
     
@@ -394,7 +394,7 @@ smb_acl_get_file(const char *path) {
     e_name = NULL;
     
     if (!*s_realm && strcmp(s_user, "Everyone") == 0) {
-      e_type = GACE_TAG_TYPE_EVERYONE;
+      e_type = GACL_TAG_TYPE_EVERYONE;
       e_name = s_dup("everyone@");
     }
     else {
@@ -413,10 +413,10 @@ smb_acl_get_file(const char *path) {
 	continue; 
 
       if (pp) {
-	e_type = GACE_TAG_TYPE_USER;
+	e_type = GACL_TAG_TYPE_USER;
 	e_ugid = pp->pw_uid;
       } else {
-	e_type = GACE_TAG_TYPE_GROUP;
+	e_type = GACL_TAG_TYPE_GROUP;
 	e_ugid = gp->gr_gid;
       }
       
@@ -435,16 +435,16 @@ smb_acl_get_file(const char *path) {
     
     switch (type) {
     case SMB_ACL_TYPE_ALLOW:
-      gacl_set_entry_type_np(ep, GACE_TYPE_ALLOW);
+      gacl_set_entry_type_np(ep, GACL_ENTRY_TYPE_ALLOW);
       break;
     case SMB_ACL_TYPE_DENY:
-      gacl_set_entry_type_np(ep, GACE_TYPE_DENY);
+      gacl_set_entry_type_np(ep, GACL_ENTRY_TYPE_DENY);
       break;
     case SMB_ACL_TYPE_AUDIT:
-      gacl_set_entry_type_np(ep, GACE_TYPE_AUDIT);
+      gacl_set_entry_type_np(ep, GACL_ENTRY_TYPE_AUDIT);
       break;
     case SMB_ACL_TYPE_ALARM:
-      gacl_set_entry_type_np(ep, GACE_TYPE_ALARM);
+      gacl_set_entry_type_np(ep, GACL_ENTRY_TYPE_ALARM);
       break;
     default:
       errno = EINVAL;
@@ -453,45 +453,45 @@ smb_acl_get_file(const char *path) {
 
     gacl_clear_flags_np(&fs);
     if (flags & SMB_ACL_FLAG_OI)
-      gacl_add_flag_np(&fs, GACE_FLAG_FILE_INHERIT);
+      gacl_add_flag_np(&fs, GACL_FLAG_FILE_INHERIT);
     if (flags & SMB_ACL_FLAG_CI)
-      gacl_add_flag_np(&fs, GACE_FLAG_DIRECTORY_INHERIT);
+      gacl_add_flag_np(&fs, GACL_FLAG_DIRECTORY_INHERIT);
     if (flags & SMB_ACL_FLAG_NI)
-      gacl_add_flag_np(&fs, GACE_FLAG_NO_PROPAGATE_INHERIT);
+      gacl_add_flag_np(&fs, GACL_FLAG_NO_PROPAGATE_INHERIT);
     if (flags & SMB_ACL_FLAG_IO)
-      gacl_add_flag_np(&fs, GACE_FLAG_INHERIT_ONLY);
+      gacl_add_flag_np(&fs, GACL_FLAG_INHERIT_ONLY);
     gacl_set_flagset_np(ep, &fs);
     
     gacl_clear_perms(&ps);
     if (perms & SMB_ACL_PERM_RD)
-      gacl_add_perm(&ps, GACE_READ_DATA);
+      gacl_add_perm(&ps, GACL_PERM_READ_DATA);
     if (perms & SMB_ACL_PERM_WD)
-      gacl_add_perm(&ps, GACE_WRITE_DATA);
+      gacl_add_perm(&ps, GACL_PERM_WRITE_DATA);
     if (perms & SMB_ACL_PERM_X)
-      gacl_add_perm(&ps, GACE_EXECUTE);
+      gacl_add_perm(&ps, GACL_PERM_EXECUTE);
     if (perms & SMB_ACL_PERM_AD)
-      gacl_add_perm(&ps, GACE_APPEND_DATA);
+      gacl_add_perm(&ps, GACL_PERM_APPEND_DATA);
     if (perms & SMB_ACL_PERM_REA)
-      gacl_add_perm(&ps, GACE_READ_NAMED_ATTRS);
+      gacl_add_perm(&ps, GACL_PERM_READ_NAMED_ATTRS);
     if (perms & SMB_ACL_PERM_WEA)
-      gacl_add_perm(&ps, GACE_WRITE_NAMED_ATTRS);
+      gacl_add_perm(&ps, GACL_PERM_WRITE_NAMED_ATTRS);
     if (perms & SMB_ACL_PERM_DC)
-      gacl_add_perm(&ps, GACE_DELETE_CHILD);
+      gacl_add_perm(&ps, GACL_PERM_DELETE_CHILD);
     if (perms & SMB_ACL_PERM_D)
-      gacl_add_perm(&ps, GACE_DELETE);
+      gacl_add_perm(&ps, GACL_PERM_DELETE);
     if (perms & SMB_ACL_PERM_RA)
-      gacl_add_perm(&ps, GACE_READ_ATTRIBUTES);
+      gacl_add_perm(&ps, GACL_PERM_READ_ATTRIBUTES);
     if (perms & SMB_ACL_PERM_WA)
-      gacl_add_perm(&ps, GACE_WRITE_ATTRIBUTES);
+      gacl_add_perm(&ps, GACL_PERM_WRITE_ATTRIBUTES);
     
     if (perms & SMB_ACL_PERM_RC)
-      gacl_add_perm(&ps, GACE_READ_ACL);
+      gacl_add_perm(&ps, GACL_PERM_READ_ACL);
     if (perms & SMB_ACL_PERM_WDAC)
-      gacl_add_perm(&ps, GACE_WRITE_ACL);
+      gacl_add_perm(&ps, GACL_PERM_WRITE_ACL);
     if (perms & SMB_ACL_PERM_WO)
-      gacl_add_perm(&ps, GACE_WRITE_OWNER);
+      gacl_add_perm(&ps, GACL_PERM_WRITE_OWNER);
     if (perms & SMB_ACL_PERM_S)
-      gacl_add_perm(&ps, GACE_SYNCHRONIZE);
+      gacl_add_perm(&ps, GACL_PERM_SYNCHRONIZE);
     
     gacl_set_permset(ep, &ps);
   }

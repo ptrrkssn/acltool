@@ -1,0 +1,28 @@
+The following table lists the access limitations for each set of special NTFS permissions.
+
+
+Special Permissions		FC	M	RX	L	R	W
+
+Traverse Folder/Execute File	x	x	x	x	-	-
+List Folder/Read Data		x	x	x	x	x	-
+Read Attributes	 		x	x	x	x	x	-
+Read Extended Attributes	x	x	x	x	x	-
+Create Files/Write Data		x	x	-	-	-	x
+Create Folders/Append Data	x	x	-	-	-	x
+Write Attributes      		x	x	-	-	-	x
+Write Extended Attributes	x	x	-	-	-	x
+Delete Subfolders and Files	x	-	-	-	-	-
+Delete 		      		x	x	-	-	-	-
+Read Permissions		x	x	x	x	x	x
+Change Permissions		x	-	-	-	-	-
+Take Ownership			x	-	-	-	-	-
+Synchronize			x	x	x	x	x	x
+
+
+FC = Full Control
+M  = Modify
+RX = Read & Execute
+L  = List Folder Contents
+R  = Read
+W  = Write
+

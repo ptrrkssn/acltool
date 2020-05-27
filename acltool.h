@@ -64,7 +64,7 @@ typedef struct config {
   int f_noupdate;
   int f_noprefix;
   mode_t f_filetype;
-  ACL_STYLE f_style;
+  GACL_STYLE f_style;
   
   int max_depth;
 } CONFIG;

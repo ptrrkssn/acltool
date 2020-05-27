@@ -34,34 +34,34 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-typedef enum acl_style
+typedef enum gacl_style
   {
-   ACL_STYLE_DEFAULT  = 0x00,
-   ACL_STYLE_STANDARD = 0x01,
-   ACL_STYLE_BRIEF    = 0x02,
-   ACL_STYLE_VERBOSE  = 0x03,
-   ACL_STYLE_CSV      = 0x10,
-   ACL_STYLE_SAMBA    = 0x20,
-   ACL_STYLE_ICACLS   = 0x30,
-   ACL_STYLE_SOLARIS  = 0x40,
-   ACL_STYLE_PRIMOS   = 0x50,
-  } ACL_STYLE;
+   GACL_STYLE_DEFAULT  = 0x00,
+   GACL_STYLE_STANDARD = 0x01,
+   GACL_STYLE_BRIEF    = 0x02,
+   GACL_STYLE_VERBOSE  = 0x03,
+   GACL_STYLE_CSV      = 0x10,
+   GACL_STYLE_SAMBA    = 0x20,
+   GACL_STYLE_ICACLS   = 0x30,
+   GACL_STYLE_SOLARIS  = 0x40,
+   GACL_STYLE_PRIMOS   = 0x50,
+  } GACL_STYLE;
 
 
-extern acl_t 
+extern gacl_t 
 get_acl(const char *path, 
 	const struct stat *sp);
 
 extern int
-print_ace(acl_t ap,
+print_ace(gacl_t ap,
 	  int p,
 	  int verbose);
 
 extern int
 set_acl(const char *path,
 	const struct stat *sp,
-	acl_t ap,
-	acl_t oap);
+	gacl_t ap,
+	gacl_t oap);
 
 extern int
 str2filetype(const char *str,
@@ -70,17 +70,17 @@ str2filetype(const char *str,
 
 extern int
 print_acl(FILE *fp,
-	  acl_t a,
+	  gacl_t a,
 	  const char *path,
 	  const struct stat *sp);
 
 
 extern int
 str2style(const char *str,
-	  ACL_STYLE *sp);
+	  GACL_STYLE *sp);
 
 extern const char *
-style2str(ACL_STYLE s);
+style2str(GACL_STYLE s);
 
 extern char *
 mode2str(mode_t m);

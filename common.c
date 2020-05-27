@@ -49,10 +49,10 @@
 #include "common.h"
 
 
-acl_t 
+gacl_t 
 get_acl(const char *path, 
 	const struct stat *sp) {
-  acl_t ap;
+  gacl_t ap;
   struct stat sbuf;
 
 
@@ -66,13 +66,13 @@ get_acl(const char *path,
   }
 
   if (S_ISLNK(sp->st_mode)) {
-    ap = vfs_acl_get_link(path, ACL_TYPE_NFS4);
+    ap = vfs_acl_get_link(path, GACL_TYPE_NFS4);
     if (!ap) {
       error(1, errno, "Getting ACL (acl_get_link)");
       return NULL;
     }
   } else {
-    ap = vfs_acl_get_file(path, ACL_TYPE_NFS4);
+    ap = vfs_acl_get_file(path, GACL_TYPE_NFS4);
     if (!ap) {
       error(1, errno, "Getting ACL (acl_get_file)");
       return NULL;
@@ -84,17 +84,17 @@ get_acl(const char *path,
 
 
 int
-print_ace(acl_t ap,
+print_ace(gacl_t ap,
 	  int p,
 	  int flags) {
-  acl_entry_t ae;
+  gacl_entry_t ae;
   char buf[1024];
 
   
   if (_gacl_get_entry(ap, p, &ae) < 0)
     return -1;
   
-  if (acl_entry_to_text(ae, buf, sizeof(buf), flags) < 0)
+  if (gacl_entry_to_text(ae, buf, sizeof(buf), flags) < 0)
     return -1;
   
   puts(buf);
@@ -105,14 +105,14 @@ print_ace(acl_t ap,
 int
 set_acl(const char *path,
 	const struct stat *sp,
-	acl_t nap,
-	acl_t oap) {
+	gacl_t nap,
+	gacl_t oap) {
   int rc, s_errno;
-  acl_t ap = nap;
+  gacl_t ap = nap;
 
 
   if (config.f_sort) {
-    acl_t sap = acl_sort(ap);
+    gacl_t sap = gacl_sort(ap);
 
     if (!sap) {
       error(1, errno, "%s: Sorting ACL", path);
@@ -122,17 +122,17 @@ set_acl(const char *path,
   }
 
   if (config.f_merge) {
-    acl_t map = acl_merge(ap);
+    gacl_t map = gacl_merge(ap);
     
     if (!map) {
       s_errno = errno;
       if (ap != nap)
-	acl_free(ap);
+	gacl_free(ap);
       error(1, s_errno, "%s: Merging ACL", path);
       return -1;
     }
     if (ap != nap)
-      acl_free(ap);
+      gacl_free(ap);
     ap = map;
   }
 
@@ -140,24 +140,24 @@ set_acl(const char *path,
     print_acl(stdout, ap, path, sp);
   
   /* Skip set operation if old and new acl is the same (and force flag not in use) */
-  if (oap && acl_match(ap, oap) == 1 && !config.f_force) {
+  if (oap && gacl_match(ap, oap) == 1 && !config.f_force) {
     if (ap != nap)
-      acl_free(ap);
+      gacl_free(ap);
     return 0;
   }
 
   rc = 0;
   if (!config.f_noupdate) {
     if (S_ISLNK(sp->st_mode))
-      rc = acl_set_link_np(path, ACL_TYPE_NFS4, ap);
+      rc = gacl_set_link_np(path, GACL_TYPE_NFS4, ap);
     else
-      rc = acl_set_file(path, ACL_TYPE_NFS4, ap);
+      rc = gacl_set_file(path, GACL_TYPE_NFS4, ap);
   }
 
   if (rc < 0) {
     s_errno = errno;
     if (ap != nap)
-      acl_free(ap);
+      gacl_free(ap);
     error(1, s_errno, "%s: Setting ACL", path);
     return rc;
   }
@@ -169,7 +169,7 @@ set_acl(const char *path,
     printf("%s: ACL Updated%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
   
   if (ap != nap)
-    acl_free(ap);
+    gacl_free(ap);
 
   return 1;
 }
@@ -285,10 +285,10 @@ primos_print_flags(FILE *fp,
 
 int
 print_acl(FILE *fp,
-	  acl_t a,
+	  gacl_t a,
 	  const char *path,
 	  const struct stat *sp) {
-  acl_entry_t ae;
+  gacl_entry_t ae;
   int i, is_trivial, len;
   uid_t *idp;
   char *as;
@@ -322,8 +322,8 @@ print_acl(FILE *fp,
     gs = s_dup(gp->gr_name);
   
   switch (config.f_style) {
-  case ACL_STYLE_DEFAULT:
-    as = acl_to_text_np(a, NULL, (config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
+  case GACL_STYLE_DEFAULT:
+    as = gacl_to_text_np(a, NULL, (config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
@@ -355,11 +355,11 @@ print_acl(FILE *fp,
     }
 
     fputs(as, fp);
-    acl_free(as);
+    gacl_free(as);
     break;
 
-  case ACL_STYLE_STANDARD:
-    as = acl_to_text_np(a, NULL, ACL_TEXT_STANDARD_NP|(config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
+  case GACL_STYLE_STANDARD:
+    as = gacl_to_text_np(a, NULL, GACL_TEXT_STANDARD|(config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
@@ -369,48 +369,48 @@ print_acl(FILE *fp,
     fprintf(fp, "# owner: %s\n", us);
     fprintf(fp, "# group: %s\n", gs);
     fputs(as, fp);
-    acl_free(as);
+    gacl_free(as);
     break;
     
-  case ACL_STYLE_CSV:
+  case GACL_STYLE_CSV:
     /* One-liner, CSV-style */
 
-    as = acl_to_text_np(a, NULL, ACL_TEXT_COMPACT_NP);
+    as = gacl_to_text_np(a, NULL, GACL_TEXT_COMPACT);
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL: %s\n", argv0, path, strerror(errno));
       return 1;
     }
     fprintf(fp, "%s;%s;%d;%d;%s;%s\n", path, as, sp->st_uid, sp->st_gid, us ? us : "-", gs ? gs : "-");
-    acl_free(as);
+    gacl_free(as);
     break;
 
-  case ACL_STYLE_BRIEF:
+  case GACL_STYLE_BRIEF:
     /* One-liner */
 
-    as = acl_to_text_np(a, NULL, ACL_TEXT_COMPACT_NP);
+    as = gacl_to_text_np(a, NULL, GACL_TEXT_COMPACT);
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL: %s\n", argv0, path, strerror(errno));
       return 1;
     }
     
     fprintf(fp, "%-24s  %s\n", path, as);
-    acl_free(as);
+    gacl_free(as);
     break;
 
-  case ACL_STYLE_VERBOSE:
+  case GACL_STYLE_VERBOSE:
     fprintf(fp, "# file: %s\n", path);
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *cp;
       int len;
-      acl_tag_t tt;
+      gacl_tag_t tt;
 
-      acl_get_tag_type(ae, &tt);
+      gacl_get_tag_type(ae, &tt);
       ace2str(ae, acebuf, sizeof(acebuf));
 
       cp = strchr(acebuf, ':');
       if (cp) {
 	len = cp-acebuf;
-	if (len > 0 && (tt == ACL_USER || tt == ACL_GROUP)) {
+	if (len > 0 && (tt == GACL_TAG_TYPE_USER || tt == GACL_TAG_TYPE_GROUP)) {
 	  cp = strchr(cp+1, ':');
 	  if (cp)
 	    len = cp-acebuf;
@@ -420,7 +420,7 @@ print_acl(FILE *fp,
 
       fprintf(fp, "%*s%s", (18-len), "", acebuf);
       switch (tt) {
-      case ACL_USER_OBJ:
+      case GACL_TAG_TYPE_USER_OBJ:
 	if (us) {
 	  if (config.f_verbose)
 	    fprintf(fp, "\t# %s (%d)", us, sp->st_uid);
@@ -430,7 +430,7 @@ print_acl(FILE *fp,
 	  fprintf(fp, "\t# (%d)", sp->st_uid);
 	break;
 
-      case ACL_GROUP_OBJ:
+      case GACL_TAG_TYPE_GROUP_OBJ:
 	if (gs) {
 	  if (config.f_verbose)
 	    fprintf(fp, "\t# %s (%d)", gs, sp->st_gid);
@@ -440,10 +440,10 @@ print_acl(FILE *fp,
 	  fprintf(fp, "\t# (%d)", sp->st_gid);
 	break;
 
-      case ACL_USER:
-      case ACL_GROUP:
+      case GACL_TAG_TYPE_USER:
+      case GACL_TAG_TYPE_GROUP:
 	if (config.f_verbose) {
-	  idp = (uid_t *) acl_get_qualifier(ae);
+	  idp = (uid_t *) gacl_get_qualifier(ae);
 	  if (idp)
 	    fprintf(fp, "\t# (%d)", *idp);
 	}
@@ -456,12 +456,12 @@ print_acl(FILE *fp,
     }
     break;
     
-  case ACL_STYLE_SOLARIS:
+  case GACL_STYLE_SOLARIS:
     tp = localtime(&sp->st_mtime);
     strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %R", tp);
 
     is_trivial = 0;
-    acl_is_trivial_np(a, &is_trivial);
+    gacl_is_trivial_np(a, &is_trivial);
     
     printf("%s%s %2lu %8s %8s %8llu %16s %s\n",
 	   mode2str(sp->st_mode), is_trivial ? " " : "+",
@@ -470,24 +470,24 @@ print_acl(FILE *fp,
 	   (unsigned long long) sp->st_size,
 	   tbuf, path);
 	   
-    as = acl_to_text_np(a, NULL, (config.f_verbose ? ACL_TEXT_VERBOSE|ACL_TEXT_APPEND_ID : 0));
+    as = gacl_to_text_np(a, NULL, (config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
     }
 
     fputs(as, fp);
-    acl_free(as);
+    gacl_free(as);
     break;
 
-  case ACL_STYLE_PRIMOS:
+  case GACL_STYLE_PRIMOS:
     printf("ACL protecting \"%s\":\n", path);
     
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *perms, *flags, *type;
-      acl_tag_t tt;
+      gacl_tag_t tt;
 
-      acl_get_tag_type(ae, &tt);
+      gacl_get_tag_type(ae, &tt);
       ace2str(ae, acebuf, sizeof(acebuf));
 
       perms = strchr(acebuf, ':');
@@ -496,7 +496,7 @@ print_acl(FILE *fp,
 	return 1;
       }
       
-      if (tt == ACL_USER || tt == ACL_GROUP)
+      if (tt == GACL_TAG_TYPE_USER || tt == GACL_TAG_TYPE_GROUP)
 	perms = strchr(++perms, ':');
       *perms++ = '\0';
 
@@ -513,7 +513,7 @@ print_acl(FILE *fp,
       if (strcmp(type, "allow") != 0)
 	fprintf(fp, "  %-5s", type);
       switch (tt) {
-      case ACL_USER_OBJ:
+      case GACL_TAG_TYPE_USER_OBJ:
 	if (us) {
 	  if (config.f_verbose)
 	    fprintf(fp, "  # %s (%d)", us, sp->st_uid);
@@ -523,7 +523,7 @@ print_acl(FILE *fp,
 	  fprintf(fp, "  # (%d)", sp->st_uid);
 	break;
 
-      case ACL_GROUP_OBJ:
+      case GACL_TAG_TYPE_GROUP_OBJ:
 	if (gs) {
 	  if (config.f_verbose)
 	    fprintf(fp, "  # %s (%d)", gs, sp->st_gid);
@@ -533,10 +533,10 @@ print_acl(FILE *fp,
 	  fprintf(fp, "  # (%d)", sp->st_gid);
 	break;
 
-      case ACL_USER:
-      case ACL_GROUP:
+      case GACL_TAG_TYPE_USER:
+      case GACL_TAG_TYPE_GROUP:
 	if (config.f_verbose) {
-	  idp = (uid_t *) acl_get_qualifier(ae);
+	  idp = (uid_t *) gacl_get_qualifier(ae);
 	  if (idp)
 	    fprintf(fp, "  # (%d)", *idp);
 	}
@@ -550,7 +550,7 @@ print_acl(FILE *fp,
     }
     break;
     
-  case ACL_STYLE_SAMBA:
+  case GACL_STYLE_SAMBA:
     fprintf(fp, "FILENAME:%s\n", path);
     fprintf(fp, "REVISION:1\n");
     fprintf(fp, "CONTROL:SR|DP\n");
@@ -565,7 +565,7 @@ print_acl(FILE *fp,
     else
       fprintf(fp, "GROUP:%d\n", sp->st_gid);
 
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *cp;
       ace2str_samba(ae, acebuf, sizeof(acebuf), sp);
 
@@ -578,12 +578,12 @@ print_acl(FILE *fp,
     }
     break;
     
-  case ACL_STYLE_ICACLS:
+  case GACL_STYLE_ICACLS:
     len = strlen(path);
 
     fprintf(fp, "%s", path);
 
-    for (i = 0; acl_get_entry(a, i == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; i++) {
+    for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       ace2str_icacls(ae, acebuf, sizeof(acebuf), sp);
       fprintf(fp, "%*s %s\n", i ? len : 0, "", acebuf);
     }
@@ -601,28 +601,28 @@ print_acl(FILE *fp,
 
 int
 str2style(const char *str,
-	  ACL_STYLE *sp) {
+	  GACL_STYLE *sp) {
   if (!str || !*str)
     return 0;
   
   if (strcasecmp(str, "default") == 0)
-    *sp = ACL_STYLE_DEFAULT;
+    *sp = GACL_STYLE_DEFAULT;
   else if (strcasecmp(str, "standard") == 0)
-    *sp = ACL_STYLE_STANDARD;
+    *sp = GACL_STYLE_STANDARD;
   else if (strcasecmp(str, "brief") == 0)
-    *sp = ACL_STYLE_BRIEF;
+    *sp = GACL_STYLE_BRIEF;
   else if (strcasecmp(str, "verbose") == 0)
-    *sp = ACL_STYLE_VERBOSE;
+    *sp = GACL_STYLE_VERBOSE;
   else if (strcasecmp(str, "csv") == 0)
-    *sp = ACL_STYLE_CSV;
+    *sp = GACL_STYLE_CSV;
   else if (strcasecmp(str, "samba") == 0)
-    *sp = ACL_STYLE_SAMBA;
+    *sp = GACL_STYLE_SAMBA;
   else if (strcasecmp(str, "icacls") == 0)
-    *sp = ACL_STYLE_ICACLS;
+    *sp = GACL_STYLE_ICACLS;
   else if (strcasecmp(str, "solaris") == 0)
-    *sp = ACL_STYLE_SOLARIS;
+    *sp = GACL_STYLE_SOLARIS;
   else if (strcasecmp(str, "primos") == 0)
-    *sp = ACL_STYLE_PRIMOS;
+    *sp = GACL_STYLE_PRIMOS;
   else
     return -1;
 
@@ -630,25 +630,25 @@ str2style(const char *str,
 }
 
 const char *
-style2str(ACL_STYLE s) {
+style2str(GACL_STYLE s) {
   switch (s) {
-  case ACL_STYLE_DEFAULT:
+  case GACL_STYLE_DEFAULT:
     return "Default";
-  case ACL_STYLE_STANDARD:
+  case GACL_STYLE_STANDARD:
     return "Standard";
-  case ACL_STYLE_BRIEF:
+  case GACL_STYLE_BRIEF:
     return "Brief";
-  case ACL_STYLE_VERBOSE:
+  case GACL_STYLE_VERBOSE:
     return "Verbose";
-  case ACL_STYLE_CSV:
+  case GACL_STYLE_CSV:
     return "CSV";
-  case ACL_STYLE_SAMBA:
+  case GACL_STYLE_SAMBA:
     return "Samba";
-  case ACL_STYLE_ICACLS:
+  case GACL_STYLE_ICACLS:
     return "ICACLS";
-  case ACL_STYLE_SOLARIS:
+  case GACL_STYLE_SOLARIS:
     return "Solaris";
-  case ACL_STYLE_PRIMOS:
+  case GACL_STYLE_PRIMOS:
     return "PRIMOS";
   }
 

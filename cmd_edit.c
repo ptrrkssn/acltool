@@ -66,14 +66,14 @@ typedef struct ace_cr {
     regex_t preg;
 
     /* Simple style */
-    acl_entry_t ep;
+    gacl_entry_t ep;
   } filter;
   struct {
     /* Generic data */
     char *data;
 
     /* ACE entry */
-    acl_entry_t ep;
+    gacl_entry_t ep;
   } change;
   int cmd;
   char *modifiers;
@@ -398,40 +398,40 @@ acecr_from_simple_text(ACECR **head,
 
 
 static int
-ace_match(acl_entry_t oae,
-	  acl_entry_t mae,
+ace_match(gacl_entry_t oae,
+	  gacl_entry_t mae,
 	  int mflags) {
   /* Matching ACE */
-  acl_tag_t mtt;
-  acl_entry_type_t met;
+  gacl_tag_t mtt;
+  gacl_entry_type_t met;
   uid_t *mip;
-  acl_permset_t mps;
-  acl_flagset_t mfs;
+  gacl_permset_t mps;
+  gacl_flagset_t mfs;
 
   /* Current ACE */
-  acl_tag_t ott;
-  acl_entry_type_t oet;
-  acl_permset_t ops;
-  acl_flagset_t ofs;
+  gacl_tag_t ott;
+  gacl_entry_type_t oet;
+  gacl_permset_t ops;
+  gacl_flagset_t ofs;
   uid_t *oip;
 
   
   /* Get match ACE */
-  acl_get_tag_type(mae, &mtt);
-  acl_get_entry_type_np(mae, &met);
-  mip = acl_get_qualifier(mae);
+  gacl_get_tag_type(mae, &mtt);
+  gacl_get_entry_type_np(mae, &met);
+  mip = gacl_get_qualifier(mae);
   
-  if (acl_get_permset(mae, &mps) < 0 ||
-      acl_get_flagset_np(mae, &mfs) < 0)
+  if (gacl_get_permset(mae, &mps) < 0 ||
+      gacl_get_flagset_np(mae, &mfs) < 0)
     return -1;
   
   /* Get current ACE */
-  acl_get_tag_type(oae, &ott);
-  acl_get_entry_type_np(oae, &oet);
-  oip = acl_get_qualifier(oae);
+  gacl_get_tag_type(oae, &ott);
+  gacl_get_entry_type_np(oae, &oet);
+  oip = gacl_get_qualifier(oae);
   
-  if (acl_get_permset(oae, &ops) < 0 ||
-      acl_get_flagset_np(oae, &ofs) < 0)
+  if (gacl_get_permset(oae, &ops) < 0 ||
+      gacl_get_flagset_np(oae, &ofs) < 0)
     return -1;
 
 
@@ -439,7 +439,7 @@ ace_match(acl_entry_t oae,
   if (ott != mtt)
       return 0;
 
-  if ((ott == ACL_USER || ott == ACL_GROUP) && (!oip || !mip || *oip != *mip))
+  if ((ott == GACL_TAG_TYPE_USER || ott == GACL_TAG_TYPE_GROUP) && (!oip || !mip || *oip != *mip))
     return 0;
 
   /* Check the ACE type set */
@@ -479,54 +479,54 @@ ace_match(acl_entry_t oae,
 
 
 static int
-cmd_edit_ace(acl_entry_t oae,
-	     acl_entry_t nae) {
+cmd_edit_ace(gacl_entry_t oae,
+	     gacl_entry_t nae) {
   /* Old ACE */
-  acl_tag_t ott;
-  acl_entry_type_t oet;
-  acl_permset_t ops;
-  acl_flagset_t ofs;
+  gacl_tag_t ott;
+  gacl_entry_type_t oet;
+  gacl_permset_t ops;
+  gacl_flagset_t ofs;
 	  
   /* New ACE */
-  acl_tag_t ntt;
-  acl_entry_type_t net;
+  gacl_tag_t ntt;
+  gacl_entry_type_t net;
   uid_t *nip;
-  acl_permset_t nps;
-  acl_flagset_t nfs;
+  gacl_permset_t nps;
+  gacl_flagset_t nfs;
 
   
   /* Get old ACE */
-  acl_get_tag_type(oae, &ott);
-  acl_get_entry_type_np(oae, &oet);
+  gacl_get_tag_type(oae, &ott);
+  gacl_get_entry_type_np(oae, &oet);
 	  
-  if (acl_get_permset(oae, &ops) < 0 ||
-      acl_get_flagset_np(oae, &ofs) < 0)
+  if (gacl_get_permset(oae, &ops) < 0 ||
+      gacl_get_flagset_np(oae, &ofs) < 0)
     return -1;
 
   /* Get new ACE */
-  acl_get_tag_type(nae, &ntt);
-  acl_get_entry_type_np(nae, &net);
-  nip = acl_get_qualifier(nae);
+  gacl_get_tag_type(nae, &ntt);
+  gacl_get_entry_type_np(nae, &net);
+  nip = gacl_get_qualifier(nae);
   
-  if (acl_get_permset(nae, &nps) < 0 ||
-      acl_get_flagset_np(nae, &nfs) < 0)
+  if (gacl_get_permset(nae, &nps) < 0 ||
+      gacl_get_flagset_np(nae, &nfs) < 0)
     return -1;
 
   /* Update the tag type */
-  if (acl_set_tag_type(oae, ntt) < 0)
+  if (gacl_set_tag_type(oae, ntt) < 0)
     goto Fail;
   
   if (nip)
-    if (acl_set_qualifier(oae, nip) < 0)
+    if (gacl_set_qualifier(oae, nip) < 0)
       goto Fail;
   
-  if (acl_set_permset(oae, nps) < 0)
+  if (gacl_set_permset(oae, nps) < 0)
     goto Fail;
   
-  if (acl_set_flagset_np(oae, nfs) < 0)
+  if (gacl_set_flagset_np(oae, nfs) < 0)
     goto Fail;
   
-  if (acl_set_entry_type_np(oae, net) < 0)
+  if (gacl_set_entry_type_np(oae, net) < 0)
     goto Fail;
 
   return 1;
@@ -537,14 +537,14 @@ cmd_edit_ace(acl_entry_t oae,
 
 static int
 cmd_edit_crace(ACECR *cr,
-	       acl_entry_t oae) {
+	       gacl_entry_t oae) {
   return cmd_edit_ace(oae, cr->change.ep);
   
 }
 RANGE *
-range_filter(RANGE *old, acl_entry_t fae, int flags, acl_t ap) {
+range_filter(RANGE *old, gacl_entry_t fae, int flags, gacl_t ap) {
   RANGE *new = NULL;
-  acl_entry_t ae;
+  gacl_entry_t ae;
   int p;
   
 
@@ -570,7 +570,7 @@ range_filter(RANGE *old, acl_entry_t fae, int flags, acl_t ap) {
     }
   } else {
     /* Scan whole ACL */
-    for (p = 0; acl_get_entry(ap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
+    for (p = 0; gacl_get_entry(ap, p == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; p++) {
       if (ace_match(ae, fae, flags) == 1) {
 	range_add(&new, p, p);
       }
@@ -585,9 +585,9 @@ RANGE *
 range_filter_regex(RANGE *old,
 		   regex_t *preg,
 		   int flags,
-		   acl_t ap) {
+		   gacl_t ap) {
   RANGE *new = NULL;
-  acl_entry_t ae;
+  gacl_entry_t ae;
   int p;
   char buf[1024], errbuf[1024];
   int rc;
@@ -606,7 +606,7 @@ range_filter_regex(RANGE *old,
       if (_gacl_get_entry(ap, p, &ae) < 0)
 	continue;
 
-      if (acl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
+      if (gacl_entry_to_text(ae, buf, sizeof(buf), 0) < 0)
 	continue;
       
       rc = regexec(preg, buf, 0, NULL, 0);
@@ -626,8 +626,8 @@ range_filter_regex(RANGE *old,
     }
   } else {
     /* Scan whole ACL */
-    for (p = 0; acl_get_entry(ap, p == 0 ? ACL_FIRST_ENTRY : ACL_NEXT_ENTRY, &ae) == 1; p++) {
-      if (acl_entry_to_text(ae, buf, sizeof(buf), ACL_TEXT_STANDARD_NP) < 0)
+    for (p = 0; gacl_get_entry(ap, p == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; p++) {
+      if (gacl_entry_to_text(ae, buf, sizeof(buf), GACL_TEXT_STANDARD) < 0)
 	continue;
 
       rc = regexec(preg, buf, 0, NULL, 0);
@@ -654,7 +654,7 @@ walker_edit(const char *path,
 	    size_t base,
 	    size_t level,
 	    void *vp) {
-  acl_t oap, nap;
+  gacl_t oap, nap;
   SCRIPT *script;
   int rc = 0;
   int pos = 0;
@@ -666,10 +666,10 @@ walker_edit(const char *path,
     return 1;
   }
 
-  nap = acl_dup(oap);
+  nap = gacl_dup(oap);
   if (!nap) {
-    acl_free(oap);
-    fprintf(stderr, "%s: Error: %s: Internal Fault (acl_dup): %s\n", argv0, path, strerror(errno));
+    gacl_free(oap);
+    fprintf(stderr, "%s: Error: %s: Internal Fault (gacl_dup): %s\n", argv0, path, strerror(errno));
     return 1;
   }
 
@@ -679,7 +679,7 @@ walker_edit(const char *path,
 
     /* Loop around executing each CR until end or one gives an error */
     for (rc = 0; rc == 0 && cr; cr = cr->next) {
-      acl_entry_t nae;
+      gacl_entry_t nae;
       int p1, p;
       int nm = 0;
       RANGE *range = NULL;
@@ -719,14 +719,14 @@ walker_edit(const char *path,
 	  while (range_prev(range, &p) == 1) {
 	    if (p == RANGE_END)
 	      p = nap->ac-1;
-	    if (acl_delete_entry_np(nap, p) < 0) {
+	    if (gacl_delete_entry_np(nap, p) < 0) {
 	      rc = -1;
 	      break;
 	    }
 	  }
 	  pos = p;
 	} else {
-	  if (acl_delete_entry_np(nap, pos) < 0) {
+	  if (gacl_delete_entry_np(nap, pos) < 0) {
 	    rc = -1;
 	    break;
 	  }
@@ -746,7 +746,7 @@ walker_edit(const char *path,
 	      printf("%-20s\t", path);
 	    if (p_line)
 	      printf("%-4d\t", p);
-	    if (print_ace(nap, p, ACL_TEXT_STANDARD_NP) < 0) {
+	    if (print_ace(nap, p, GACL_TEXT_STANDARD) < 0) {
 	      rc = -1;
 	      break;
 	    }
@@ -760,7 +760,7 @@ walker_edit(const char *path,
 	    printf("%-20s\t", path);
 	  if (p_line)
 	    printf("%-4d\t", pos);
-	  if (print_ace(nap, pos, ACL_TEXT_STANDARD_NP) < 0) {
+	  if (print_ace(nap, pos, GACL_TEXT_STANDARD) < 0) {
 	    rc = -1;
 	    break;
 	  }
@@ -773,11 +773,11 @@ walker_edit(const char *path,
 	  p1 = pos;
 	if (cr->cmd == 'a')
 	  ++p1;
-	if (acl_create_entry_np(&nap, &nae, p1) < 0) {
+	if (gacl_create_entry_np(&nap, &nae, p1) < 0) {
 	  fprintf(stderr, "Unable to create ACE at %d\n", p1);
 	  rc = -1;
 	}
-	else if (acl_copy_entry(nae, cr->change.ep) < 0) {
+	else if (gacl_copy_entry(nae, cr->change.ep) < 0) {
 	  fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
 	  rc = -1;
 	}
@@ -788,7 +788,7 @@ walker_edit(const char *path,
 	  p1 = pos;
 	if (_gacl_get_entry(nap, p1, &nae) < 0)
 	  rc = -1;
-	else if (acl_copy_entry(nae, cr->change.ep) < 0)
+	else if (gacl_copy_entry(nae, cr->change.ep) < 0)
 	  rc = -1;
 	break;
 	
@@ -800,20 +800,20 @@ walker_edit(const char *path,
       case 's': /* Substitue ACEs */
       case 'S': /* Substitue ACEs (simple-change) */
 	if (!range && cr->cmd == 'S') {
-	  GACE *oep = cr->change.ep;
+	  GACL_ENTRY *oep = cr->change.ep;
 
 	  /* 
 	   * Try to find optimal insertion point for a new ACE. This code assumes the 
 	   * ACL is sorted where users < groups < everyone and with deny < allow.
 	   */
 	  for (pos = 0; pos < nap->ac; ++pos) {
-	    GACE *nep = &nap->av[pos];
+	    GACL_ENTRY *nep = &nap->av[pos];
 	    
 	    if (oep->tag.type < nep->tag.type)
 	      break;
 	    if (oep->tag.type > nep->tag.type)
 	      continue;
-	    if (oep->tag.type == GACE_TAG_TYPE_USER || oep->tag.type == GACE_TAG_TYPE_GROUP) {
+	    if (oep->tag.type == GACL_TAG_TYPE_USER || oep->tag.type == GACL_TAG_TYPE_GROUP) {
 	      if (oep->tag.ugid < nep->tag.ugid)
 		break;
 	      if (oep->tag.ugid > nep->tag.ugid)
@@ -826,7 +826,7 @@ walker_edit(const char *path,
 	}
 	
 	if (range_len(range) > 0) {
-	  acl_entry_t ae;
+	  gacl_entry_t ae;
 	  int p = RANGE_NONE;
 
 	  while (range_next(range, &p) == 1) {
@@ -852,7 +852,7 @@ walker_edit(const char *path,
 	      break;
 	  }
 	} else {
-	  acl_entry_t ae;
+	  gacl_entry_t ae;
 
 	  p = 0;
 	  while (_gacl_get_entry(nap, p, &ae) == 1) {
@@ -888,12 +888,12 @@ walker_edit(const char *path,
 	if (nm == 0) {
 	AddACE:
 	  /* Add ACE entry if no match found */
-	  if (acl_create_entry_np(&nap, &nae, pos) < 0) {
+	  if (gacl_create_entry_np(&nap, &nae, pos) < 0) {
 	    fprintf(stderr, "Unable to create ACE at %d\n", pos);
 	    rc = -1;
 	  }
 
-	  if (acl_copy_entry(nae, cr->change.ep) < 0) {
+	  if (gacl_copy_entry(nae, cr->change.ep) < 0) {
 	    fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
 	    rc = -1;
 	  }
@@ -917,13 +917,13 @@ walker_edit(const char *path,
     goto Fail;
   }
 
-  acl_free(oap);
-  acl_free(nap);
+  gacl_free(oap);
+  gacl_free(nap);
   return 0;
 
  Fail:
-  acl_free(oap);
-  acl_free(nap);
+  gacl_free(oap);
+  gacl_free(nap);
   return 1;
 }
 

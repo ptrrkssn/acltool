@@ -105,20 +105,20 @@ static struct gace_perm2c {
   char c;
   char *s;
 } p2c[] = {
-		{ GACE_READ_DATA, 'r', "read_data" },
-		{ GACE_WRITE_DATA, 'w', "write_data" },
-		{ GACE_EXECUTE, 'x', "execute" },
-		{ GACE_APPEND_DATA, 'p', "append_data" },
-		{ GACE_DELETE, 'd', "delete" },
-		{ GACE_DELETE_CHILD, 'D', "delete_child" },
-		{ GACE_READ_ATTRIBUTES, 'a', "read_attributes" },
-		{ GACE_WRITE_ATTRIBUTES, 'A', "write_attributes" },
-		{ GACE_READ_NAMED_ATTRS, 'R', "read_xattrs" },
-		{ GACE_WRITE_NAMED_ATTRS, 'W', "write_xattrs" },
-		{ GACE_READ_ACL, 'c', "read_acl" },
-		{ GACE_WRITE_ACL, 'C', "write_acl" },
-		{ GACE_WRITE_OWNER, 'o', "write_owner" },
-		{ GACE_SYNCHRONIZE, 's', "synchronize" },
+		{ GACL_PERM_READ_DATA, 'r', "read_data" },
+		{ GACL_PERM_WRITE_DATA, 'w', "write_data" },
+		{ GACL_PERM_EXECUTE, 'x', "execute" },
+		{ GACL_PERM_APPEND_DATA, 'p', "append_data" },
+		{ GACL_PERM_DELETE, 'd', "delete" },
+		{ GACL_PERM_DELETE_CHILD, 'D', "delete_child" },
+		{ GACL_PERM_READ_ATTRIBUTES, 'a', "read_attributes" },
+		{ GACL_PERM_WRITE_ATTRIBUTES, 'A', "write_attributes" },
+		{ GACL_PERM_READ_NAMED_ATTRS, 'R', "read_xattrs" },
+		{ GACL_PERM_WRITE_NAMED_ATTRS, 'W', "write_xattrs" },
+		{ GACL_PERM_READ_ACL, 'c', "read_acl" },
+		{ GACL_PERM_WRITE_ACL, 'C', "write_acl" },
+		{ GACL_PERM_WRITE_OWNER, 'o', "write_owner" },
+		{ GACL_PERM_SYNCHRONIZE, 's', "synchronize" },
 		{ 0, 0 }
 };
 
@@ -126,14 +126,14 @@ static struct gace_flag2c {
   int f;
   char c;
 } f2c[] = {
-		{ GACE_FLAG_FILE_INHERIT, 'f' },
-		{ GACE_FLAG_DIRECTORY_INHERIT, 'd' },
-		{ GACE_FLAG_INHERIT_ONLY, 'i' },
-		{ GACE_FLAG_NO_PROPAGATE_INHERIT, 'n' },
-		{ GACE_FLAG_SUCCESSFUL_ACCESS, 'S' },
-		{ GACE_FLAG_FAILED_ACCESS, 'F' },
-#ifdef GACE_FLAG_INHERITED
-		{ GACE_FLAG_INHERITED, 'I' },
+		{ GACL_FLAG_FILE_INHERIT, 'f' },
+		{ GACL_FLAG_DIRECTORY_INHERIT, 'd' },
+		{ GACL_FLAG_INHERIT_ONLY, 'i' },
+		{ GACL_FLAG_NO_PROPAGATE_INHERIT, 'n' },
+		{ GACL_FLAG_SUCCESSFUL_ACCESS, 'S' },
+		{ GACL_FLAG_FAILED_ACCESS, 'F' },
+#ifdef GACL_FLAG_INHERITED
+		{ GACL_FLAG_INHERITED, 'I' },
 #endif
 		{ 0, 0 }
 };
@@ -144,20 +144,20 @@ static struct perm2c_windows {
   char *c;
   char *s;
 } p2c_windows[] = {
-	   { ACL_READ_DATA,         "R",   "read_data"        },
-	   { ACL_WRITE_DATA,        "W",   "write_data"       },
-	   { ACL_EXECUTE,           "X",   "execute"          },
-	   { ACL_DELETE,            "D",   "delete"           },
-	   { ACL_WRITE_ACL,         "P",   "write_acl"        },
-	   { ACL_WRITE_OWNER,       "O",   "write_owner"      },
-	   { ACL_READ_ATTRIBUTES,   "RA",  "read_attributes"  },
-	   { ACL_WRITE_ATTRIBUTES,  "WA",  "write_attributes" },
-	   { ACL_DELETE_CHILD,      "DC",  "delete_child"     },
-	   { ACL_APPEND_DATA,       "AD",  "append_data"      },
-	   { ACL_READ_NAMED_ATTRS,  "REA", "read_xattrs"      },
-	   { ACL_WRITE_NAMED_ATTRS, "WEA", "write_xattrs"     },
-	   { ACL_SYNCHRONIZE,       "S",   "synchronize"      },
-	   { ACL_READ_ACL,          "AS",  "read_acl"         }, 
+	   { GACL_PERM_READ_DATA,         "R",   "read_data"        },
+	   { GACL_PERM_WRITE_DATA,        "W",   "write_data"       },
+	   { GACL_PERM_EXECUTE,           "X",   "execute"          },
+	   { GACL_PERM_DELETE,            "D",   "delete"           },
+	   { GACL_PERM_WRITE_ACL,         "P",   "write_acl"        },
+	   { GACL_PERM_WRITE_OWNER,       "O",   "write_owner"      },
+	   { GACL_PERM_READ_ATTRIBUTES,   "RA",  "read_attributes"  },
+	   { GACL_PERM_WRITE_ATTRIBUTES,  "WA",  "write_attributes" },
+	   { GACL_PERM_DELETE_CHILD,      "DC",  "delete_child"     },
+	   { GACL_PERM_APPEND_DATA,       "AD",  "append_data"      },
+	   { GACL_PERM_READ_NAMED_ATTRS,  "REA", "read_xattrs"      },
+	   { GACL_PERM_WRITE_NAMED_ATTRS, "WEA", "write_xattrs"     },
+	   { GACL_PERM_SYNCHRONIZE,       "S",   "synchronize"      },
+	   { GACL_PERM_READ_ACL,          "AS",  "read_acl"         }, 
 	   { 0, NULL, NULL }
 };
 
@@ -166,17 +166,13 @@ static struct flag2str_windows {
   int f;
   char *s;
 } f2c_windows[] = {
-	   { ACL_ENTRY_FILE_INHERIT,         "OI" },
-	   { ACL_ENTRY_DIRECTORY_INHERIT,    "CI" },
-	   { ACL_ENTRY_INHERITED,            "I"  },
-	   { ACL_ENTRY_NO_PROPAGATE_INHERIT, "NP" },
-	   { ACL_ENTRY_INHERIT_ONLY,         "IO" },
-#ifdef ACL_ENTRY_SUCCESSFUL_ACCESS
-	   { ACL_ENTRY_SUCCESSFUL_ACCESS,    "S"  },
-#endif
-#ifdef ACL_ENTRY_FAILED_ACCESS
-	   { ACL_ENTRY_FAILED_ACCESS,        "F"  },
-#endif
+	   { GACL_FLAG_FILE_INHERIT,         "OI" },
+	   { GACL_FLAG_DIRECTORY_INHERIT,    "CI" },
+	   { GACL_FLAG_INHERITED,            "I"  },
+	   { GACL_FLAG_NO_PROPAGATE_INHERIT, "NP" },
+	   { GACL_FLAG_INHERIT_ONLY,         "IO" },
+	   { GACL_FLAG_SUCCESSFUL_ACCESS,    "S"  },
+	   { GACL_FLAG_FAILED_ACCESS,        "F"  },
 	   { 0, NULL }
 };
 
@@ -188,7 +184,7 @@ static struct flag2str_windows {
 
 
 char *
-permset2str(acl_permset_t psp, char *res) {
+permset2str(gacl_permset_t psp, char *res) {
   static char buf[64];
   int i, a;
 
@@ -197,7 +193,7 @@ permset2str(acl_permset_t psp, char *res) {
     res = buf;
   
   for (i = 0; p2c[i].c; i++) {
-    a = acl_get_perm_np(psp, p2c[i].p);
+    a = gacl_get_perm_np(psp, p2c[i].p);
     res[i] = a ? p2c[i].c : '-';
   }
   res[i] = '\0';
@@ -205,7 +201,7 @@ permset2str(acl_permset_t psp, char *res) {
 }
 
 char *
-permset2str_samba(acl_permset_t psp,
+permset2str_samba(gacl_permset_t psp,
 		  char *res) {
   static char buf[64];
   int i, a, n;
@@ -217,7 +213,7 @@ permset2str_samba(acl_permset_t psp,
   res[0] = '\0';
   n = 0;
   for (i = 0; p2c_windows[i].c; i++) {
-    a = acl_get_perm_np(psp, p2c_windows[i].p);
+    a = gacl_get_perm_np(psp, p2c_windows[i].p);
     if (a) {
       if (n++)
 	strcat(res, "|");
@@ -229,7 +225,7 @@ permset2str_samba(acl_permset_t psp,
 
 
 char *
-permset2str_icacls(acl_permset_t psp,
+permset2str_icacls(gacl_permset_t psp,
 		   char *res) {
   static char buf[64];
   int i, a, n;
@@ -242,7 +238,7 @@ permset2str_icacls(acl_permset_t psp,
   n = 0;
   strcat(res, "(");
   for (i = 0; p2c_windows[i].c; i++) {
-    a = acl_get_perm_np(psp, p2c_windows[i].p);
+    a = gacl_get_perm_np(psp, p2c_windows[i].p);
     if (a) {
       if (n++)
 	strcat(res, ",");
@@ -254,7 +250,7 @@ permset2str_icacls(acl_permset_t psp,
 }
 
 char *
-flagset2str(acl_flagset_t fsp, char *res) {
+flagset2str(gacl_flagset_t fsp, char *res) {
   static char buf[64];
   int i, a;
 
@@ -263,7 +259,7 @@ flagset2str(acl_flagset_t fsp, char *res) {
     res = buf;
   
   for (i = 0; f2c[i].c; i++) {
-    a = acl_get_flag_np(fsp, f2c[i].f);
+    a = gacl_get_flag_np(fsp, f2c[i].f);
     res[i] = a ? f2c[i].c : '-';
   }
   res[i] = '\0';
@@ -271,7 +267,7 @@ flagset2str(acl_flagset_t fsp, char *res) {
 }
 
 char *
-flagset2str_samba(acl_flagset_t fsp,
+flagset2str_samba(gacl_flagset_t fsp,
 		  char *res) {
   static char buf[64];
   int i, a, n;
@@ -284,7 +280,7 @@ flagset2str_samba(acl_flagset_t fsp,
 
   n = 0;
   for (i = 0; f2c_windows[i].s; i++) {
-    a = acl_get_flag_np(fsp, f2c_windows[i].f);
+    a = gacl_get_flag_np(fsp, f2c_windows[i].f);
     if (a) {
       if (n++)
 	strcat(res, "|");
@@ -296,7 +292,7 @@ flagset2str_samba(acl_flagset_t fsp,
 }
 
 char *
-flagset2str_icacls(acl_flagset_t fsp,
+flagset2str_icacls(gacl_flagset_t fsp,
 		   char *res) {
   static char buf[64];
   int i, a;
@@ -308,7 +304,7 @@ flagset2str_icacls(acl_flagset_t fsp,
   res[0] = '\0';
 
   for (i = 0; f2c_windows[i].s; i++) {
-    a = acl_get_flag_np(fsp, f2c_windows[i].f);
+    a = gacl_get_flag_np(fsp, f2c_windows[i].f);
     if (a) {
       strcat(res, "(");
       strcat(res, f2c_windows[i].s);
@@ -321,21 +317,21 @@ flagset2str_icacls(acl_flagset_t fsp,
 
 
 const char *
-aet2str(const acl_entry_type_t aet) {
+aet2str(gacl_entry_type_t aet) {
   switch (aet) {
-  case ACL_ENTRY_TYPE_UNDEFINED:
+  case GACL_ENTRY_TYPE_UNDEFINED:
     return NULL;
     
-  case ACL_ENTRY_TYPE_ALLOW:
+  case GACL_ENTRY_TYPE_ALLOW:
     return "allow";
 
-  case ACL_ENTRY_TYPE_DENY:
+  case GACL_ENTRY_TYPE_DENY:
     return "deny";
 
-  case ACL_ENTRY_TYPE_AUDIT:
+  case GACL_ENTRY_TYPE_AUDIT:
     return "audit";
 
-  case ACL_ENTRY_TYPE_ALARM:
+  case GACL_ENTRY_TYPE_ALARM:
     return "alarm";
   }
 
@@ -345,16 +341,16 @@ aet2str(const acl_entry_type_t aet) {
 
 
 char *
-ace2str_samba(acl_entry_t ae,
+ace2str_samba(gacl_entry_t ae,
 	      char *rbuf,
 	      size_t rsize,
 	      const struct stat *sp) {
   static char buf[256];
   char *res;
-  acl_tag_t at;
-  acl_permset_t aps;
-  acl_flagset_t afs;
-  acl_entry_type_t aet;
+  gacl_tag_t at;
+  gacl_permset_t aps;
+  gacl_flagset_t afs;
+  gacl_entry_type_t aet;
   void *qp = NULL;
   struct passwd *pp = NULL;
   struct group *gp = NULL;
@@ -368,12 +364,12 @@ ace2str_samba(acl_entry_t ae,
 
   res = rbuf;
   
-  if (acl_get_tag_type(ae, &at) < 0)
+  if (gacl_get_tag_type(ae, &at) < 0)
     return NULL;
 
   switch (at) {
-  case ACL_USER:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_USER:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -385,11 +381,11 @@ ace2str_samba(acl_entry_t ae,
       gp = getgrgid(*(gid_t *) qp);
       rc = snprintf(res, rsize, "ACL:%u%s:", * (uid_t *) qp, gp ? "(user)" : "");
     }
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_GROUP:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_GROUP:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -401,10 +397,10 @@ ace2str_samba(acl_entry_t ae,
       pp = getpwuid(*(uid_t *) qp);
       rc = snprintf(res, rsize, "ACL:%u%s:", * (gid_t *) qp, pp ? "(group)" : "");
     }
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_USER_OBJ:
+  case GACL_TAG_TYPE_USER_OBJ:
     pp = getpwuid(sp->st_uid);
     if (pp)
       rc = snprintf(res, rsize, "ACL:%s:", pp->pw_name);
@@ -412,7 +408,7 @@ ace2str_samba(acl_entry_t ae,
       rc = snprintf(res, rsize, "ACL:%u:", sp->st_uid);
     break;
     
-  case ACL_GROUP_OBJ:
+  case GACL_TAG_TYPE_GROUP_OBJ:
     gp = getgrgid(sp->st_gid);
     if (gp) {
       if (getpwnam(gp->gr_name))
@@ -423,17 +419,15 @@ ace2str_samba(acl_entry_t ae,
       rc = snprintf(res, rsize, "ACL:GID=%u:", sp->st_gid);
     break;
 
-#ifdef ACL_MASK
-  case ACL_MASK:
+  case GACL_TAG_TYPE_MASK:
     rc = snprintf(res, rsize, "ACL:%s:", "mask@");
     break;
-#endif
 
-  case ACL_OTHER_OBJ:
+  case GACL_TAG_TYPE_OTHER:
     rc = snprintf(res, rsize, "ACL:%s:", "Everyone");
     break;
 
-  case ACL_EVERYONE:
+  case GACL_TAG_TYPE_EVERYONE:
     rc = snprintf(res, rsize, "ACL:%s:", "Everyone");
     break;
 
@@ -454,22 +448,21 @@ ace2str_samba(acl_entry_t ae,
   rsize -= rc;
 
   
-  acl_get_entry_type_np(ae, &aet);
+  gacl_get_entry_type_np(ae, &aet);
   
   switch (aet) {
-  case ACL_ENTRY_TYPE_UNDEFINED:
+  case GACL_ENTRY_TYPE_UNDEFINED:
     return NULL;
-    
-  case ACL_ENTRY_TYPE_ALLOW:
+  case GACL_ENTRY_TYPE_ALLOW:
     rc = snprintf(rbuf, rsize, "ALLOWED/");
     break;
-  case ACL_ENTRY_TYPE_DENY:
+  case GACL_ENTRY_TYPE_DENY:
     rc = snprintf(rbuf, rsize, "ALLOWED/");
     break;
-  case ACL_ENTRY_TYPE_AUDIT:
+  case GACL_ENTRY_TYPE_AUDIT:
     rc = snprintf(rbuf, rsize, "AUDIT/");
     break;
-  case ACL_ENTRY_TYPE_ALARM:
+  case GACL_ENTRY_TYPE_ALARM:
     rc = snprintf(rbuf, rsize, "ALARM/");
     break;
   }
@@ -478,7 +471,7 @@ ace2str_samba(acl_entry_t ae,
   rsize -= rc;
   
 
-  if (acl_get_flagset_np(ae, &afs) < 0)
+  if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
   flagset2str_samba(afs, rbuf);
@@ -490,7 +483,7 @@ ace2str_samba(acl_entry_t ae,
   ++rbuf;
   --rsize;
 
-  if (acl_get_permset(ae, &aps) < 0)
+  if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
   permset2str_samba(aps, rbuf);
@@ -509,17 +502,17 @@ ace2str_samba(acl_entry_t ae,
 
 
 char *
-ace2str_icacls(acl_entry_t ae,
+ace2str_icacls(gacl_entry_t ae,
 	      char *rbuf,
 	      size_t rsize,
 	      const struct stat *sp) {
   static char buf[256];
   char *res;
-  acl_tag_t at;
-  acl_permset_t aps;
-  acl_flagset_t afs;
+  gacl_tag_t at;
+  gacl_permset_t aps;
+  gacl_flagset_t afs;
 #if 0
-  acl_entry_type_t aet;
+  gacl_entry_type_t aet;
 #endif
   void *qp = NULL;
   struct passwd *pp = NULL;
@@ -534,12 +527,12 @@ ace2str_icacls(acl_entry_t ae,
 
   res = rbuf;
   
-  if (acl_get_tag_type(ae, &at) < 0)
+  if (gacl_get_tag_type(ae, &at) < 0)
     return NULL;
 
   switch (at) {
-  case ACL_USER:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_USER:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -548,11 +541,11 @@ ace2str_icacls(acl_entry_t ae,
       rc = snprintf(res, rsize, "%s:", pp->pw_name);
     else
       rc = snprintf(res, rsize, "%u:", * (uid_t *) qp);
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_GROUP:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_GROUP:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -564,10 +557,10 @@ ace2str_icacls(acl_entry_t ae,
 	rc = snprintf(res, rsize, "%s:", gp->gr_name);
     } else
       rc = snprintf(res, rsize, "GID=%u:", * (gid_t *) qp);
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_USER_OBJ:
+  case GACL_TAG_TYPE_USER_OBJ:
     pp = getpwuid(sp->st_uid);
     if (pp)
       rc = snprintf(res, rsize, "%s:", pp->pw_name);
@@ -575,7 +568,7 @@ ace2str_icacls(acl_entry_t ae,
       rc = snprintf(res, rsize, "%u:", sp->st_uid);
     break;
     
-  case ACL_GROUP_OBJ:
+  case GACL_TAG_TYPE_GROUP_OBJ:
     gp = getgrgid(sp->st_gid);
     if (gp) {
       if (getpwnam(gp->gr_name))
@@ -586,17 +579,15 @@ ace2str_icacls(acl_entry_t ae,
       rc = snprintf(res, rsize, "GID=%u:", sp->st_gid);
     break;
 
-#ifdef ACL_MASK
-  case ACL_MASK:
+  case GACL_TAG_TYPE_MASK:
     rc = snprintf(res, rsize, "%s:", "mask@");
     break;
-#endif
 
-  case ACL_OTHER:
+  case GACL_TAG_TYPE_OTHER:
     rc = snprintf(res, rsize, "%s:", "Everyone");
     break;
 
-  case ACL_EVERYONE:
+  case GACL_TAG_TYPE_EVERYONE:
     rc = snprintf(res, rsize, "%s:", "Everyone");
     break;
 
@@ -620,18 +611,18 @@ ace2str_icacls(acl_entry_t ae,
 #if 0
   /* XXX: How to show DENY ACEs? */
   
-  acl_get_entry_type_np(ae, &aet);
+  gacl_get_entry_type_np(ae, &aet);
   
   switch (aet) {
-  case ACL_ENTRY_TYPE_ALLOW:
+  case GACL_ENTRY_TYPE_ALLOW:
     break;
-  case ACL_ENTRY_TYPE_DENY:
+  case GACL_ENTRY_TYPE_DENY:
     rc = snprintf(rbuf, rsize, "DENIED/");
     break;
-  case ACL_ENTRY_TYPE_AUDIT:
+  case GACL_ENTRY_TYPE_AUDIT:
     rc = snprintf(rbuf, rsize, "AUDIT/");
     break;
-  case ACL_ENTRY_TYPE_ALARM:
+  case GACL_ENTRY_TYPE_ALARM:
     rc = snprintf(rbuf, rsize, "ALARM/");
     break;
   }
@@ -640,7 +631,7 @@ ace2str_icacls(acl_entry_t ae,
   rsize -= rc;
 #endif
 
-  if (acl_get_flagset_np(ae, &afs) < 0)
+  if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
   flagset2str_icacls(afs, rbuf);
@@ -649,7 +640,7 @@ ace2str_icacls(acl_entry_t ae,
   rsize -= rc;
 
   
-  if (acl_get_permset(ae, &aps) < 0)
+  if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
   permset2str_icacls(aps, rbuf);
@@ -660,15 +651,15 @@ ace2str_icacls(acl_entry_t ae,
 
 
 char *
-ace2str(acl_entry_t ae,
+ace2str(gacl_entry_t ae,
 	char *rbuf,
 	size_t rsize) {
   static char buf[256];
   char *res;
-  acl_tag_t at;
-  acl_permset_t aps;
-  acl_flagset_t afs;
-  acl_entry_type_t aet;
+  gacl_tag_t at;
+  gacl_permset_t aps;
+  gacl_flagset_t afs;
+  gacl_entry_type_t aet;
   void *qp = NULL;
   struct passwd *pp = NULL;
   struct group *gp = NULL;
@@ -682,12 +673,12 @@ ace2str(acl_entry_t ae,
 
   res = rbuf;
   
-  if (acl_get_tag_type(ae, &at) < 0)
+  if (gacl_get_tag_type(ae, &at) < 0)
     return NULL;
 
   switch (at) {
-  case ACL_USER:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_USER:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -696,11 +687,11 @@ ace2str(acl_entry_t ae,
       rc = snprintf(res, rsize, "u:%s", pp->pw_name);
     else
       rc = snprintf(res, rsize, "u:%u", * (uid_t *) qp);
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_GROUP:
-    qp = acl_get_qualifier(ae);
+  case GACL_TAG_TYPE_GROUP:
+    qp = gacl_get_qualifier(ae);
     if (!qp)
       return NULL;
 
@@ -709,26 +700,26 @@ ace2str(acl_entry_t ae,
       rc = snprintf(res, rsize, "g:%s", gp->gr_name);
     else
       rc = snprintf(res, rsize, "g:%u", * (gid_t *) qp);
-    acl_free(qp);
+    gacl_free(qp);
     break;
     
-  case ACL_USER_OBJ:
+  case GACL_TAG_TYPE_USER_OBJ:
     rc = snprintf(res, rsize, "%s", "owner@");
     break;
     
-  case ACL_GROUP_OBJ:
+  case GACL_TAG_TYPE_GROUP_OBJ:
     rc = snprintf(res, rsize, "%s", "group@");
     break;
 
-  case ACL_MASK:
+  case GACL_TAG_TYPE_MASK:
     rc = snprintf(res, rsize, "%s", "mask@");
     break;
 
-  case ACL_OTHER:
+  case GACL_TAG_TYPE_OTHER:
     rc = snprintf(res, rsize, "%s", "other@");
     break;
 
-  case ACL_EVERYONE:
+  case GACL_TAG_TYPE_EVERYONE:
     rc = snprintf(res, rsize, "%s", "everyone@");
     break;
 
@@ -752,7 +743,7 @@ ace2str(acl_entry_t ae,
   ++rbuf;
   --rsize;
 
-  if (acl_get_permset(ae, &aps) < 0)
+  if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
   permset2str(aps, rbuf);
@@ -764,7 +755,7 @@ ace2str(acl_entry_t ae,
   ++rbuf;
   --rsize;
   
-  if (acl_get_flagset_np(ae, &afs) < 0)
+  if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
   flagset2str(afs, rbuf);
@@ -776,7 +767,7 @@ ace2str(acl_entry_t ae,
   ++rbuf;
   --rsize;
 
-  acl_get_entry_type_np(ae, &aet);
+  gacl_get_entry_type_np(ae, &aet);
   strcpy(rbuf, aet2str(aet));
   return res;
 }

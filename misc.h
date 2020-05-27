@@ -60,7 +60,7 @@ flagset2str(acl_flagset_t fsp,
 	    char *res);
 
 extern const char *
-aet2str(const acl_entry_type_t aet);
+aet2str(gacl_entry_type_t aet);
 
 extern char *
 ace2str(acl_entry_t ae,
