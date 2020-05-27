@@ -123,16 +123,19 @@ typedef uint16_t GACL_FLAGSET;
 
 #define GACL_FLAG_OI 0x0001
 #define GACL_FLAG_CI 0x0002
-#define GACL_FLAG_NI 0x0004
+#define GACL_FLAG_NP 0x0004
 #define GACL_FLAG_IO 0x0008
+#define GACL_FLAG_ID 0x0010
+#define GACL_FLAG_SA 0x0040
+#define GACL_FLAG_FA 0x0080
 
 #define GACL_FLAG_FILE_INHERIT          GACL_FLAG_OI
 #define GACL_FLAG_DIRECTORY_INHERIT     GACL_FLAG_CI
-#define GACL_FLAG_NO_PROPAGATE_INHERIT  GACL_FLAG_NI
+#define GACL_FLAG_NO_PROPAGATE_INHERIT  GACL_FLAG_NP
 #define GACL_FLAG_INHERIT_ONLY          GACL_FLAG_IO
-#define GACL_FLAG_SUCCESSFUL_ACCESS     0x0010
-#define GACL_FLAG_FAILED_ACCESS         0x0020
-#define GACL_FLAG_INHERITED             0x0080
+#define GACL_FLAG_INHERITED             GACL_FLAG_ID
+#define GACL_FLAG_SUCCESSFUL_ACCESS     GACL_FLAG_SA
+#define GACL_FLAG_FAILED_ACCESS         GACL_FLAG_FA
 
 #define	GACL_FLAG_BITS \
   (GACL_FLAG_FILE_INHERIT |       \
@@ -163,6 +166,8 @@ typedef struct gacl_entry {
 
 typedef struct gacl {
   GACL_TYPE type;
+  char owner[128];
+  char group[128];
   int ac;
   int as;
   int ap;

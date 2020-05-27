@@ -308,22 +308,30 @@ print_acl(FILE *fp,
     pp = getpwuid(sp->st_uid);
     gp = getgrgid(sp->st_gid);
   }
+
+  if (a->owner[0])
+    us = s_dup(a->owner);
+  else {
+    if (!pp) {
+      if (sp->st_uid != -1) {
+	snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
+	us = s_dup(ubuf);
+      }
+    } else
+      us = s_dup(pp->pw_name);
+  }
   
-  if (!pp) {
-    if (sp->st_uid != -1) {
-      snprintf(ubuf, sizeof(ubuf), "%u", sp->st_uid);
-      us = s_dup(ubuf);
-    }
-  } else
-    us = s_dup(pp->pw_name);
-  
-  if (!gp) {
-    if (sp->st_gid != -1) {
-      snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
-      gs = s_dup(gbuf);
-    }
-  } else
-    gs = s_dup(gp->gr_name);
+  if (a->group[0])
+    gs = s_dup(a->group);
+  else {
+    if (!gp) {
+      if (sp->st_gid != -1) {
+	snprintf(gbuf, sizeof(gbuf), "%u", sp->st_gid);
+	gs = s_dup(gbuf);
+      }
+    } else
+      gs = s_dup(gp->gr_name);
+  }
   
   switch (config.f_style) {
   case GACL_STYLE_DEFAULT:

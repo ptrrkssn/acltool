@@ -43,6 +43,9 @@
 #define SMB_ACL_FLAG_CI   0x02 			/* Container Inherit */
 #define SMB_ACL_FLAG_NI   0x04 			/* No Propagate Inherit */
 #define SMB_ACL_FLAG_IO   0x08 			/* Inherit Only */
+#define SMB_ACL_FLAG_I    0x10                  /* Inherited */
+#define SMB_ACL_FLAG_SA   0x40                  /* Successful Access */
+#define SMB_ACL_FLAG_FA   0x80                  /* Failed Access */
 
 #define SMB_ACL_PERM_GA   0x10000000 		/* Generic All */
 #define SMB_ACL_PERM_GE   0x20000000 		/* Generic Execute */

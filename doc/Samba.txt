@@ -1,0 +1,47 @@
+ * @param name      The name of an attribute to be changed.  Names are of
+ *                  one of the following forms:
+ *
+ *                     system.nt_sec_desc.<attribute name>
+ *                     system.nt_sec_desc.*
+ *                     system.nt_sec_desc.*+
+ *
+ *                  where <attribute name> is one of:
+ *
+ *                     revision
+ *                     owner
+ *                     owner+
+ *                     group
+ *                     group+
+ *                     acl:<name or sid>
+ *                     acl+:<name or sid>
+ *
+ *                  In the forms "system.nt_sec_desc.*" and
+ *                  "system.nt_sec_desc.*+", the asterisk and plus signs are
+ *                  literal, i.e. the string is provided exactly as shown, and
+ *                  the value parameter should contain a complete security
+ *                  descriptor with name:value pairs separated by tabs,
+ *                  commas, or newlines (not spaces!).
+ *
+ *                  The plus sign ('+') indicates that SIDs should be mapped
+ *                  to names.  Without the plus sign, SIDs are not mapped;
+ *                  rather they are simply converted to a string format.
+ *
+ * @param value     The value to be assigned to the specified attribute name.
+ *                  This buffer should contain only the attribute value if the
+ *                  name was of the "system.nt_sec_desc.<attribute_name>"
+ *                  form.  If the name was of the "system.nt_sec_desc.*" form
+ *                  then a complete security descriptor, with name:value pairs
+ *                  separated by tabs, commas, or newlines (not spaces!),
+ *                  should be provided in this value buffer.  A complete
+ *                  security descriptor will contain one or more entries
+ *                  selected from the following:
+ *
+ *                    REVISION:<revision number>
+ *                    OWNER:<sid or name>
+ *                    GROUP:<sid or name>
+ *                    ACL:<sid or name>:<type>/<flags>/<mask>
+ *
+ *                  The  revision of the ACL specifies the internal Windows NT
+ *                  ACL revision for the security descriptor. If not specified
+ *                  it defaults to  1.  Using values other than 1 may cause
+ *                  strange behaviour.

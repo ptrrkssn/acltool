@@ -52,6 +52,9 @@ slist_add(SLIST *sp,
 extern void
 slist_free(SLIST *sp);
 
+extern char *
+slist_join(SLIST *sp,
+	   const char *delim);
 
 
 extern char *

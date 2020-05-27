@@ -254,6 +254,8 @@ gacl_init(int count) {
     return NULL;
 
   ap->type = 0;
+  ap->owner[0] = '\0';
+  ap->group[0] = '\0';
   ap->ac = 0;
   ap->ap = 0;
   ap->as = count;
@@ -264,7 +266,8 @@ gacl_init(int count) {
 
 int
 gacl_free(void *op) {
-  free(op);
+  if (op)
+    free(op);
   return 0;
 }
 

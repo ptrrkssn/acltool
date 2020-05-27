@@ -26,3 +26,107 @@ L  = List Folder Contents
 R  = Read
 W  = Write
 
+
+
+Win32_ACE class
+
+The Win32_ACE abstract WMI class specifies an access control entry (ACE). An ACE grants permission to execute a restricted operation, such as writing to a file or formatting a disk. An ACE that is specific to WMI allows logon, remote access, method execution, and writing to the WMI repository.
+
+The following syntax is simplified from Managed Object Format (MOF) code and includes all of the inherited properties. Properties are listed in alphabetic order, not MOF order.
+
+class Win32_ACE : __ACE
+{
+  uint64        TIME_CREATED;
+  uint32        AccessMask;
+  uint32        AceFlags;
+  uint32        AceType;
+  string        GuidInheritedObjectType;
+  string        GuidObjectType;
+  Win32_Trustee Trustee;
+};
+
+Members
+The Win32_ACE class has these types of members:
+AccessMask
+Data type: uint32
+Access type: Read/write
+Qualifiers: Override (AccessMask), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+Bit flags that indicate rights granted or denied to the trustee. For more information, see the Remarks section of this topic.
+FILE_READ_DATA (file) or FILE_LIST_DIRECTORY (directory) (1 (0x1))
+Grants the right to read data from the file. For a directory, this value grants the right to list the contents of the directory.
+FILE_WRITE_DATA (file) or FILE_ADD_FILE (directory) (2 (0x2))
+Grants the right to write data to the file. For a directory, this value grants the right to create a file in the directory.
+FILE_APPEND_DATA (file) or FILE_ADD_SUBDIRECTORY (directory) (4 (0x4))
+Grants the right to append data to the file. For a directory, this value grants the right to create a subdirectory.
+FILE_READ_EA (8 (0x8))
+Grants the right to read extended attributes.
+FILE_WRITE_EA (16 (0x10))
+Grants the right to write extended attributes.
+FILE_EXECUTE (file) or FILE_TRAVERSE (directory) (32 (0x20))
+Grants the right to execute a file. For a directory, the directory can be traversed.
+FILE_DELETE_CHILD (64 (0x40))
+Grants the right to delete a directory and all the files it contains (its children), even if the files are read-only.
+FILE_READ_ATTRIBUTES (128 (0x80))
+Grants the right to read file attributes.
+FILE_WRITE_ATTRIBUTES (256 (0x100))
+Grants the right to change file attributes.
+DELETE (65536 (0x10000))
+Grants delete access.
+READ_CONTROL (131072 (0x20000))
+Grants read access to the security descriptor and owner.
+WRITE_DAC (262144 (0x40000))
+Grants write access to the discretionary access control list (ACL).
+WRITE_OWNER (524288 (0x80000))
+Assigns the write owner.
+SYNCHRONIZE (1048576 (0x100000))
+Synchronizes access and allows a process to wait for an object to enter the signaled state.
+AceFlags
+Data type: uint32
+Access type: Read/write
+Qualifiers: Override (AceFlags), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+Bit flags that specify inheritance of the ACE. The the relevant permission values for AceFlags are listed below.
+OBJECT_INHERIT_ACE (1 (0x1))
+Noncontainer child objects inherit the ACE as an effective ACE.
+For child objects that are containers, the ACE is inherited as an inherit-only ACE unless the NO_PROPAGATE_INHERIT_ACE bit flag is also set.
+CONTAINER_INHERIT_ACE (2 (0x2))
+Child objects that are containers, such as directories, inherit the ACE as an effective ACE. The inherited ACE is inheritable unless the NO_PROPAGATE_INHERIT_ACE bit flag is also set.
+NO_PROPAGATE_INHERIT_ACE (4 (0x4))
+If the ACE is inherited by a child object, the system clears the OBJECT_INHERIT_ACE and CONTAINER_INHERIT_ACE flags in the inherited ACE. This prevents the ACE from being inherited by subsequent generations of objects.
+INHERIT_ONLY_ACE (8 (0x8))
+Indicates an inherit-only ACE which does not control access to the object to which it is attached. If this flag is not set, the ACE is an effective ACE which controls access to the object to which it is attached.
+Both effective and inherit-only ACEs can be inherited depending on the state of the other inheritance flags.
+INHERITED_ACE (16 (0x10))
+The system sets this bit when it propagates an inherited ACE to a child object.
+The two possible values for AceFlags that pertain only to an ACE contained within a system access control list (SACL) are listed below.
+SUCCESSFUL_ACCESS_ACE_FLAG (64 (0x40))
+Used with system-audit ACEs in an SACL to generate audit messages for successful access attempts.
+FAILED_ACCESS_ACE_FLAG (128 (0x80))
+Used with system-audit ACEs in an SACL to generate audit messages for failed access attempts.
+AceType
+Data type: uint32
+Access type: Read/write
+Qualifiers: Override (AceType), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+Type of ACE.
+Access Allowed (0)
+Access Denied (1)
+Audit (2)
+GuidInheritedObjectType
+Data type: string
+Access type: Read/write
+Qualifiers: Override (GuidInheritedObjectType), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+Globally unique identifier (GUID) associated with the parent of the object to which these rights apply.
+GuidObjectType
+Data type: string
+Access type: Read/write
+Qualifiers: Override (GuidObjectType), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+GUID associated with the type of object to which these rights apply.
+TIME_CREATED
+Data type: uint64
+Access type: Read-only
+The time, in the CIM_DATETIME format, when the security descriptor was created.
+This property is inherited from __ACE.
+Trustee
+Data type: Win32_Trustee
+Access type: Read/write
+Qualifiers: Override (Trustee), WritePrivileges ("SeSecurityPrivilege", "SeRestorePrivilege")
+Object representing the user account, group account, or logon session to which an ACE applies.

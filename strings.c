@@ -293,5 +293,39 @@ slist_free(SLIST *sp) {
 }
 
 
+char *
+slist_join(SLIST *sp,
+	   const char *delim) {
+  size_t dlen, tlen;
+  int i;
+  char *buf;
+  
+
+  if (sp->c == 0)
+    return s_dup("");
+  
+  dlen = delim ? strlen(delim) : 0;
+
+  tlen = 0;
+  for (i = 0; i < sp->c; i++)
+    tlen += strlen(sp->v[i]);
+
+  tlen += (sp->c-1)*dlen + 1;
+
+  buf = malloc(tlen);
+  if (!buf)
+    return NULL;
+
+  strcpy(buf, sp->v[0]);
+  for (i = 1; i < sp->c; i++) {
+    if (delim)
+      strcat(buf, delim);
+    strcat(buf, sp->v[i]);
+  }
+
+  return buf;
+}
+
+
 
 
