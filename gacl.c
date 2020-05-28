@@ -1642,6 +1642,48 @@ gacl_entry_to_text(GACL_ENTRY *ep,
   return bp-buf;
 }
 
+int
+_gacl_max_tagwidth(GACL *ap) {
+  int i;
+
+
+  int mw = 0;
+  for (i = 0; i < ap->ac; i++) {
+    GACL_ENTRY *ep = &ap->av[i];
+    int ew = 0;
+    
+    switch (ep->tag.type) {
+    case GACL_TAG_TYPE_USER_OBJ:
+      ew = strlen(GACL_TAG_TYPE_USER_OBJ_TEXT);
+      break;
+    case GACL_TAG_TYPE_USER:
+      ew = strlen(GACL_TAG_TYPE_USER_TEXT)+strlen(ep->tag.name);
+      break;
+    case GACL_TAG_TYPE_GROUP_OBJ:
+      ew = strlen(GACL_TAG_TYPE_GROUP_OBJ_TEXT);
+      break;
+    case GACL_TAG_TYPE_GROUP:
+      ew = strlen(GACL_TAG_TYPE_GROUP_TEXT)+strlen(ep->tag.name);
+      break;
+    case GACL_TAG_TYPE_EVERYONE:
+      ew = strlen(GACL_TAG_TYPE_EVERYONE_TEXT);
+      break;
+    case GACL_TAG_TYPE_MASK:
+      ew = strlen(GACL_TAG_TYPE_MASK_TEXT);
+      break;
+    case GACL_TAG_TYPE_OTHER:
+      ew = strlen(GACL_TAG_TYPE_OTHER_TEXT);
+      break;
+    default:
+      return -1;
+    }
+
+    if (ew > mw)
+      mw = ew;
+  }
+  return mw;
+}
+
 
 char *
 gacl_to_text_np(GACL *ap,
@@ -1651,7 +1693,7 @@ gacl_to_text_np(GACL *ap,
   size_t bufsize = 2048;
   int i, rc;
   GACL_ENTRY *ep;
-  int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 18 : 40);
+  int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 18 : _gacl_max_tagwidth(ap)+8);
 
   
   bp = buf = malloc(bufsize);

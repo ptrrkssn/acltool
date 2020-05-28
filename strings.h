@@ -90,4 +90,13 @@ extern char *
 s_dupcat(const char *str,
 	 ...);
 
+extern int
+s_getint(int *ip,
+	 char **spp);
+
+extern int
+s_sepint(int *ip,
+	 char **spp,
+	 char *delim);
+
 #endif

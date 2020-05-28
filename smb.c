@@ -551,9 +551,6 @@ smb_acl_get_file(const char *path) {
   while ((cp = strsep(&bp, ",")) != NULL) {
     char *s_tag;
     char *s_user;
-    char *s_type;
-    char *s_flags;
-    char *s_perms;
     int type, flags, perms;
     GACL_ENTRY *ep = NULL;
     GACL_PERMSET ps;
@@ -563,22 +560,20 @@ smb_acl_get_file(const char *path) {
     char *e_name;
 
     
-    s_tag   = strsep(&cp, ":");
+    s_tag = strsep(&cp, ":");
     if (strcmp(s_tag, "ACL") != 0)
       goto Fail;
-    
-    s_user  = strsep(&cp, ":");
-    s_type  = strsep(&cp, "/");
-    s_flags = strsep(&cp, "/");
-    s_perms = strsep(&cp, "/");
-    
-    if (!s_user  || !*s_user ||
-	!s_type  || sscanf(s_type, "%d", &type) != 1 ||
-	!s_flags || sscanf(s_flags, "%d", &flags) != 1 ||
-	!s_perms || !(sscanf(s_perms, "0x%x", &perms) == 1 ||
-		      sscanf(s_perms, "%d", &perms) == 1))
-      continue; /* Invalid entry - skip */
 
+    s_user = strsep(&cp, ":");
+    if (!s_user)
+      goto Fail;
+    
+    if (s_sepint(&type,  &cp, "/") < 1 ||
+	s_sepint(&flags, &cp, "/") < 1 ||
+	s_sepint(&perms, &cp, "/") < 1) {
+      goto Fail;
+    }
+    
     e_type = -1;
     e_ugid = -1;
     e_name = s_dup(s_user);

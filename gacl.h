@@ -64,6 +64,14 @@ typedef enum gacl_tag_type {
   GACL_TAG_TYPE_EVERYONE  = 0x0040,
 } GACL_TAG_TYPE;
 
+#define GACL_TAG_TYPE_USER_OBJ_TEXT  "owner@"
+#define GACL_TAG_TYPE_USER_TEXT      "user:"
+#define GACL_TAG_TYPE_GROUP_OBJ_TEXT "group@"
+#define GACL_TAG_TYPE_GROUP_TEXT     "group:"
+#define GACL_TAG_TYPE_MASK_TEXT      "mask@"
+#define GACL_TAG_TYPE_OTHER_TEXT     "other@"
+#define GACL_TAG_TYPE_EVERYONE_TEXT  "everyone@"
+
 
 typedef struct gacl_entry_tag {
   GACL_TAG_TYPE type;

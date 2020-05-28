@@ -327,5 +327,99 @@ slist_join(SLIST *sp,
 }
 
 
+int
+s_getint(int *ip,
+	 char **spp) {
+  char *sp;
+  int sign = 1;
+  
+  if (!spp)
+    return -1;
+
+  sp = *spp;
+  while (isspace(*sp))
+    ++sp;
+
+  if (!*sp || !(isdigit(*sp) || *sp == '-')) {
+    *spp = sp;
+    return 0;
+  }
+
+  if (*sp == '-') {
+    sign = -1;
+    ++sp;
+  }
+    
+  if (sp[0] == '0' && (sp[1] == 'x' || sp[1] == 'X')) {
+    sp += 2;
+    *ip = 0;
+
+    while (isxdigit(*sp)) {
+      unsigned char c = isdigit(*sp) ? *sp - '0' : toupper(*sp)-'A'+10;
+      *ip <<= 4;
+      *ip |= c;
+      ++sp;
+    }
+  } else
+    *ip = 0;
+  
+    while (isdigit(*sp)) {
+      unsigned char c = *sp - '0';
+      *ip *= 10;
+      *ip += c;
+      ++sp;
+    }
+
+  *ip *= sign;
+  *spp = sp;
+  return 1;
+}
 
 
+int
+s_sepint(int *ip,
+	    char **spp,
+	    char *delim) {
+  char *sp;
+  int sign = 1;
+  
+  if (!spp)
+    return -1;
+
+  sp = strsep(spp, delim);
+  if (!sp)
+    return 0;
+  
+  if (! ((sp[0] == '-' && isdigit(sp[1])) || isdigit(sp[0]))) {
+    *spp = sp;
+    return 0;
+  }
+  
+  if (*sp == '-') {
+    sign = -1;
+    ++sp;
+  }
+  
+  if (sp[0] == '0' && (sp[1] == 'x' || sp[1] == 'X')) {
+    sp += 2;
+    *ip = 0;
+
+    while (isxdigit(*sp)) {
+      unsigned char c = isdigit(*sp) ? *sp - '0' : toupper(*sp)-'A'+10;
+      *ip <<= 4;
+      *ip |= c;
+      ++sp;
+    }
+  } else
+    *ip = 0;
+  
+  while (isdigit(*sp)) {
+    unsigned char c = *sp - '0';
+    *ip *= 10;
+    *ip += c;
+    ++sp;
+  }
+
+  *ip *= sign;
+  return 1;
+}
