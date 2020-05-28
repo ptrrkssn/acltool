@@ -323,7 +323,7 @@ acecr_from_simple_text(ACECR **head,
     
     if (_gacl_entry_from_text(es, cur->filter.ep, GACL_TEXT_RELAXED) < 0)
       goto Fail;
-    
+
     cur->filter.avail = 1;
     if (ep) {
       /* Matched change - only update matching ACEs
@@ -363,7 +363,10 @@ acecr_from_simple_text(ACECR **head,
       
       *(cur->change.ep) = *(cur->filter.ep);
       cur->filter.type = 0; /* Ignore 'permissions part at match' */
-      cur->cmd = 'S';
+      if (cur->change.ep->perms == 0)
+	cur->cmd = 'd';
+      else
+	cur->cmd = 'S';
     }
 
     
@@ -846,7 +849,7 @@ walker_edit(const char *path,
 	    }
 	    if (rc == 1)
 	      ++nm;
-	    
+
 	    if (p >= nap->ac-1)
 	      break;
 	  }
@@ -869,13 +872,6 @@ walker_edit(const char *path,
 	      /* 'Global' search & replace or stop at first match? */
 	      if (cr->modifiers && !strchr(cr->modifiers, 'g'))
 		break;
-	    }
-
-	    if (cr->cmd == 'S' && !ae->perms) {
-	      rc = gacl_delete_entry_np(nap, p);
-	      if (rc < 0)
-		break;
-	      continue;
 	    }
 
 	    ++p;

@@ -1110,7 +1110,11 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
 
   /* Locate end of tag */
   np = strchr(cp, ':');
-
+  if (!np) {
+    errno = EINVAL;
+    return -1;
+  }
+		
   etp->name = s_ndup(cp, np-cp);
   if (!etp->name) {
     errno = EINVAL;
@@ -1941,6 +1945,9 @@ _gacl_entry_from_text(char *cp,
   if (_gacl_entry_tag_from_text(ep, &cp, flags) < 0)
     return -1;
 
+  if (!cp)
+    return -1;
+  
   /* 2. Get permset */
   np = strchr(cp, ':');
   if (np)
