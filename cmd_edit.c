@@ -218,9 +218,6 @@ acecr_from_text(ACECR **head,
 	  
 	  regerror(ec, &cur->filter.preg, errbuf, sizeof(errbuf));
 	  return error(1, 0, "%s: Regex: %s", es, errbuf);
-	  
-	  fprintf(stderr, "%s: Error: %s: %s\n", argv0, es, errbuf);
-	  goto Fail;
 	}
       } else {
 	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
@@ -661,8 +658,8 @@ range_filter_regex(RANGE *old,
 	break;
       default:
 	regerror(rc, preg, errbuf, sizeof(errbuf));
-	fprintf(stderr, "%s: Error: %s: %s\n", argv0, buf, errbuf);
-	exit(1);
+	error(1, 0, "%s: Regex: %s", buf, errbuf);
+	return NULL;
       }
 		    
       if (p >= ap->ac-1)
@@ -682,8 +679,8 @@ range_filter_regex(RANGE *old,
 	break;
       default:
 	regerror(rc, preg, errbuf, sizeof(errbuf));
-	fprintf(stderr, "%s: Error: %s: %s\n", argv0, buf, errbuf);
-	exit(1);
+	error(1, 0, "%s: Regex: %s", buf, errbuf);
+	return NULL;
       }
     }
   }
@@ -692,29 +689,105 @@ range_filter_regex(RANGE *old,
 }
 
 
+
+static SCRIPT *edit_script = NULL;
+
+static int
+script_add(SCRIPT **spp,
+	   ACECR *cr) {
+  SCRIPT *new;
+  
+
+  if (!spp)
+    return -1;
+  
+  new = malloc(sizeof(*new));
+  if (!new)
+    return -1;
+
+  memset(new, 0, sizeof(*new));
+  new->cr = cr;
+  new->next = NULL;
+
+  while (*spp)
+    spp = &(*spp)->next;
+
+  *spp = new;
+  return 0;
+}
+
+static void
+acecr_free(ACECR *cr) {
+  while (cr) {
+    ACECR *next = cr->next;
+
+    if (cr->filter.avail) {
+      if (cr->filter.ep)
+	free(cr->filter.ep);
+      else
+	regfree(&cr->filter.preg);
+    }
+    if (cr->change.ep)
+      free(cr->change.ep);
+    if (cr->modifiers)
+      free(cr->modifiers);
+    free(cr);
+    cr = next;
+  }
+}
+
+
+static void
+script_free(SCRIPT **spp) {
+  SCRIPT *sp, *next;
+
+  
+  if (!spp)
+    return;
+  
+  for (sp = *spp; sp; sp = next) {
+    next = sp->next;
+    acecr_free(sp->cr);
+    free(sp);
+  }
+  *spp = NULL;
+}
+  
+
 static int
 walker_edit(const char *path,
 	    const struct stat *sp,
 	    size_t base,
 	    size_t level,
 	    void *vp) {
-  gacl_t oap, nap;
-  SCRIPT *script;
+  gacl_t oap = NULL;
+  gacl_t nap = NULL;
+  SCRIPT *script = NULL;
   int rc = 0;
   int pos = 0;
   int p_line = 0;
+  jmp_buf saved_error_env;
 
-  oap = get_acl(path, sp);  
-  if (!oap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
+
+  if ((rc = error_catch(saved_error_env)) != 0) {
+    if (oap)
+      gacl_free(oap);
+    if(nap)
+      gacl_free(nap);
+
+    error_return(rc, saved_error_env);
   }
+  
+  oap = get_acl(path, sp);  
+  if (!oap)
+    return error(1, errno, "%s: Getting ACL", path);
 
   nap = gacl_dup(oap);
   if (!nap) {
+    int ec = errno;
+    
     gacl_free(oap);
-    fprintf(stderr, "%s: Error: %s: Internal Fault (gacl_dup): %s\n", argv0, path, strerror(errno));
-    return 1;
+    return error(1, ec, "%s: Internal Fault (gacl_dup)", path);
   }
 
   /* Execute script - all registered CR chains in sequence */
@@ -730,31 +803,19 @@ walker_edit(const char *path,
 
       
       /* Make sure this change request is valid for this file type */
-      if (cr->ftypes && (sp->st_mode & cr->ftypes) == 0) {
-	if (config.f_debug)
-	  fprintf(stderr, "*** File type mismatch - skipping\n");
+      if (cr->ftypes && (sp->st_mode & cr->ftypes) == 0)
 	continue;
-      }
 
       if (cr->filter.avail) {
 	if (cr->filter.ep)
 	  range = range_filter(cr->range, cr->filter.ep, cr->filter.type, nap);
 	else
 	  range = range_filter_regex(cr->range, &cr->filter.preg, cr->filter.type, nap);
-	if (!range && cr->cmd != 'S') {
-	  if (config.f_debug)
-	    fprintf(stderr, "*** Range filter mismatch - skipping\n");
+	if (!range && cr->cmd != 'S')
 	  continue;
-	}
       }
       else
 	range = cr->range;
-
-      if (config.f_debug) {
-	fprintf(stderr, "*** Range: ");
-	range_print(range, stderr);
-	fprintf(stderr, "\n*** Action: %c\n", cr->cmd);
-      }
 
       switch (cr->cmd) {
       case 'd': /* Delete ACEs - do it backwards */
@@ -817,14 +878,10 @@ walker_edit(const char *path,
 	  p1 = pos;
 	if (cr->cmd == 'a')
 	  ++p1;
-	if (gacl_create_entry_np(&nap, &nae, p1) < 0) {
-	  fprintf(stderr, "Unable to create ACE at %d\n", p1);
-	  rc = -1;
-	}
-	else if (gacl_copy_entry(nae, cr->change.ep) < 0) {
-	  fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
-	  rc = -1;
-	}
+	if (gacl_create_entry_np(&nap, &nae, p1) < 0)
+	  return error(1, errno, "Creating ACL Entry @ %d", p1);
+	else if (gacl_copy_entry(nae, cr->change.ep) < 0)
+	  return error(1, errno, "Copying ACL Entry");
 	break;
 	
       case '=': /* Replace ACE at position */
@@ -925,15 +982,11 @@ walker_edit(const char *path,
 	if (nm == 0) {
 	AddACE:
 	  /* Add ACE entry if no match found */
-	  if (gacl_create_entry_np(&nap, &nae, pos) < 0) {
-	    fprintf(stderr, "Unable to create ACE at %d\n", pos);
-	    rc = -1;
-	  }
+	  if (gacl_create_entry_np(&nap, &nae, pos) < 0)
+	    return error(1, errno, "Creating ACL Entry @ %d", pos);
 
-	  if (gacl_copy_entry(nae, cr->change.ep) < 0) {
-	    fprintf(stderr, "Unable to copy ACE: %s\n", strerror(errno));
-	    rc = -1;
-	  }
+	  if (gacl_copy_entry(nae, cr->change.ep) < 0)
+	    return error(1, errno, "Copying ACL Entry");
 	}
 	break;
 	
@@ -950,83 +1003,13 @@ walker_edit(const char *path,
   gacl_clean(nap);
 
   rc = set_acl(path, sp, nap, oap);
-  if (rc < 0) {
-    goto Fail;
-  }
+  if (rc < 0)
+    error(1, errno, "%s: Setting ACL", path);
 
   gacl_free(oap);
   gacl_free(nap);
   return 0;
-
- Fail:
-  gacl_free(oap);
-  gacl_free(nap);
-  return 1;
 }
-
-static SCRIPT *edit_script = NULL;
-
-
-static int
-script_add(SCRIPT **spp,
-	   ACECR *cr) {
-  SCRIPT *new;
-  
-
-  if (!spp)
-    return -1;
-  
-  new = malloc(sizeof(*new));
-  if (!new)
-    return -1;
-
-  memset(new, 0, sizeof(*new));
-  new->cr = cr;
-  new->next = NULL;
-
-  while (*spp)
-    spp = &(*spp)->next;
-
-  *spp = new;
-  return 0;
-}
-
-static void
-acecr_free(ACECR *cr) {
-  while (cr) {
-    ACECR *next = cr->next;
-
-    if (cr->filter.avail) {
-      if (cr->filter.ep)
-	free(cr->filter.ep);
-      else
-	regfree(&cr->filter.preg);
-    }
-    if (cr->change.ep)
-      free(cr->change.ep);
-    if (cr->modifiers)
-      free(cr->modifiers);
-    free(cr);
-    cr = next;
-  }
-}
-
-static void
-script_free(SCRIPT **spp) {
-  SCRIPT *sp, *next;
-
-  
-  if (!spp)
-    return;
-  
-  for (sp = *spp; sp; sp = next) {
-    next = sp->next;
-    acecr_free(sp->cr);
-    free(sp);
-  }
-  *spp = NULL;
-}
-  
 
 static int
 editopt_handler(const char *name,
