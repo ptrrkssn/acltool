@@ -416,28 +416,18 @@ ace_match(gacl_entry_t oae,
   uid_t *oip;
 
   
-  /* Get match ACE */
   gacl_get_tag_type(mae, &mtt);
+  gacl_get_tag_type(oae, &ott);
+
+  if (ott != mtt)
+      return 0;
+  
   gacl_get_entry_type_np(mae, &met);
   mip = gacl_get_qualifier(mae);
   
-  if (gacl_get_permset(mae, &mps) < 0 ||
-      gacl_get_flagset_np(mae, &mfs) < 0)
-    return -1;
-  
-  /* Get current ACE */
-  gacl_get_tag_type(oae, &ott);
   gacl_get_entry_type_np(oae, &oet);
   oip = gacl_get_qualifier(oae);
   
-  if (gacl_get_permset(oae, &ops) < 0 ||
-      gacl_get_flagset_np(oae, &ofs) < 0)
-    return -1;
-
-
-  /* Check the tag type */
-  if (ott != mtt)
-      return 0;
 
   if ((ott == GACL_TAG_TYPE_USER || ott == GACL_TAG_TYPE_GROUP) && (!oip || !mip || *oip != *mip))
     return 0;
@@ -445,6 +435,18 @@ ace_match(gacl_entry_t oae,
   /* Check the ACE type set */
   if (met != oet)
       return 0;
+
+
+  if (gacl_get_permset(mae, &mps) < 0 ||
+      gacl_get_flagset_np(mae, &mfs) < 0)
+    return -1;
+  
+  if (gacl_get_permset(oae, &ops) < 0 ||
+      gacl_get_flagset_np(oae, &ofs) < 0)
+    return -1;
+
+
+
 
   /* Check the flag set */
   if (*mfs != *ofs)

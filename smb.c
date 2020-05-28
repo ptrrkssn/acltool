@@ -658,16 +658,26 @@ smb_acl_get_file(const char *path) {
 }
 
 
-int
+static int
 smb_gacl_entry_to_text(GACL_ENTRY *ep,
 		       char *buf,
-		       size_t bufsize) {
+		       size_t bufsize,
+		       char *owner,
+		       char *group) {
   char *name;
   int type, i, n;
   int perms, flags;
   
   
   switch (ep->tag.type) {
+  case GACL_TAG_TYPE_USER_OBJ:
+    name = owner;
+    break;
+    
+  case GACL_TAG_TYPE_GROUP_OBJ:
+    name = group;
+    break;
+    
   case GACL_TAG_TYPE_USER:
   case GACL_TAG_TYPE_GROUP:
     name = ep->tag.name;
@@ -728,19 +738,66 @@ smb_acl_set_file(const char *path,
   SLIST *sp = NULL;
   char *abuf = NULL;
   int i;
-  
+  int need_owner = 0;
+  int need_group = 0;
+
   
   sp = slist_new(ap->ac);
   if (!sp)
     return -1;
 
   slist_add(sp, "REVISION:1");
-  slist_add(sp, "OWNER:AD\\peter86");
-  slist_add(sp, "GROUP:AD\\employee-liu.se");
+
+  /* Do we need to lookup the owner and/or group? */
+  for (i = 0; i < ap->ac && !need_owner && !need_group; i++) {
+    GACL_ENTRY *ep = &ap->av[i];
+  
+    if (ep->tag.type == GACL_TAG_TYPE_USER_OBJ && !ap->owner[0])
+      need_owner = 1;
+    
+    if (ep->tag.type == GACL_TAG_TYPE_GROUP_OBJ && !ap->group[0])
+      need_group = 1;
+  }
+
+  if (need_owner) {
+    const char *owner_attr = "system.nt_sec_desc.owner+";
+    char buf[256];
+    
+    if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) < 0)
+      return -1;
+
+    strncpy(ap->owner, buf, sizeof(ap->owner));
+  }
+
+  if (need_group) {
+    const char *group_attr = "system.nt_sec_desc.group+";
+    char buf[256];
+    
+    if (smb_getxattr(path, group_attr, buf, sizeof(buf)) < 0)
+      return -1;
+
+    strncpy(ap->group, buf, sizeof(ap->group));
+  }
+
+#if 0 /* We can skip these (atleast for now) */
+  if (ap->owner[0]) {
+    char buf[512];
+    
+    snprintf(buf, sizeof(buf), "OWNER:%s", ap->owner);
+    slist_add(sp, buf);
+  }
+  
+  if (ap->group[0]) {
+    char buf[512];
+  
+    snprintf(buf, sizeof(buf), "GROUP:%s", ap->group);
+    slist_add(sp, buf);
+  }
+#endif
   
   for (i = 0; i < ap->ac; i++) {
     char ebuf[256];
-    if (smb_gacl_entry_to_text(&ap->av[i], ebuf, sizeof(ebuf)) < 0)
+    if (smb_gacl_entry_to_text(&ap->av[i], ebuf, sizeof(ebuf), ap->owner, ap->group) < 0)
       goto Fail;
 
     slist_add(sp, ebuf);
