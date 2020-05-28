@@ -121,12 +121,10 @@ _nfs4_id_domain(void) {
 /* This code is a bit of a hack */
 static int
 _nfs4_id_to_uid(char *buf,
-		size_t bufsize,
 		uid_t *uidp) {
   struct passwd *pp;
   int i;
   char *idd = NULL;
-  int iddlen = -1;
 
 
   /* First we try a direct lookup (user@realm) - it might work... */
@@ -136,37 +134,33 @@ _nfs4_id_to_uid(char *buf,
     return 1;
   }
   
-  if (bufsize < 1)
-    return -1;
+  idd = _nfs4_id_domain();
 
-  for (i = 0; i < bufsize && buf[i] != '@'; i++)
+  for (i = 0; buf[i] && buf[i] != '@'; i++)
     ;
-
-  if (i < bufsize) {
-    buf[i++] = '\0';
-    
-    if (!idd || (iddlen == bufsize-i && strncmp(idd, buf+i, iddlen) == 0)) {
-      pp = getpwnam(buf);
-      if (pp) {
-	*uidp = pp->pw_uid;
-	return 1;
-      }
+  
+  if (buf[i] && (!idd || strcmp(idd, buf+i) == 0)) {
+    buf[i] = '\0';
+    pp = getpwnam(buf);
+    buf[i] = '@';
+    if (pp) {
+      *uidp = pp->pw_uid;
+      return 1;
     }
   } else if (sscanf(buf, "%d", uidp) == 1)
     return 1;
-
+  
   return 0;
 }
+
 
 /* This code is a bit of a hack */
 static int
 _nfs4_id_to_gid(char *buf,
-		size_t bufsize,
 		gid_t *gidp) {
   struct group *gp;
   int i;
   char *idd = NULL;
-  int iddlen = -1;
 
 
   /* First try a direct lookup (group@realm) - might work */
@@ -176,46 +170,79 @@ _nfs4_id_to_gid(char *buf,
     return 1;
   }
   
-  if (bufsize < 1)
-    return -1;
-
   idd = _nfs4_id_domain();
-  if (idd)
-    iddlen = strlen(idd);
 
-  for (i = 0; i < bufsize && buf[i] != '@'; i++)
+  for (i = 0; buf[i] && buf[i] != '@'; i++)
     ;
 
-  if (i < bufsize) {
-    buf[i++] = '\0';
-    
-    if (!idd || (iddlen == bufsize-i && strncmp(idd, buf+i, iddlen) == 0)) {
-      gp = getgrnam(buf);
-      if (gp) {
-	*gidp = gp->gr_gid;
-	return 1;
-      }
+  if (buf[i] && (!idd || strcmp(idd, buf+1) == 0)) {
+    buf[i] = '\0';
+    gp = getgrnam(buf);
+    buf[i] = '@';
+    if (gp) {
+      *gidp = gp->gr_gid;
+      return 1;
     }
   } else if (sscanf(buf, "%d", gidp) == 1)
     return 1;
-
+  
   return 0;
 }
 
 
-static GACL *
+static struct flagtab {
+  GACL_FLAG g;
+  u_int16_t s;
+} flagtab[] =
+  {
+    { GACL_FLAG_FILE_INHERIT,          NFS4_ACE_FILE_INHERIT_ACE },
+    { GACL_FLAG_DIRECTORY_INHERIT,     NFS4_ACE_DIRECTORY_INHERIT_ACE },
+    { GACL_FLAG_NO_PROPAGATE_INHERIT,  NFS4_ACE_NO_PROPAGATE_INHERIT_ACE },
+    { GACL_FLAG_INHERIT_ONLY,          NFS4_ACE_INHERIT_ONLY_ACE },
+    { GACL_FLAG_SUCCESSFUL_ACCESS,     NFS4_ACE_SUCCESSFUL_ACCESS_ACE_FLAG },
+    { GACL_FLAG_FAILED_ACCESS,         NFS4_ACE_FAILED_ACCESS_ACE_FLAG },
+#ifdef NFS4_ACE_INHERITED_ACE
+    { GACL_FLAG_INHERITED,             NFS4_ACE_INHERITED_ACE },
+#endif
+  };
+
+static struct permtab {
+  GACL_PERM g;
+  u_int32_t s;
+} permtab[] =
+  {
+    { GACL_PERM_READ_DATA,           NFS4_ACE_READ_DATA },
+    { GACL_PERM_LIST_DIRECTORY,      NFS4_ACE_LIST_DIRECTORY },
+    { GACL_PERM_WRITE_DATA,          NFS4_ACE_WRITE_DATA },
+    { GACL_PERM_ADD_FILE,            NFS4_ACE_ADD_FILE },
+    { GACL_PERM_APPEND_DATA,         NFS4_ACE_APPEND_DATA },
+    { GACL_PERM_ADD_SUBDIRECTORY,    NFS4_ACE_ADD_SUBDIRECTORY },
+    { GACL_PERM_READ_NAMED_ATTRS,    NFS4_ACE_READ_NAMED_ATTRS },
+    { GACL_PERM_WRITE_NAMED_ATTRS,   NFS4_ACE_WRITE_NAMED_ATTRS },
+    { GACL_PERM_EXECUTE,             NFS4_ACE_EXECUTE },
+    { GACL_PERM_DELETE_CHILD,        NFS4_ACE_DELETE_CHILD },
+    { GACL_PERM_READ_ATTRIBUTES,     NFS4_ACE_READ_ATTRIBUTES },
+    { GACL_PERM_WRITE_ATTRIBUTES,    NFS4_ACE_WRITE_ATTRIBUTES },
+    { GACL_PERM_DELETE,              NFS4_ACE_DELETE },
+    { GACL_PERM_READ_ACL,            NFS4_ACE_READ_ACL },
+    { GACL_PERM_WRITE_ACL,           NFS4_ACE_WRITE_ACL },
+    { GACL_PERM_WRITE_OWNER,         NFS4_ACE_WRITE_OWNER },
+    { GACL_PERM_SYNCHRONIZE,         NFS4_ACE_SYNCHRONIZE },
+  };
+
+
+GACL *
 _gacl_init_from_nfs4(const char *buf,
 		     size_t bufsize) {
-  int i;
-  u_int32_t *vp;
-  u_int32_t na;
+  int i, j;
+  u_int32_t *vp, s_flags, s_perms, na;
   char *cp;
   GACL *ap;
 
   
   vp = (u_int32_t *) buf;
   na = ntohl(*vp++);
-  
+
   ap = gacl_init(na);
   if (!ap)
     return NULL;
@@ -230,15 +257,44 @@ _gacl_init_from_nfs4(const char *buf,
       gacl_free(ap);
       return NULL;
     }
+
+    switch (ntohl(*vp++)) {
+    case NFS4_ACE_ACCESS_ALLOWED_ACE_TYPE:
+      ep->type = GACL_ENTRY_TYPE_ALLOW;
+      break;
+    case NFS4_ACE_ACCESS_DENIED_ACE_TYPE:
+      ep->type = GACL_ENTRY_TYPE_DENY;
+      break;
+    case NFS4_ACE_SYSTEM_AUDIT_ACE_TYPE:
+      ep->type = GACL_ENTRY_TYPE_AUDIT;
+      break;
+    case NFS4_ACE_SYSTEM_ALARM_ACE_TYPE:
+      ep->type = GACL_ENTRY_TYPE_ALARM;
+      break;
+    default:
+      errno = EINVAL;
+      return NULL;
+    }
+
+    s_flags = ntohl(*vp++);
     
-    ep->type =  ntohl(*vp++);
-    ep->flags = ntohl(*vp++);
-    ep->perms = ntohl(*vp++);
+    ep->flags = 0;
+    for (j = 0; j < sizeof(flagtab)/sizeof(flagtab[0]); j++)
+      if (s_flags & flagtab[j].s)
+	ep->flags |= flagtab[j].g;
+
+    
+    s_perms = ntohl(*vp++);
+    ep->perms = 0;
+    for (j = 0; j < sizeof(permtab)/sizeof(permtab[0]); j++)
+      if (s_perms & permtab[j].s)
+	ep->perms |= permtab[j].g;
     
     idlen = ntohl(*vp++);
     cp = (char *) vp;
 
-    if (ep->flags & NFS4_ACE_IDENTIFIER_GROUP) {
+
+    if (s_flags & NFS4_ACE_IDENTIFIER_GROUP) {
       if (strncmp(cp, "GROUP@", idlen) == 0) {
 	ep->tag.name = s_dup("group@");
 	ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
@@ -246,12 +302,12 @@ _gacl_init_from_nfs4(const char *buf,
       } else {
 	ep->tag.ugid = -1;
 	ep->tag.name = s_ndup(cp, idlen);
-	(void) _nfs4_id_to_gid(cp, idlen, &ep->tag.ugid);
+	(void) _nfs4_id_to_gid(ep->tag.name, &ep->tag.ugid);
 	ep->tag.type = GACL_TAG_TYPE_GROUP;
       }
     } else {
       if (strncmp(cp, "OWNER@", idlen) == 0) {
-	ep->tag.name = s_dup("group@");
+	ep->tag.name = s_dup("owner@");
 	ep->tag.type = GACL_TAG_TYPE_USER_OBJ;
 	ep->tag.ugid = -1;
       } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
@@ -262,10 +318,9 @@ _gacl_init_from_nfs4(const char *buf,
 	ep->tag.ugid = -1;
 	ep->tag.name = s_ndup(cp, idlen);
 	ep->tag.type = GACL_TAG_TYPE_USER;
-	(void) _nfs4_id_to_uid(cp, idlen, &ep->tag.ugid);
+	(void) _nfs4_id_to_uid(ep->tag.name, &ep->tag.ugid);
       }
     }
-
 
     vp += idlen / sizeof(u_int32_t);
     if (idlen % sizeof(u_int32_t))
@@ -345,9 +400,9 @@ static ssize_t
 _gacl_to_nfs4(GACL *ap, 
 	      char *buf, 
 	      size_t bufsize) {
-  u_int32_t *vp, *endp;
+  u_int32_t *vp, *endp, s_flags, s_perms;
   size_t buflen, vlen;
-  int i, rc;
+  int i, j, rc;
 
 
   vp = (u_int32_t *) buf;
@@ -370,22 +425,54 @@ _gacl_to_nfs4(GACL *ap,
       errno = ENOMEM;
       return -1;
     }
-    *vp++ = htonl(ep->type);
 
-    if (vp >= endp) {
-      errno = ENOMEM;
+    switch (ep->type) {
+    case GACL_ENTRY_TYPE_ALLOW:
+      *vp++ = htonl(NFS4_ACE_ACCESS_ALLOWED_ACE_TYPE);
+      break;
+    case GACL_ENTRY_TYPE_DENY:
+      *vp++ = htonl(NFS4_ACE_ACCESS_DENIED_ACE_TYPE);
+      break;
+    case GACL_ENTRY_TYPE_AUDIT:
+      *vp++ = htonl(NFS4_ACE_SYSTEM_AUDIT_ACE_TYPE);
+      break;
+    case GACL_ENTRY_TYPE_ALARM:
+      *vp++ = htonl(NFS4_ACE_SYSTEM_ALARM_ACE_TYPE);
+      break;
+    default:
+      errno = EINVAL;
       return -1;
     }
-    *vp++ = htonl(ep->flags | (ep->tag.type == GACL_TAG_TYPE_GROUP ||
-			       ep->tag.type == GACL_TAG_TYPE_GROUP_OBJ ? 
-			       NFS4_ACE_IDENTIFIER_GROUP : 0));
     
     if (vp >= endp) {
       errno = ENOMEM;
       return -1;
     }
-    *vp++ = htonl(ep->perms);
 
+    s_flags = 0;
+    for (j = 0; j < sizeof(flagtab)/sizeof(flagtab[0]); j++)
+      if (ep->flags & flagtab[j].g)
+	s_flags |= flagtab[j].s;
+
+    s_flags |= (ep->tag.type == GACL_TAG_TYPE_GROUP ||
+		ep->tag.type == GACL_TAG_TYPE_GROUP_OBJ ? 
+		NFS4_ACE_IDENTIFIER_GROUP : 0);
+
+    *vp++ = htonl(s_flags); 
+    
+    if (vp >= endp) {
+      errno = ENOMEM;
+      return -1;
+    }
+
+    s_perms = 0;
+    for (j = 0; j < sizeof(permtab)/sizeof(permtab[0]); j++)
+      if (ep->perms & permtab[j].g)
+	s_perms |= permtab[j].s;
+    
+    *vp++ = htonl(s_perms);
+
+    
     switch (ep->tag.type) {
     case GACL_TAG_TYPE_USER_OBJ:
       idname = "OWNER@";
@@ -955,7 +1042,7 @@ _gacl_get_fd_file(int fd,
   int i, n;
   ace_t *acp;
 
-  
+
   if (path && (flags & GACL_F_SYMLINK_NOFOLLOW)) {
     struct stat sb;
     
@@ -978,7 +1065,7 @@ _gacl_get_fd_file(int fd,
       n = acl(path, ACE_GETACLCNT, 0, NULL);
     else
       n = facl(fd, ACE_GETACLCNT, 0, NULL);
-      
+
     if (n < 0)
       return NULL;
 

@@ -1,0 +1,19 @@
+
+#define ACL_NFS4_XATTR "system.nfs4_acl"
+
+/*
+ * xattr format:
+ * 
+ * struct acl {
+ *   u_int32_t ace_c;
+ *   struct ace {
+ *     u_int32_t type;
+ *     u_int32_t flags;
+ *     u_int32_t perms;
+ *     struct utf8str_mixed {
+ *       u_int32_t len;
+ *       char buf[len];
+ *     } id;
+ *   } ace_v[ace_c];
+ * };
+ */
