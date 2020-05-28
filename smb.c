@@ -48,6 +48,10 @@
 #include <libsmbclient.h>
 #include "misc.h"
 
+#if !defined(SMBC_XATTR_FLAG_NO_ACL_SORT)
+#warning Missing Samba ACL-Set-Sorting patch detected (see README)
+#endif
+
 static SMBCCTX *context = NULL;
 
 static int _smb_flags = 0;
