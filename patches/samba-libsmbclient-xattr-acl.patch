@@ -1,0 +1,53 @@
+# This patch fixes two things in Samba. Without the second fix Samba will always re-sort
+# ACLs written (and thus any order set by 'acltool' will be ignored).
+#
+# 1. Allow the code that parses ACL entries written via smbc_setxattr() to understand the
+#    same format as the code read from smbc_getxattr() (hexadecimal numbers for the access_mask)
+#
+# 2. Disables the sorting of ACLs when writing complete/full ACL records via smbc_setxattr().
+#
+# Author: Peter Eriksson <pen@lysator.liu.se>, 2020-05-28
+#
+--- samba-4.12.3/source3/libsmb/libsmb_xattr.c	2020-01-31 11:25:36.000000000 +0100
++++ samba-4.12.3-orig/source3/libsmb/libsmb_xattr.c	2020-05-28 13:50:32.523687000 +0200
+@@ -303,7 +303,8 @@
+ 	p++;
+ 	/* Try to parse numeric form */
+ 
+-	if (sscanf(p, "%u/%u/%u", &atype, &aflags, &amask) == 3 &&
++	if ((sscanf(p, "%u/%u/0x%x", &atype, &aflags, &amask) == 3 ||
++	     sscanf(p, "%u/%u/%u", &atype, &aflags, &amask) == 3) &&
+ 	    convert_string_to_sid(ipc_cli, pol, numeric, &sid, str)) {
+ 		goto done;
+ 	}
+@@ -1645,7 +1646,8 @@
+ 	}
+ 
+ 	/* Denied ACE entries must come before allowed ones */
+-	sort_acl(old->dacl);
++	if (mode != SMBC_XATTR_MODE_SET || (flags & SMBC_XATTR_FLAG_NO_ACL_SORT) == 0)
++	  sort_acl(old->dacl);
+ 
+ 	/* Create new security descriptor and set it */
+ 	sd = make_sec_desc(ctx, old->revision, SEC_DESC_SELF_RELATIVE,
+@@ -1848,6 +1850,9 @@
+                         errno = ENOMEM;
+                         ret = -1;
+                 } else {
++			if (strcasecmp_m(name, "system.nt_sec_desc.*") == 0 ||
++			    strcasecmp_m(name, "system.nt_sec_desc.*+") == 0)
++				flags |= SMBC_XATTR_FLAG_NO_ACL_SORT;
+                         ret = cacl_set(context, talloc_tos(), srv->cli,
+                                        ipc_srv->cli, &ipc_srv->pol, path,
+                                        namevalue,
+--- samba-4.12.3/source3/include/libsmbclient.h	2020-01-31 11:25:36.000000000 +0100
++++ samba-4.12.3-orig/source3/include/libsmbclient.h	2020-05-28 13:48:25.434517000 +0200
+@@ -189,7 +189,7 @@
+  */
+ #define SMBC_XATTR_FLAG_CREATE       0x1 /* fail if attr already exists */
+ #define SMBC_XATTR_FLAG_REPLACE      0x2 /* fail if attr does not exist */
+-
++#define SMBC_XATTR_FLAG_NO_ACL_SORT  0x4 /* no ACL sorting */
+ 
+ /*
+  * Mappings of the DOS mode bits, as returned by smbc_getxattr() when the

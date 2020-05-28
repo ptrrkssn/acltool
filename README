@@ -72,13 +72,16 @@ BUILD INSTRUCTIONS
 
   View and possibly adjust the Makefile.
 
-    
   You may want to install the Gnu readline development libraries &
   header files (if not already there) or compilation will fail.
 
-  If you want to build with SMB support via Samba you probably will
-  have to adjust the paths and enable it (it tries to autodetect it
-  via pkg-config though). For now requires Kerberos.
+  If you want to build with SMB support via Samba you may want to
+  apply the patch in 'patches' for Samba first. Atleast if you care
+  about the order ACLs are written.
+  You then (might) have to adjust the paths in 'Makefile' (it tries
+  to autodetect Sambas libsmbclient via the 'pkg-config' tool, but if
+  you have built your own Samba (with the patch) then you must make
+  sure it links with the correct smbclient library.
   
   Then type 'make' in the source directory and it will automatically
   detect and build on the supported operating systems. No need to run
