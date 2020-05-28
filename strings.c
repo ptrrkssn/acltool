@@ -360,15 +360,16 @@ s_getint(int *ip,
       *ip |= c;
       ++sp;
     }
-  } else
+  } else {
     *ip = 0;
-  
+    
     while (isdigit(*sp)) {
       unsigned char c = *sp - '0';
       *ip *= 10;
       *ip += c;
       ++sp;
     }
+  }
 
   *ip *= sign;
   *spp = sp;
@@ -410,14 +411,15 @@ s_sepint(int *ip,
       *ip |= c;
       ++sp;
     }
-  } else
+  } else {
     *ip = 0;
   
-  while (isdigit(*sp)) {
-    unsigned char c = *sp - '0';
-    *ip *= 10;
-    *ip += c;
-    ++sp;
+    while (isdigit(*sp)) {
+      unsigned char c = *sp - '0';
+      *ip *= 10;
+      *ip += c;
+      ++sp;
+    }
   }
 
   *ip *= sign;
