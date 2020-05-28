@@ -46,8 +46,11 @@
 
 #if ENABLE_SMB
 #include <libsmbclient.h>
+#include "misc.h"
 
 static SMBCCTX *context = NULL;
+
+static int _smb_flags = 0;
 
 
 static void
@@ -61,9 +64,29 @@ get_auth_data_with_context_fn(SMBCCTX *context,
 			      char * pPassword,
 			      int maxLenPassword)
 {
+  static char *saved_password = NULL;
+
+#if 0
+  fprintf(stderr, "pServer=%s, pShare=%s, pWorkgroup=%s, pUsername=%s, pPassword=%s\n",
+	  pServer, pShare, pWorkgroup, pUsername, pPassword);
+#endif
+  
+  if (_smb_flags & SMB_PROMPT_PASSWORD) {
+    if (saved_password)
+      strncpy(pPassword, saved_password, maxLenPassword);
+    else 
+      if (prompt_user(pPassword, maxLenPassword, 0, "%s\\%s's Password: ", pWorkgroup, pUsername) > 0)
+	saved_password = s_dup(pPassword);
+  }
+  
   return;
 }  
 
+
+void
+smb_init(int flags) {
+  _smb_flags = flags;
+}
 
 
 static int
@@ -72,28 +95,25 @@ _smb_init(void) {
     return 0;
 
   context = smbc_new_context();
-  if (!context) {
-    printf("Could not allocate new smbc context\n");
+  if (!context)
     return -1;
-  }
   
   smbc_setFunctionAuthDataWithContext(context,
 				      get_auth_data_with_context_fn);
-  
-  smbc_setOptionUseKerberos(context, 1);
+
+  smbc_setOptionUseKerberos(context, (_smb_flags & SMB_PROMPT_PASSWORD) ? 0 : 1);
   smbc_setOptionUseCCache(context, 1);
   smbc_setOptionFallbackAfterKerberos(context, 1);
+  smbc_setOptionOneSharePerServer(context, 1);
 
-    if (!smbc_init_context(context)) {
-        smbc_free_context(context, 0);
-        printf("Could not initialize smbc context\n");
-        return -1;
-    }
+  if (!smbc_init_context(context)) {
+    smbc_free_context(context, 0);
+    return -1;
+  }
 
-    /* Tell the compatibility layer to use this context */
-    smbc_set_context(context);
-
-    return 1;
+  /* Tell the compatibility layer to use this context */
+  smbc_set_context(context);
+  return 0;
 }
 
 
@@ -226,7 +246,8 @@ smb_lstat(const char *path,
   int rc;
   
 
-  _smb_init();
+  if (_smb_init() < 0)
+    return -1;
   
   rc = smbc_stat(path, sp);
   if (rc < 0)
@@ -254,7 +275,8 @@ smb_statvfs(const char *path,
 	    struct statvfs *sp) {
   int rc;
   
-  _smb_init();
+  if (_smb_init() < 0)
+    return -1;
 
   memset(sp, 0, sizeof(*sp));
   rc = smbc_statvfs((char *) path, sp);
@@ -397,7 +419,8 @@ smb_getxattr(const char *path,
 	     const char *attr,
 	     char *buf,
 	     size_t bufsize) {
-  _smb_init();
+  if (_smb_init() < 0)
+    return -1;
 
   return smbc_getxattr(path, attr, buf, bufsize);
 }
@@ -407,7 +430,8 @@ smb_setxattr(const char *path,
 	     const char *attr,
 	     char *buf,
 	     size_t bufsize) {
-  _smb_init();
+  if (_smb_init() < 0)
+    return -1;
   
   return smbc_setxattr(path, attr, buf, bufsize, 0);
 }
@@ -415,7 +439,8 @@ smb_setxattr(const char *path,
 int
 smb_removexattr(const char *path,
 		const char *attr) {
-  _smb_init();
+  if (_smb_init() < 0)
+    return -1;
   
   return smbc_removexattr(path, attr);
 }
@@ -471,7 +496,7 @@ static struct flagtab {
 
 GACL *
 smb_acl_get_file(const char *path) {
-  char buf[2048], *bp, *cp;
+  char buf[32768], *bp, *cp;
   GACL *ap;
   int n_ace;
   int i, n;
@@ -479,10 +504,16 @@ smb_acl_get_file(const char *path) {
   char *s_owner;
   char *s_group;
   
+#if 0
+  fprintf(stderr, "getxattr(\"%s\", \"%s\")\n", path, SECATTR);
+#endif
   
   if (smb_getxattr(path, SECATTR, buf, sizeof(buf)) < 0)
     return NULL;
-
+#if 0
+  fprintf(stderr, "getxattr(\"%s\", \"%s\") -> '%s'\n",
+	  path, SECATTR, buf);
+#endif  
   n_ace = 1;
   for (bp = buf; *bp; bp++)
     if (*bp == ',')

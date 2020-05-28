@@ -82,6 +82,11 @@
 #define SMB_ACL_PERM_FC   (SMB_ACL_PERM_M|SMB_ACL_PERM_DC|SMB_ACL_PERM_WDAC|SMB_ACL_PERM_WO)
 
 
+#define SMB_PROMPT_PASSWORD 0x01
+
+extern void
+smb_init(int flags);
+
 extern int
 smb_lstat(const char *path,
 	  struct stat *sp);

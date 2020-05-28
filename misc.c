@@ -42,6 +42,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <termios.h>
 
 #include "acltool.h"
 
@@ -932,3 +933,52 @@ ft_foreach(const char *path,
 }
 
 
+int
+prompt_user(char *buf,
+	    size_t bufsize,
+	    int echo,
+	    const char *prompt,
+	    ...) {
+  struct termios oflags, nflags;
+  int i;
+  char *res;
+  va_list ap;
+  
+
+  va_start(ap, prompt);
+  i = vfprintf(stderr, prompt, ap);
+  va_end(ap);
+  if (i < 0)
+    return -1;
+  
+  if (!echo) {
+    if (tcgetattr(fileno(stdin), &oflags) < 0)
+      return -1;
+    
+    nflags = oflags;
+    nflags.c_lflag &= ~ECHO;
+    nflags.c_lflag |= ECHONL;
+    
+    if (tcsetattr(fileno(stdin), TCSANOW, &nflags) < 0) {
+      return -1;
+    }
+  }
+  
+  res = fgets(buf, bufsize, stdin);
+
+  if (res) {
+    /* Remove trailing newline(s) */
+    i = strlen(buf)-1;
+    while (i >= 0 && (buf[i] == '\n' || buf[i] == '\r'))
+      --i;
+    buf[i+1] = '\0';
+  }
+  
+  if (!echo) {
+    /* restore terminal */
+    if (tcsetattr(fileno(stdin), TCSANOW, &oflags) <0)
+      return -1;
+  }
+  
+  return res ? i : 0;
+}

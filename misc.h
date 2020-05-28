@@ -95,4 +95,11 @@ extern char *
 strxcat(const char *str,
 	...);
 
+extern int
+prompt_user(char *buf,
+	    size_t bufsize,
+	    int echo,
+	    const char *prompt,
+	    ...);
+
 #endif

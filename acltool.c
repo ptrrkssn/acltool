@@ -50,8 +50,12 @@
 
 #include "acltool.h"
 
+#if ENABLE_SMB
+#include "smb.h"
+#endif
+
 char *argv0 = "acltool";
-char *version = "1.12";
+char *version = "1.12.1";
 
 COMMANDS commands = { 0 };
 
@@ -159,6 +163,19 @@ set_merge(const char *name,
   
   return 0;
 }
+
+#if ENABLE_SMB
+int
+set_password(const char *name,
+	     const char *value,
+	     unsigned int type,
+	     const void *svp,
+	     void *dvp,
+	     const char *a0) {
+  smb_init(SMB_PROMPT_PASSWORD);
+  return 0;
+}
+#endif
 
 
 int
@@ -284,6 +301,9 @@ OPTION global_options[] =
    { "depth",     	'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
    { "style",     	'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
    { "type",      	't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
+#if ENABLE_SMB
+   { "password",      	'P', OPTS_TYPE_NONE,               set_password,  NULL, "Prompt for user password (SMB)" },
+#endif
    { "no-update", 	'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
    { "no-prefix", 	'N', OPTS_TYPE_NONE,               set_no_prefix, NULL, "Do not prefix filenames" }, 
    { NULL,        	-1,  0,                            NULL,          NULL, NULL },
