@@ -76,7 +76,7 @@ distclean clean:
 push: 	clean
 	git add -A && git commit -a && git push
 
-pull:	clean
+pull:
 	git pull
 
 install:	acltool
