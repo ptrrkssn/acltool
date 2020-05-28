@@ -530,9 +530,17 @@ _gacl_entry_compare(const void *va,
   uid_t *qa, *qb;
   
 
-  /* Explicit entries goes before inherited ones */
   gacl_get_flagset_np(a, &afs);
   gacl_get_flagset_np(b, &bfs);
+  
+  inherited_a = gacl_get_flag_np(afs, GACL_FLAG_INHERITED);
+  inherited_b = gacl_get_flag_np(bfs, GACL_FLAG_INHERITED);
+
+  /* Explicit entries goes before inherited ones */
+  v = inherited_a-inherited_b;
+  if (v)
+    return v;
+
   
   inherit_only_a = gacl_get_flag_np(afs, GACL_FLAG_INHERIT_ONLY);
   inherit_only_b = gacl_get_flag_np(bfs, GACL_FLAG_INHERIT_ONLY);
@@ -541,7 +549,8 @@ _gacl_entry_compare(const void *va,
   if (inherit_only_a || inherit_only_b)
     return 0;
 
-  /* order: owner@ - user - group@ - group - everyone @ */
+  
+  /* order: owner@ - user - group@ - group - everyone@ */
   if (gacl_get_tag_type(a, &ta) < 0)
     return -1;
   
@@ -577,13 +586,6 @@ _gacl_entry_compare(const void *va,
     break;
   }
   
-  inherited_a = gacl_get_flag_np(afs, GACL_FLAG_INHERITED);
-  inherited_b = gacl_get_flag_np(bfs, GACL_FLAG_INHERITED);
-
-  v = inherited_a-inherited_b;
-  if (v)
-    return v;
-
   /* Deny entries goes before allow ones */
   if (gacl_get_entry_type_np(a, &aet_a) < 0)
     return -1;

@@ -498,6 +498,8 @@ static struct flagtab {
    
   };
 
+#define SMB_TAG_TYPE_EVERYONE_TEXT "\\Everyone"
+
 GACL *
 smb_acl_get_file(const char *path) {
   char buf[32768], *bp, *cp;
@@ -576,12 +578,13 @@ smb_acl_get_file(const char *path) {
     
     e_type = -1;
     e_ugid = -1;
-    e_name = s_dup(s_user);
 
-    if (strcmp(s_user, "\\Everyone") == 0) {
+    if (strcmp(s_user, SMB_TAG_TYPE_EVERYONE_TEXT) == 0) {
       e_type = GACL_TAG_TYPE_EVERYONE;
+      e_name = s_dup(GACL_TAG_TYPE_EVERYONE_TEXT);
     }
     else {
+      e_name = s_dup(s_user);
       int rc_uid, rc_gid;
       uid_t uid = -1;
       gid_t gid = -1;
@@ -684,7 +687,7 @@ smb_gacl_entry_to_text(GACL_ENTRY *ep,
     break;
     
   case GACL_TAG_TYPE_EVERYONE:
-    name = "\\Everyone";
+    name = SMB_TAG_TYPE_EVERYONE_TEXT;
     break;
 
   default:
