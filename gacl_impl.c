@@ -129,6 +129,13 @@ _nfs4_id_to_uid(char *buf,
   int iddlen = -1;
 
 
+  /* First we try a direct lookup (user@realm) - it might work... */
+  pp = getpwnam(buf);
+  if (pp) {
+    *uidp = pp->pw_uid;
+    return 1;
+  }
+  
   if (bufsize < 1)
     return -1;
 
@@ -162,6 +169,13 @@ _nfs4_id_to_gid(char *buf,
   int iddlen = -1;
 
 
+  /* First try a direct lookup (group@realm) - might work */
+  gp = getgrnam(buf);
+  if (gp) {
+    *gidp = gp->gr_gid;
+    return 1;
+  }
+  
   if (bufsize < 1)
     return -1;
 

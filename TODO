@@ -8,9 +8,8 @@ Some stuff that needs to be done (in no particular order):
 - Investigate how the inherit-access command should work
 - How should the check-access command work?
 - Rework "merge_acl" (not correct currently)
+- Revisit "sort_acl"
 - Linux: Communicate with idmap/gssd? Just try to resolve via nsswitch first
-- Improve error handling
-- Integrate with Sambas 'libsmbclient' in order to talk directly with SMB servers
+- Clean up the error handling
 - Implement support for POSIX.1e ACLs
-- A more general "vfs_stat" that handles symbolic st_uid & st_gid fields (strings)
 - Fix the User/Group check code in cmd_edit.c (check strings instead of uid/gid)
