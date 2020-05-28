@@ -465,8 +465,8 @@ setxattr_cmd(int argc,
     if (rc < 0)
       error(1, errno, "%s: %s: Setting Extended Attribute", argv[1], argv[i]);
     
-    if (config.f_verbose)
-      fprintf(stderr, "%s = \"%s\"\n", argv[i], vp);
+    if (config.f_debug)
+      fprintf(stderr, "setxattr: %s = \"%s\"\n", argv[i], vp);
   }
   
   return 0;
