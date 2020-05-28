@@ -15,15 +15,18 @@ ACLTOOL
   might be a useful tool to access low-level ACLs on some systems.
 
 
+
 AUTHOR
 
   Peter Eriksson <pen@lysator.liu.se>
+
 
 
 PRIMARY DOWNLOAD SITE
 
   https://github.com/ptrrkssn/acltool
   
+
 
 OPERATING SYSTEMS SUPPORTED
 
@@ -35,12 +38,14 @@ OPERATING SYSTEMS SUPPORTED
 All the above also support Extended Attributes. 
 
 
+
 FILESYSTEMS SUPPORT
 
   - NFSv4
   - ZFS (but not on Linux sadly - lacks kernel support)
   - HFS+ (MacOS)
   - SMB - if built with Samba (libsmbclient)
+
 
 
 DEPENDENCIES
@@ -61,7 +66,8 @@ DEPENDENCIES
     readline
     (you'll have to build Samba yourself)
 
-    
+
+
 BUILD INSTRUCTIONS
 
   View and possibly adjust the Makefile.
@@ -77,6 +83,7 @@ BUILD INSTRUCTIONS
   Then type 'make' in the source directory and it will automatically
   detect and build on the supported operating systems. No need to run
   a "configure" script.
+
 
 
 USAGE
@@ -109,6 +116,7 @@ USAGE
   commands like "cd", "dir" etc.
 
 
+
 MISCELLANEOUS INFORMATION
 
 FILE TYPES
@@ -134,9 +142,25 @@ ACL PRINT STYLES
   icacls	  Windows ICACLS-style
 
 
+
 MORE INFORMATION
 
   See the information in the "doc" subdirectory.
+
+
+
+SOME KNOWN PROBLEMS
+
+Samba force it's own ACL sorting rules when setting them via "smb://"-path:s
+so our sorting order is ignored/overridden.
+
+Linux currently only allows updating of ACLs over NFSv4. _Not_directly on ZFS.
+
+MacOS has known problems with NFSv4 & Kerberos - kernel-crashing problems. So
+while it works for a short while (if you're brave enough) expect your machine to
+crash and restart without warning (for example if your Kerberos ticket expires,
+or when your machine returns from sleep).
+
 
 
 EXAMPLES

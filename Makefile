@@ -45,7 +45,7 @@ Linux linux:
 FreeBSD freebsd:
 	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lncurses $(LDFLAGS)" all
 
-macos Darwin:
+Darwin macos:
 	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
 
 
