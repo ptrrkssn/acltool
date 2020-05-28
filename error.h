@@ -1,7 +1,7 @@
 /*
- * acltool.h
+ * error.h
  *
- * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
+ * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
  * All rights reserved.
  * 
@@ -31,56 +31,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_H
-#define ACLTOOL_H 1
+#ifndef ERROR_H
+#define ERROR_H 1
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <setjmp.h>
 
-#include "vfs.h"
-#include "gacl.h"
-#include "argv.h"
-#include "commands.h"
-#include "aclcmds.h"
-#include "basic.h"
-#include "strings.h"
-#include "misc.h"
-#include "opts.h"
-#include "common.h"
-#include "error.h"
+extern char *error_argv0;
+extern jmp_buf error_env;
 
-
-struct command;
-
-typedef struct config {
-  int f_debug;
-  int f_verbose;
-  int f_force;
-  int f_print;
-  int f_sort;
-  int f_merge;
-  int f_recurse;
-  int f_relaxed;
-  int f_noupdate;
-  int f_noprefix;
-  mode_t f_filetype;
-  GACL_STYLE f_style;
-  
-  int max_depth;
-} CONFIG;
-
-
-extern char *argv0;
-
-extern OPTION global_options[];
-
-/* Default configuration loaded from config file and global command line */
-extern CONFIG default_config;
-
-/* Per-command active configuration */
-extern CONFIG config;
+#define error_catch(save_env)		(memcpy(save_env, error_env, sizeof(jmp_buf)), setjmp(error_env))
+#define error_return(rc, save_env) 	do { memcpy(error_env, save_env, sizeof(jmp_buf)); return rc; } while(0)
 
 extern int
-error(int rc, int ec, const char *msg, ...);
+error(int rc,
+      int ec,
+      const char *msg,
+      ...);
 
 #endif

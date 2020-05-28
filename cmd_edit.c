@@ -110,12 +110,40 @@ typedef struct script {
 static int
 acecr_from_text(ACECR **head,
 		const char *buf) {
-  ACECR *cur, **next;
-  char *bp, *tbuf, *ep;
+  ACECR *cur = NULL;
+  char *tbuf = NULL;
+  ACECR **next;
+  char *bp, *ep;
   char *es;
+  jmp_buf saved_error_env;
+  int rc;
 
   
-  tbuf = NULL;
+  if ((rc = error_catch(saved_error_env)) != 0) {
+    fprintf(stderr, "acecr_from_text: error-catched\n");
+    
+    if (tbuf)
+      free(tbuf);
+    
+    if (cur) {
+      if (cur->filter.avail) {
+	if (cur->filter.ep)
+	  free(cur->filter.ep);
+	else
+	  regfree(&cur->filter.preg);
+      }
+      if (cur->change.data)
+	free(cur->change.data);
+      if (cur->change.ep)
+	free(cur->change.ep);
+      if (cur->modifiers)
+	free(cur->modifiers);
+      free(cur);
+    }
+  
+    error_return(rc, saved_error_env);
+  }
+  
   bp = tbuf = s_dup(buf);
   if (!tbuf)
     return -1;
@@ -135,6 +163,7 @@ acecr_from_text(ACECR **head,
     
     cur = malloc(sizeof(*cur));
     if (!cur) {
+      return error(1, errno, "Malloc");
       goto Fail;
     }
     memset(cur, 0, sizeof(*cur));
@@ -188,18 +217,24 @@ acecr_from_text(ACECR **head,
 	  char errbuf[1024];
 	  
 	  regerror(ec, &cur->filter.preg, errbuf, sizeof(errbuf));
+	  return error(1, 0, "%s: Regex: %s", es, errbuf);
+	  
 	  fprintf(stderr, "%s: Error: %s: %s\n", argv0, es, errbuf);
 	  goto Fail;
 	}
       } else {
 	cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
-	if (!cur->filter.ep)
+	if (!cur->filter.ep) {
+	  return error(1, errno, "Malloc");
 	  goto Fail;
+	}
 
 	cur->filter.type = m_type;
 	
-	if (_gacl_entry_from_text(es, cur->filter.ep, 0) < 0)
+	if (_gacl_entry_from_text(es, cur->filter.ep, 0) < 0) {
+	  return error(1, 0, "%s: Invalid GACL Entry", es);
 	  goto Fail;
+	}
       }
       es = ep;
       
@@ -208,8 +243,10 @@ acecr_from_text(ACECR **head,
     while (isspace(*es))
       ++es;
     
-    if (!isalpha(*es))
+    if (!isalpha(*es)) {
+      return error(1, 0, "%s: Invalid ACL Entry");
       goto Fail;
+    }
     
     cur->cmd = *es++;
     
@@ -227,14 +264,19 @@ acecr_from_text(ACECR **head,
     }
     if (*es) {
       cur->change.data = s_dup(es);
-      if (!cur->change.data)
+      if (!cur->change.data) {
+	return error(1, errno, "Memory");
 	goto Fail;
+      }
       
       cur->change.ep = malloc(sizeof(*(cur->change.ep)));
-      if (!cur->change.ep)
+      if (!cur->change.ep) {
+	return error(1, errno, "Malloc");
 	goto Fail;
+      }
 
       if (_gacl_entry_from_text(es, cur->change.ep, 0) < 0) {
+	return error(1, 0, "Invalid ACL Entry");
 	goto Fail;
       }
     }

@@ -110,7 +110,7 @@ set_acl(const char *path,
   int rc, s_errno;
   gacl_t ap = nap;
 
-
+  
   if (config.f_sort) {
     gacl_t sap = gacl_sort(ap);
 
@@ -764,12 +764,16 @@ aclcmd_foreach(int argc,
     rc = ft_foreach(argv[i], handler, vp,
 		    config.f_recurse ? -1 : config.max_depth, config.f_filetype);
     if (rc) {
+#if 1
+      error(1, errno, "%s: Accessing", argv[i]);
+#else
       if (rc < 0) {
 	fprintf(stderr, "%s: Error: %s: Accessing object: %s\n", 
 		argv0, argv[i], strerror(errno));
 	rc = 1;
       }
       break;
+#endif
     }
   }
 

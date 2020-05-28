@@ -134,11 +134,9 @@ cmd_run(COMMANDS *cmdlist,
 	char *argv[]) {
   int i, j, nm;
   COMMAND *scp;
-  char *tmp_a0a;
-#if 0
-  char *tmp_a0b;
-#endif
+  char *tmp_a0;
 
+  
   if (!argv[0])
     return 0;
   
@@ -151,37 +149,31 @@ cmd_run(COMMANDS *cmdlist,
   scp = NULL;
   for (i = 0; i < cmdlist->c; i++) {
     COMMAND *cp = cmdlist->v[i];
+    
     if (s_match(argv[0], cp->name)) {
       scp = cp;
       ++nm;
     }
   }
   
-  if (nm < 1) {
+  if (nm < 1)
     error(1, 0, "%s: Unknown command", argv[0]);
-    return -1;
-  }
 
-  if (nm > 1) {
+  if (nm > 1)
     error(1, 0, "%s: Nonunique command", argv[0]);
-    return -1;
-  }
 
-  tmp_a0a = argv[0];
+  tmp_a0 = argv[0];
   argv[0] = s_dup(scp->name);
-#if 0
-  tmp_a0b = argv0;
-  argv0 = s_dupcat(argv0, ": ", argv[0], NULL);
-#endif
+
+  if (error_argv0)
+    free(error_argv0);
+  
+  error_argv0 = s_dupcat(argv0, " ", argv[0], NULL);
+
   i = opts_parse_argv(argc, argv, global_options, scp->options, NULL);
 
-#if 0
-  free(argv0);
-  argv0 = tmp_a0b;
-#endif
-  
   free(argv[0]);
-  argv[0] = tmp_a0a;
+  argv[0] = tmp_a0;
   
   if (i < 0)
     return i;

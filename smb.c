@@ -509,10 +509,7 @@ smb_acl_get_file(const char *path) {
   char *s_revision;
   char *s_owner;
   char *s_group;
-  
-#if 0
-  fprintf(stderr, "getxattr(\"%s\", \"%s\")\n", path, SECATTR);
-#endif
+
   
   if (smb_getxattr(path, SECATTR, buf, sizeof(buf)) < 0)
     return NULL;

@@ -22,7 +22,7 @@ SOLCC=gcc
 CFLAGS=-O -g -Wall
 LDFLAGS=-lreadline
 
-OBJS=gacl.o gacl_impl.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
+OBJS=gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
 
 auto build:
 	@if [ -f "$(SMBLIB)/libsmbclient.so" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
@@ -51,7 +51,7 @@ Darwin macos:
 
 all: acltool
 
-acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h nfs4.h Makefile
+acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h error.h nfs4.h Makefile
 
 acltool.o: 	acltool.c acltool.h
 argv.o: 	argv.c argv.h acltool.h
@@ -62,6 +62,7 @@ strings.o:	strings.c strings.h acltool.h
 commands.o:	commands.c commands.h acltool.h
 basic.o:	basic.c basic.h acltool.h
 aclcmds.o:	aclcmds.c aclcmds.h acltool.h
+error.o:	error.c error.h
 gacl.o:		gacl.c gacl.h
 gacl_impl.o:	gacl_impl.c gacl_impl.h
 

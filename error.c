@@ -1,5 +1,5 @@
 /*
- * acltool.h
+ * error.c
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,56 +31,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACLTOOL_H
-#define ACLTOOL_H 1
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <errno.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include "vfs.h"
-#include "gacl.h"
-#include "argv.h"
-#include "commands.h"
-#include "aclcmds.h"
-#include "basic.h"
-#include "strings.h"
-#include "misc.h"
-#include "opts.h"
-#include "common.h"
 #include "error.h"
 
+char *error_argv0 = NULL;
 
-struct command;
+jmp_buf error_env;
 
-typedef struct config {
-  int f_debug;
-  int f_verbose;
-  int f_force;
-  int f_print;
-  int f_sort;
-  int f_merge;
-  int f_recurse;
-  int f_relaxed;
-  int f_noupdate;
-  int f_noprefix;
-  mode_t f_filetype;
-  GACL_STYLE f_style;
+
+int
+error(int rc,
+      int ec,
+      const char *msg,
+      ...) {
+  va_list ap;
+
   
-  int max_depth;
-} CONFIG;
+  va_start(ap, msg);
+  
+  if (error_argv0)
+    fprintf(stderr, "%s: ", error_argv0);
+  
+  fprintf(stderr, "%s: ", rc ? (rc < 0 ? "Warning" : "Error") : "Info");
+  vfprintf(stderr, msg, ap);
+  if (ec)
+    fprintf(stderr, ": %s", strerror(ec));
+  putc('\n', stderr);
 
+  va_end(ap);
+  
+  if (rc)
+    longjmp(error_env, rc);
 
-extern char *argv0;
-
-extern OPTION global_options[];
-
-/* Default configuration loaded from config file and global command line */
-extern CONFIG default_config;
-
-/* Per-command active configuration */
-extern CONFIG config;
-
-extern int
-error(int rc, int ec, const char *msg, ...);
-
-#endif
+  return rc;
+}

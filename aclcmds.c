@@ -103,8 +103,7 @@ walker_strip(const char *path,
     int s_errno = errno;
     
     gacl_free(ap);
-    error(0, s_errno, "%s: Internal Error (gacl_is_trivial_np)", path);
-    return 1;
+    return error(0, s_errno, "%s: Internal Error (gacl_is_trivial_np)", path);
   }
 
   if (tf) {
@@ -139,10 +138,8 @@ walker_delete(const char *path,
   else
     rc = gacl_delete_file_np(path, GACL_TYPE_NFS4);
   
-  if (rc < 0) {
-    fprintf(stderr, "%s: Error: %s: Deleting ACL\n", argv0, path);
-    return 1;
-  }
+  if (rc < 0)
+    return error(1, errno, "%s: Deleting ACL", path);
 
   if (config.f_verbose)
     printf("%s: ACL Deleted%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
@@ -162,16 +159,12 @@ walker_sort(const char *path,
 
 
   ap = get_acl(path, sp);
-  if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
-  }
+  if (!ap)
+    return error(1, errno, "%s: Getting ACL", path);
 
   na = gacl_sort(ap);
-  if (!na) {
-    fprintf(stderr, "%s: Error: %s: Sorting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
-  }
+  if (!na)
+    return error(1, errno, "%s: Sorting ACL", path);
 
   rc = set_acl(path, sp, na, ap);
 
@@ -195,10 +188,8 @@ walker_touch(const char *path,
 
 
   ap = get_acl(path, sp);
-  if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
-  }
+  if (!ap)
+    return error(1, errno, "%s: Getting ACL", path);
 
   rc = set_acl(path, sp, ap, ap);
   gacl_free(ap);
@@ -297,10 +288,8 @@ walker_print(const char *path,
   fp = stdout;
 
   ap = get_acl(path, sp);  
-  if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
-  }
+  if (!ap)
+    return error(1, errno, "%s: Getting ACL", path);
 
   if (np && ++*np > 1)
     putchar('\n');
@@ -335,39 +324,40 @@ get_cmd(int argc,
     char *pp, *as;
 
     pp = strchr(argv[i], '=');
-    if (!pp) {
-      fprintf(stderr, "%s: Error: %s: Missing required '=' character\n", argv0, argv[i]);
-      return 1;
-    }
+    if (!pp)
+      return error(1, 0, "%s: Missing required '=' character", argv[i]);
+
     *pp++ = '\0';
 
     ap = get_acl(pp, NULL);
-    if (!ap) {
-      fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, pp, strerror(errno));
-      return 1;
-    }
+    if (!ap)
+      return error(1, errno, "%s: Getting ACL", pp);
 
     as = gacl_to_text_np(ap, NULL, GACL_TEXT_COMPACT);
     if (!as) {
-      fprintf(stderr, "%s: Error: %s: Converting ACL to text: %s\n", argv0, pp, strerror(errno));
+      int ec = errno;
+      
       gacl_free(ap);
-      return 1;
+      return error(1, ec, "%s: Converting ACL to text", pp);
     }
 
     ns = strlen(argv[i])+1+strlen(as)+1;
     nv = malloc(ns);
     if (!nv) {
-      fprintf(stderr, "%s: Error: %s: Malloc(%d): %s\n", argv0, argv[i], (int) ns, strerror(errno));
+      int ec = errno;
+      
       gacl_free(ap);
-      return 1;
+      return error(1, ec, "%s: Malloc(%d)", argv[i], (int) ns);
     }
     
     snprintf(nv, ns, "%s=%s", argv[i], as);
     if (putenv(nv) < 0) {
-      fprintf(stderr, "%s: Error: %s: Putenv: %s\n", argv0, argv[i], strerror(errno));
+      int ec = errno;
+
       gacl_free(ap);
-      return 1;
+      return error(1, ec, "%s: Putenv: %s\n", argv[i]);
     }
+    
     gacl_free(as);
     gacl_free(ap);
   }
@@ -385,22 +375,19 @@ copy_cmd(int argc,
   DACL a;
 
   
-  if (vfs_lstat(argv[1], &s0) != 0) {
-    fprintf(stderr, "%s: Error: %s: Accessing: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
-  }
+  if (vfs_lstat(argv[1], &s0) != 0)
+    return error(1, errno, "%s: Accessing", argv[1]);
 
   a.da = get_acl(argv[1], &s0);
-  if (!a.da) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
-  }
+  if (!a.da)
+    return error(1, errno, "%s: Getting ACL", argv[1]);
 
   a.fa = gacl_dup(a.da);
   if (!a.fa) {
+    int ec = errno;
+    
     gacl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Internal Fault (gacl_dup): %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
+    return error(1, ec, "%s: Internal Fault (gacl_dup)", argv[1]);
   }
  
   _acl_filter_file(a.fa);
@@ -445,25 +432,21 @@ set_cmd(int argc,
   DACL a;
 
 
-  if (argc < 2) {
-    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
-    return 1;
-  }
-
+  if (argc < 2)
+    return error(1, 0, "Missing required arguments (<acl> <path>)");
 
   a.da = gacl_from_text(argv[1]);
-  if (!a.da) {
-    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
-  }
+  if (!a.da)
+    return error(1, errno, "%s: Invalid ACL", argv[1]);
 
   a.fa = gacl_dup(a.da);
   if (!a.fa) {
+    int ec = errno;
+    
     gacl_free(a.da);
-    fprintf(stderr, "%s: Error: %s: Invalid ACL: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
+    return error(1, ec, "%s: Invalid ACL", argv[1]);
   }
-
+  
   _acl_filter_file(a.fa);
 
   rc = aclcmd_foreach(argc-2, argv+2, walker_set, (void *) &a);
@@ -500,10 +483,8 @@ walker_rename(const char *path,
 
   
   ap = get_acl(path, sp);
-  if (!ap) {
-    fprintf(stderr, "%s: Error: %s: Getting ACL: %s\n", argv0, path, strerror(errno));
-    return 1;
-  }
+  if (!ap)
+    return error(1, errno, "%s: Getting ACL", path);
 
   for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
     gacl_tag_t tt;
@@ -528,9 +509,8 @@ walker_rename(const char *path,
   
   if (f_updated) {
     rc = set_acl(path, sp, ap, NULL);
-    if (rc < 0) {
-      return 1;
-    }
+    if (rc < 0)
+      return error(1, errno, "%s: Setting ACL", path);
   }
   
   return 0;
@@ -641,15 +621,11 @@ rename_cmd(int argc,
   RENAMELIST r;
 
   
-  if (argc < 2) {
-    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
-    return 1;
-  }
-
-  if (str2renamelist(argv[1], &r) < 0) {
-    fprintf(stderr, "%s: Error: %s: Invalid renamelist: %s\n", argv[0], argv[1], strerror(errno));
-    return 1;
-  }
+  if (argc < 2)
+    return error(1, 0, "Missing required arguments (<acl> <path>)");
+  
+  if (str2renamelist(argv[1], &r) < 0)
+    return error(1, 0, "%s: Invalid renamelist", argv[1]);
 
   rc = aclcmd_foreach(argc-2, argv+2, walker_rename, (void *) &r);
 
@@ -663,11 +639,8 @@ find_cmd(int argc,
   gacl_t ap;
 
 
-  if (argc < 2) {
-    fprintf(stderr, "%s: Error: Missing required arguments (<acl> <path>)\n", argv[0]);
-    return 1;
-  }
-
+  if (argc < 2)
+    return error(1, 0, "Missing required arguments (<acl> <path>)");
 
   ap = gacl_from_text(argv[1]);
 
@@ -721,14 +694,8 @@ walker_inherit(const char *path,
     }
 
     /* Update the ACL with FILE & DIR INHERIT (if a directory) */
-    if (set_acl(path, sp, a->da, ap) < 0) {
-      /* XXX TODO: FIXME */
-      char *s = gacl_to_text(a->da, NULL);
-      puts(s);
-      
-      fprintf(stderr, "set_acl(%s): %s\n", path, strerror(errno));
-      goto Fail;
-    }
+    if (set_acl(path, sp, a->da, ap) < 0)
+      return error(1, errno, "%s: Setting ACL", path);
     
     for (p = GACL_FIRST_ENTRY; gacl_get_entry(a->da, p, &ep) == 1; p = GACL_NEXT_ENTRY) {
       gacl_flagset_t fs;
@@ -764,7 +731,7 @@ walker_inherit(const char *path,
     else
       rc = set_acl(path, sp, a->fa, oap);
     if (rc < 0)
-      return rc;
+      return error(1, errno, "%s: Setting ACL", path);
     
     gacl_free(oap);
     return 0;
@@ -831,35 +798,35 @@ extern COMMAND edit_command;
 COMMAND list_command =
   { "list-access", 	list_cmd,	NULL, "<path>+",		"List ACL(s)" };
 
+COMMAND set_command =
+  { "set-access",  	set_cmd,	NULL, "<acl> <path>+",		"Set ACL(s)" };
+
 COMMAND touch_command =
   { "touch-access",     touch_cmd,	NULL, "<path>+",		"Touch/update ACL(s)" };
+
+COMMAND get_command =
+  { "get-access", 	get_cmd,	NULL, "<var>=<path>+",		"Get ACL into variable" };
+
 
 #if 0
 COMMAND strip_command =
   { "strip-access",     strip_cmd,	NULL, "<path>+",		"Strip ACL(s)" };
 
 COMMAND sort_command =
-  { "sort-access",      sort_cmd,	NULL,   "<path>+",		"Sort ACL(s)" };
+  { "sort-access",      sort_cmd,	NULL, "<path>+",		"Sort ACL(s)" };
 #endif
 
 COMMAND copy_command =
-  { "copy-access",     copy_cmd,	NULL,    "<src> <dst>+",		"Copy ACL(s)" };
+  { "copy-access",     copy_cmd,	NULL, "<src> <dst>+",		"Copy ACL(s)" };
 
 COMMAND delete_command =
   { "delete-access",    delete_cmd,	NULL, "<path>+",		"Delete ACL(s)" };
 
-COMMAND set_command =
-  { "set-access",  	set_cmd,	NULL, "<acl> <path>+",	"Set ACL(s)" };
-
-
 COMMAND find_command =
-  { "find-access",      find_cmd,	NULL, "<acl> <path>+",	"Search ACL(s)" };
+  { "find-access",      find_cmd,	NULL, "<acl> <path>+",		"Search ACL(s)" };
 
 COMMAND rename_command =
-  { "rename-access",    rename_cmd,     NULL, "<change> <path>+",     "Rename ACL entries" };
-
-COMMAND get_command =
-  { "get-access", 	get_cmd,	NULL, "<var>=<path>+",	"Get ACL into variable" };
+  { "rename-access",    rename_cmd,     NULL, "<change> <path>+", 	"Rename ACL entries" };
 
 COMMAND inherit_command =
   { "inherit-access",   inherit_cmd,	NULL, "<path>+",		"Propage ACL(s) inheritance" };
@@ -871,6 +838,7 @@ COMMAND *acl_commands[] =
    &set_command,
    &edit_command,
    &touch_command,
+   &get_command,
 #if 0
    &sort_command,
    &strip_command,
@@ -879,7 +847,6 @@ COMMAND *acl_commands[] =
    &delete_command,
    &find_command,
    &rename_command,
-   &get_command,
    &inherit_command,
    NULL,
   };

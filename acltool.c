@@ -50,12 +50,13 @@
 
 #include "acltool.h"
 
+
 #if ENABLE_SMB
 #include "smb.h"
 #endif
 
 char *argv0 = "acltool";
-char *version = "1.12.2";
+char *version = "1.12.3";
 
 COMMANDS commands = { 0 };
 
@@ -533,30 +534,6 @@ run_cmd(int argc,
 }
 
 
-static jmp_buf error_env;
-
-void
-error(int rc,
-      int ec,
-      const char *msg,
-      ...) {
-  va_list ap;
-
-  va_start(ap, msg);
-  if (!f_interactive)
-    fprintf(stderr, "%s: ", argv0);
-  fprintf(stderr, "%s: ", rc ? (rc < 0 ? "Warning" : "Error") : "Info");
-  vfprintf(stderr, msg, ap);
-  if (ec)
-    fprintf(stderr, ": %s", strerror(ec));
-  putc('\n', stderr);
-
-  va_end(ap);
-  
-  if (rc)
-    longjmp(error_env, rc);
-}
-
 int
 main(int argc,
      char **argv)
@@ -566,7 +543,7 @@ main(int argc,
   int ac, rc = 0;
   char *aname;
   int i, j;
-    
+  jmp_buf saved_error_env;
   
 
   aname = strrchr(argv[0], '/');
@@ -576,6 +553,7 @@ main(int argc,
     aname = argv[0];
 
   argv0 = s_dup(argv[0]);
+  error_argv0 = s_dup(error_argv0);
 
   cmd_register(&commands, basic_commands);
   cmd_register(&commands, acltool_commands);
@@ -585,7 +563,7 @@ main(int argc,
     /* Shortcut to acl-cmd */
     argv[0] = s_dup(aname);
     
-    rc = setjmp(error_env);
+    rc = error_catch(saved_error_env);
     if (rc)
       exit(rc);
     
@@ -606,6 +584,7 @@ main(int argc,
   if (argc == 1) {
     char *stdin_path = NULL;
     char *stdout_path = NULL;
+
     
     if (isatty(fileno(stdin))) {
       print_version();
@@ -615,7 +594,7 @@ main(int argc,
 
     rl_attempted_completion_function = cmd_name_completion;
     
-    rc = setjmp(error_env);
+    rc = error_catch(saved_error_env);
     
     while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
       char *cp;
@@ -668,7 +647,6 @@ main(int argc,
 	if (ac > 0) {
 	  rc = run_cmd(ac, av);
 	}
-	
 	argv_destroy(av);
       }
       
@@ -686,7 +664,7 @@ main(int argc,
     exit(rc);
   }
 
-  rc = setjmp(error_env);
+  rc = error_catch(saved_error_env);
   if (rc)
     exit(rc);
   

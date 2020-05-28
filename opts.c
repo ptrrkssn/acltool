@@ -192,17 +192,11 @@ opts_parse_argv(int argc,
       va_end(ap);
       free(name);
 
-      if (nm < 1 || !op) {
-	error(1, 0, "%s: Invalid option", argv[i]);
-#if 0
-	fprintf(stderr, "%s: Error: %s: Invalid option\n", argv[0], argv[i]);
-#endif
-	return -1;
-      }
-      if (nm > 1) {
-	fprintf(stderr, "%s: Error: %s: Multiple options matches\n", argv[0], argv[i]);
-	return -1;
-      }
+      if (nm < 1 || !op)
+	return error(1, 0, "%s: Invalid option", argv[i]);
+
+      if (nm > 1)
+	return error(-1, 0, "%s: Multiple options matches", argv[i]);
 
       rc = opts_set_value(op, value, argv[0]);
       if (rc != 0)
@@ -234,14 +228,11 @@ opts_parse_argv(int argc,
 	}
 	va_end(ap);
 	
-	if (nm < 1 || !op) {
-	  fprintf(stderr, "%s: Error: -%c: Invalid option\n", argv[0], argv[i][j]);
-	  return -1;
-	}
-	if (nm > 1) {
-	  fprintf(stderr, "%s: Error: -%c: Multiple options matches\n", argv[0], argv[i][j]);
-	  return -1;
-	}
+	if (nm < 1 || !op)
+	  error(1, 0, "-%c: Invalid option", argv[i][j]);
+	
+	if (nm > 1)
+	  error(1, 0, "-%c: Multiple options matches", argv[i][j]);
 
 	value = NULL;
 	switch (op->type & OPTS_TYPE_MASK) {
@@ -279,9 +270,8 @@ opts_parse_argv(int argc,
 	  break;
 	  
 	default:
-	  fprintf(stderr, "%s: Error: %d: Unknown option type\n",
-		  argv[0], (op->type & OPTS_TYPE_MASK));
-	  return -1;
+	  return error(1, 0, "%d: Unknown option type",
+		       (op->type & OPTS_TYPE_MASK));
 	}
 
 	if (rc != 0)
