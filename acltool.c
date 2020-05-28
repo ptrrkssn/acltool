@@ -56,7 +56,7 @@
 #endif
 
 char *argv0 = "acltool";
-char *version = "1.12.3";
+char *version = "1.12.4";
 
 COMMANDS commands = { 0 };
 
