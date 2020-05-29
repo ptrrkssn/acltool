@@ -591,12 +591,12 @@ LIBOBJS
 LIBSMBCLIENT
 LIBSMBCLIENT_LIBS
 LIBSMBCLIENT_CFLAGS
+LIBREADLINE_LIBS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
 LIBREADLINE
-READLINE_LIBS
-READLINE_CFLAGS
+LIBREADLINE_CFLAGS
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
@@ -698,8 +698,8 @@ CPPFLAGS
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-READLINE_CFLAGS
-READLINE_LIBS
+LIBREADLINE_CFLAGS
+LIBREADLINE_LIBS
 LIBSMBCLIENT_CFLAGS
 LIBSMBCLIENT_LIBS'
 
@@ -1344,10 +1344,10 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  READLINE_CFLAGS
-              C compiler flags for READLINE, overriding pkg-config
-  READLINE_LIBS
-              linker flags for READLINE, overriding pkg-config
+  LIBREADLINE_CFLAGS
+              C compiler flags for LIBREADLINE, overriding pkg-config
+  LIBREADLINE_LIBS
+              linker flags for LIBREADLINE, overriding pkg-config
   LIBSMBCLIENT_CFLAGS
               C compiler flags for LIBSMBCLIENT, overriding pkg-config
   LIBSMBCLIENT_LIBS
@@ -3661,11 +3661,9 @@ if test "x$with_readline" != xno; then :
 
   case "x$with_readline" in
     /*)
-      READLINE_CFLAGS=-I${with_readline}/include
+      LIBREADLINE_CFLAGS=-I${with_readline}/include
 
-      READLINE_LIBS=-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses
-
-      LIBREADLINE="-lreadline -lncurses"
+      LIBREADLINE="-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"
 
       $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
@@ -3673,11 +3671,11 @@ if test "x$with_readline" != xno; then :
     *)
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE" >&5
-$as_echo_n "checking for READLINE... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBREADLINE" >&5
+$as_echo_n "checking for LIBREADLINE... " >&6; }
 
-if test -n "$READLINE_CFLAGS"; then
-    pkg_cv_READLINE_CFLAGS="$READLINE_CFLAGS"
+if test -n "$LIBREADLINE_CFLAGS"; then
+    pkg_cv_LIBREADLINE_CFLAGS="$LIBREADLINE_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"readline\""; } >&5
@@ -3685,7 +3683,7 @@ if test -n "$READLINE_CFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_READLINE_CFLAGS=`$PKG_CONFIG --cflags "readline" 2>/dev/null`
+  pkg_cv_LIBREADLINE_CFLAGS=`$PKG_CONFIG --cflags "readline" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3693,8 +3691,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$READLINE_LIBS"; then
-    pkg_cv_READLINE_LIBS="$READLINE_LIBS"
+if test -n "$LIBREADLINE_LIBS"; then
+    pkg_cv_LIBREADLINE_LIBS="$LIBREADLINE_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"readline\""; } >&5
@@ -3702,7 +3700,7 @@ if test -n "$READLINE_LIBS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_READLINE_LIBS=`$PKG_CONFIG --libs "readline" 2>/dev/null`
+  pkg_cv_LIBREADLINE_LIBS=`$PKG_CONFIG --libs "readline" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3723,12 +3721,12 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        READLINE_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "readline" 2>&1`
+	        LIBREADLINE_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "readline" 2>&1`
         else
-	        READLINE_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "readline" 2>&1`
+	        LIBREADLINE_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "readline" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$READLINE_PKG_ERRORS" >&5
+	echo "$LIBREADLINE_PKG_ERRORS" >&5
 
 
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
@@ -3769,6 +3767,7 @@ fi
 $as_echo "$ac_cv_lib_readline_readline" >&6; }
 if test "x$ac_cv_lib_readline_readline" = xyes; then :
 
+	  echo "AC-CHECK-LIB found LIBREADLINE"
           LIBREADLINE="-lreadline -lncurses"
 
 
@@ -3829,6 +3828,7 @@ fi
 $as_echo "$ac_cv_lib_readline_readline" >&6; }
 if test "x$ac_cv_lib_readline_readline" = xyes; then :
 
+	  echo "AC-CHECK-LIB found LIBREADLINE"
           LIBREADLINE="-lreadline -lncurses"
 
 
@@ -3848,11 +3848,12 @@ fi
 
 
 else
-	READLINE_CFLAGS=$pkg_cv_READLINE_CFLAGS
-	READLINE_LIBS=$pkg_cv_READLINE_LIBS
+	LIBREADLINE_CFLAGS=$pkg_cv_LIBREADLINE_CFLAGS
+	LIBREADLINE_LIBS=$pkg_cv_LIBREADLINE_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
+        echo "PKG-CONFIG found LIBREADLINE"
         $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
 

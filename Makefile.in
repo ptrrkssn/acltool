@@ -113,7 +113,7 @@ am_acltool_OBJECTS = acltool-gacl.$(OBJEXT) \
 	acltool-vfs.$(OBJEXT) acltool-smb.$(OBJEXT)
 acltool_OBJECTS = $(am_acltool_OBJECTS)
 am__DEPENDENCIES_1 =
-acltool_DEPENDENCIES = $(am__DEPENDENCIES_1)
+acltool_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 acltool_LINK = $(CCLD) $(acltool_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -190,8 +190,7 @@ AM_RECURSIVE_TARGETS = cscope
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/aux/compile $(top_srcdir)/aux/depcomp \
 	$(top_srcdir)/aux/install-sh $(top_srcdir)/aux/missing README \
-	TODO aux/compile aux/depcomp aux/install-sh aux/missing \
-	depcomp
+	TODO aux/compile aux/depcomp aux/install-sh aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -235,6 +234,8 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBREADLINE = @LIBREADLINE@
+LIBREADLINE_CFLAGS = @LIBREADLINE_CFLAGS@
+LIBREADLINE_LIBS = @LIBREADLINE_LIBS@
 LIBS = @LIBS@
 LIBSMBCLIENT = @LIBSMBCLIENT@
 LIBSMBCLIENT_CFLAGS = @LIBSMBCLIENT_CFLAGS@
@@ -254,8 +255,6 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
-READLINE_CFLAGS = @READLINE_CFLAGS@
-READLINE_LIBS = @READLINE_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -303,8 +302,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 acltool_SOURCES = gacl.c gacl_impl.c error.c acltool.c argv.c buffer.c aclcmds.c basic.c commands.c misc.c opts.c strings.c range.c common.c cmd_edit.c vfs.c smb.c
-acltool_CFLAGS = $(READLINE_CFLAGS)
-acltool_LDADD = $(READLINE_LIBS)
+acltool_CFLAGS = $(LIBREADLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+acltool_LDADD = $(LIBREADLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -1078,12 +1077,11 @@ uninstall-am: uninstall-binPROGRAMS
 clean-local:
 	-rm -f *~ \#* core
 
-push: 	maintainer-clean
+push: maintainer-clean
 	$(MAKE) -f Makefile.dist push
 
 pull:
-	$(MAKE) -f Makefile.dist pull
-
+	git pull
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

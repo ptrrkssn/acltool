@@ -20,16 +20,17 @@ LIBREADLINE=
 AS_IF([test "x$with_readline" != xno], [
   case "x$with_readline" in
     /*)
-      AC_SUBST([READLINE_CFLAGS], [-I${with_readline}/include])
-      AC_SUBST([READLINE_LIBS], [-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses])
-      AC_SUBST([LIBREADLINE], ["-lreadline -lncurses"])
+      AC_SUBST([LIBREADLINE_CFLAGS], [-I${with_readline}/include])
+      AC_SUBST([LIBREADLINE], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
       AC_DEFINE([HAVE_LIBREADLINE], [1])
       ;;
     *)
-      PKG_CHECK_MODULES([READLINE], [readline], [
+      PKG_CHECK_MODULES([LIBREADLINE], [readline], [
+        echo "PKG-CONFIG found LIBREADLINE"
         AC_DEFINE([HAVE_LIBREADLINE], [1])
       ], [			       
         AC_CHECK_LIB([readline], [readline], [
+	  echo "AC-CHECK-LIB found LIBREADLINE"
           AC_SUBST([LIBREADLINE], ["-lreadline -lncurses"])
           AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
         ], [
