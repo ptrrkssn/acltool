@@ -1,6 +1,7 @@
 # Makefile for acltool
 
-DEST=/usr/local
+PREFIX=/usr/local
+DEST=$(PREFIX)
 DESTBIN=$(DEST)/bin
 
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
