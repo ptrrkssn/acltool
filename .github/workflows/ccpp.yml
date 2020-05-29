@@ -12,10 +12,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: install dependencies
       run: test "`uname -s`" = "Linux" -a -f /usr/bin/apt && sudo apt install libreadline-dev libsmbclient-dev || true
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
+    - name: configure+make
+      run: make -f Makefile.dist
     - name: make check
       run: make check
     - name: make distcheck
