@@ -1,6 +1,5 @@
 Some stuff that needs to be done (in no particular order):
 
-- Use Gnu autoconf instead of the current hack
 - Create a much better test suite
 - Support saving ACLs to text files, and restore from text files
 - Support directory tree ACLs cloning
@@ -9,7 +8,7 @@ Some stuff that needs to be done (in no particular order):
 - How should the check-access command work?
 - Rework "merge_acl" (not correct currently)
 - Revisit "sort_acl"
-- Linux: Communicate with idmap/gssd? Just try to resolve via nsswitch first
-- Clean up the error handling
+- Linux: Communicate with idmap/gssd? 
+- Clean up the error handling some more
 - Implement support for POSIX.1e ACLs
 - Fix the User/Group check code in cmd_edit.c (check strings instead of uid/gid)
