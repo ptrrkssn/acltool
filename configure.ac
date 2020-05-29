@@ -10,24 +10,29 @@ AC_PROG_CC
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
 
-AC_ARG_WITH([readline], [
-  AS_HELP_STRING([--with-readline],
-    [support fancy command line editing @<:@default=check@:>@])],
-  [], [with_readline=check])
-          
-READLINE=
 
+AC_ARG_WITH([readline],
+  [AS_HELP_STRING([--with-readline],
+    [support fancy command line editing (valid arguments: 'check', 'no', 'yes' or PATH) @<:@default=check@:>@])],
+  [],
+  [with_readline=check])
+          
 AS_IF([test "x$with_readline" != xno], [
   case "x$with_readline" in
     /*)
-      AC_SUBST([READLINE_CFLAGS], ["-I${with_readline}/include"])
-      AC_SUBST([READLINE_LIBS], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
-      AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
+      AC_MSG_CHECKING(for READLINE in ${with_readline})
+      if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
+        AC_SUBST([READLINE_CFLAGS], ["-I${with_readline}/include"])
+        AC_SUBST([READLINE_LIBS], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
+        AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
+	AC_MSG_RESULT(yes)
+      else
+	AC_MSG_RESULT(no)
+      fi
       ;;
     *)
       PKG_CHECK_MODULES([READLINE], [readline], [
         AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
-	echo "READLINE found via pkg-config"
       ], [			       
         AC_CHECK_LIB([readline], [readline], [
           AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
@@ -43,20 +48,24 @@ AS_IF([test "x$with_readline" != xno], [
 ])
 
 
-AC_ARG_WITH([libsmbclient], [
-  AS_HELP_STRING([--with-libsmbclient],
-    [support SMB via Samba libsmbclient @<:@default=check@:>@])],
+AC_ARG_WITH([libsmbclient],
+  [AS_HELP_STRING([--with-libsmbclient],
+    [support SMB via Samba libsmbclient (valid arguments: 'check', 'no', 'yes' or PATH) @<:@default=check@:>@])],
   [],
   [with_libsmbclient=check])
           
-LIBSMBCLIENT=
-
 AS_IF([test "x$with_libsmbclient" != xno], [
   case "$with_libsmbclient" in
     /*)
-      AC_SUBST([LIBSMBCLIENT_CFLAGS], ["-I${with_libsmbclient}/include"])
-      AC_SUBST([LIBSMBCLIENT_LIBS], ["-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"])
-      AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
+      AC_MSG_CHECKING(for LIBSMBCLIENT in ${with_libsmbclient})
+      if test -f "${with_libsmbclient}/include/libsmbclient.h" -a -e "${with_libsmbclient}/lib/libsmbclient.so" ; then
+        AC_SUBST([LIBSMBCLIENT_CFLAGS], ["-I${with_libsmbclient}/include"])
+        AC_SUBST([LIBSMBCLIENT_LIBS], ["-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"])
+        AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
+        AC_MSG_RESULT(yes)
+      else
+        AC_MSG_RESULT(no)
+      fi
       ;;
     *)
       PKG_CHECK_MODULES([LIBSMBCLIENT], [libsmbclient], [
@@ -75,8 +84,5 @@ AS_IF([test "x$with_libsmbclient" != xno], [
   esac
 ])
 
-dnl AC_SEARCH_LIBS([smbc_init], [smbclient], [], [
-dnl  AC_MSG_WARN([unable to find Samba libsmbclient])
-dnl ])
 
 AC_OUTPUT

@@ -1324,10 +1324,10 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-
-    --with-readline         support fancy command line editing [default=check]
-
-    --with-libsmbclient     support SMB via Samba libsmbclient [default=check]
+  --with-readline         support fancy command line editing (valid arguments:
+                          'check', 'no', 'yes' or PATH) [default=check]
+  --with-libsmbclient     support SMB via Samba libsmbclient (valid arguments:
+                          'check', 'no', 'yes' or PATH) [default=check]
 
 Some influential environment variables:
   CC          C compiler command
@@ -3525,6 +3525,7 @@ ac_config_files="$ac_config_files Makefile"
 
 
 
+
 # Check whether --with-readline was given.
 if test "${with_readline+set}" = set; then :
   withval=$with_readline;
@@ -3532,8 +3533,6 @@ else
   with_readline=check
 fi
 
-
-READLINE=
 
 
 
@@ -3660,13 +3659,22 @@ if test "x$with_readline" != xno; then :
 
   case "x$with_readline" in
     /*)
-      READLINE_CFLAGS="-I${with_readline}/include"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE in ${with_readline}" >&5
+$as_echo_n "checking for READLINE in ${with_readline}... " >&6; }
+      if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
+        READLINE_CFLAGS="-I${with_readline}/include"
 
-      READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"
+        READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"
 
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      fi
       ;;
     *)
 
@@ -3854,7 +3862,6 @@ $as_echo "yes" >&6; }
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
-	echo "READLINE found via pkg-config"
 
 fi
       ;;
@@ -3872,19 +3879,26 @@ else
 fi
 
 
-LIBSMBCLIENT=
-
 if test "x$with_libsmbclient" != xno; then :
 
   case "$with_libsmbclient" in
     /*)
-      LIBSMBCLIENT_CFLAGS="-I${with_libsmbclient}/include"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBSMBCLIENT in ${with_libsmbclient}" >&5
+$as_echo_n "checking for LIBSMBCLIENT in ${with_libsmbclient}... " >&6; }
+      if test -f "${with_libsmbclient}/include/libsmbclient.h" -a -e "${with_libsmbclient}/lib/libsmbclient.so" ; then
+        LIBSMBCLIENT_CFLAGS="-I${with_libsmbclient}/include"
 
-      LIBSMBCLIENT_LIBS="-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"
+        LIBSMBCLIENT_LIBS="-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"
 
 
 $as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
 
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      fi
       ;;
     *)
 
