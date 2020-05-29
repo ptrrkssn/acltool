@@ -48,18 +48,18 @@ FILESYSTEMS SUPPORT
 
 
 
-DEPENDENCIES
+OPTIONAL DEPENDENCIES
 
   Ubuntu/Debian (apt install):
     libreadline-dev
-    libsmbclient-dev (if SMB support)
+    libsmbclient-dev
 
   CentOS (yum install)
     readline-devel
-    libsmbclient-devel (if SMB support)
+    libsmbclient-devel
     
   FreeBSD (pkg install)
-    readline (if SMB support)
+    readline
     samba
 
   Illumos (pkg install)
@@ -70,24 +70,30 @@ DEPENDENCIES
 
 BUILD INSTRUCTIONS
 
-  View and possibly adjust the Makefile.
-
-  You may want to install the Gnu readline development libraries &
-  header files (if not already there) or compilation will fail.
-
-  If you want to build with SMB support via Samba you may want to
-  apply the patch in 'patches' for Samba first. Atleast if you care
-  about the order ACLs are written.
-  You then (might) have to adjust the paths in 'Makefile' (it tries
-  to autodetect Sambas libsmbclient via the 'pkg-config' tool, but if
-  you have built your own Samba (with the patch) then you must make
-  sure it links with the correct smbclient library.
+  1. Install the optional dependencies mentioned above
   
-  Then type 'make' in the source directory and it will automatically
-  detect and build on the supported operating systems. No need to run
-  a "configure" script.
+  2. If you want to build with SMB support via Samba you may want to
+     apply the patch in 'patches' for Samba first. Atleast if you care
+     about the order ACLs are written.
 
+  3. Run "./configure" (optionally with arguments).
 
+     The configure script will try to autodetect the optional
+     dependencies via 'pkg-config' and if that fails, by looking
+     in the standard locations. If installed in nonstandard
+     locations you can use:
+
+       --with-readline=/path/to/readline
+       --with-libsmbclient=/path/to/samba
+
+     The path's should point to directories containing "lib" and
+     "include" subdirectories.
+     
+  4. Then type 'make' in the source directory and it will automatically
+     build the tool.
+
+  5. Run "make install" to install
+  
 
 USAGE
 
