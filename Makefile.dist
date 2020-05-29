@@ -6,11 +6,11 @@ acltool: Makefile
 	$(MAKE)
 
 Makefile: Makefile.in
-	./configure
+	touch aclocal.m4 config.h.in Makefile.in configure && ./configure
 
 distclean clean:
 	-rm -f *~ *.o \#* core *.core acltool */*~ Makefile
-	-rm -fr t/*
+	-rm -fr t/* .deps autom4te.cache
 
 push: 	clean
 	git add -A && git commit -a && git push
