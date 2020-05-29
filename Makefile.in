@@ -95,13 +95,13 @@ check-linux check-Linux:
 
 check-all: check-lac check-sac check-edac
 
-check-lac: auto
+check-lac: acltool
 	./acltool lac t
 
-check-sac: auto
+check-sac: acltool
 	./acltool sac -vp "user:nobody:rwx,user:$$USER:all" t
 
-check-edac: auto
+check-edac: acltool
 	./acltool edac -vp -e '/user:nobody:r.*/d' t
 
 distcheck: check
