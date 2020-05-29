@@ -35,7 +35,7 @@ AS_IF([test "x$with_readline" != xno], [
       AC_CHECK_LIB([readline], [readline], [ 
         AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
       ], [], -lncurses)
-      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline.h" = xyes; then 
+      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
 	AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
       else
         PKG_CHECK_MODULES([READLINE], [readline], [
@@ -82,7 +82,7 @@ AS_IF([test "x$with_libsmbclient" != xno], [
       if test "x$ac_cv_lib_libsmbclient_smbc_init" = xyes -a "x$ac_cv_header_libsmbclient.h" = xyes; then 
         AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
       else
-        PKG_CHECK_MODULES([LIBSMBCLIENT], [libsmbclient], [
+        PKG_CHECK_MODULES([LIBSMBCLIENT], [smbclient], [
           AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
         ], [
           if test "x$with_libsmbclient" != xcheck; then

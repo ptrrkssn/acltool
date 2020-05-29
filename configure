@@ -4372,7 +4372,7 @@ if test "x$ac_cv_lib_readline_readline" = xyes; then :
 
 fi
 
-      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline.h" = xyes; then
+      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
@@ -4578,12 +4578,12 @@ if test -n "$LIBSMBCLIENT_CFLAGS"; then
     pkg_cv_LIBSMBCLIENT_CFLAGS="$LIBSMBCLIENT_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsmbclient\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsmbclient") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"smbclient\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "smbclient") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_LIBSMBCLIENT_CFLAGS=`$PKG_CONFIG --cflags "libsmbclient" 2>/dev/null`
+  pkg_cv_LIBSMBCLIENT_CFLAGS=`$PKG_CONFIG --cflags "smbclient" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4595,12 +4595,12 @@ if test -n "$LIBSMBCLIENT_LIBS"; then
     pkg_cv_LIBSMBCLIENT_LIBS="$LIBSMBCLIENT_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsmbclient\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsmbclient") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"smbclient\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "smbclient") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_LIBSMBCLIENT_LIBS=`$PKG_CONFIG --libs "libsmbclient" 2>/dev/null`
+  pkg_cv_LIBSMBCLIENT_LIBS=`$PKG_CONFIG --libs "smbclient" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4621,9 +4621,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        LIBSMBCLIENT_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libsmbclient" 2>&1`
+	        LIBSMBCLIENT_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "smbclient" 2>&1`
         else
-	        LIBSMBCLIENT_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libsmbclient" 2>&1`
+	        LIBSMBCLIENT_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "smbclient" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBSMBCLIENT_PKG_ERRORS" >&5
