@@ -3,6 +3,8 @@
 DEST=/usr/local
 DESTBIN=$(DEST)/bin
 
+BINS=acltool
+
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
 SMBDIR=/usr/local/samba
 #SMBDIR=/usr/local/samba/default
@@ -24,7 +26,7 @@ LDFLAGS=-lreadline
 
 OBJS=gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
 
-auto build:
+all auto build:
 	@if [ -f "$(SMBLIB)/libsmbclient.so" -a -f "$(SMBINC)/libsmbclient.h" ]; then \
 		$(MAKE) CFLAGS="$(CFLAGS) -I$(SMBINC) -DENABLE_SMB=1" LDFLAGS="$(LDFLAGS) -Wl,-rpath,$(SMBLIB) -L$(SMBLIB) -lsmbclient" `uname -s` ; \
 	elif pkg-config --exists smbclient 2>/dev/null ; then \
@@ -37,19 +39,17 @@ help:
 	@echo "USAGE: make <target>";echo "";echo "TARGETS: help, auto, linux, freebsd, solaris, macos, clean" ; exit 0
 
 SunOS solaris omnios illumos:
-	@$(MAKE) CC="$(SOLCC)" CFLAGS="$(CFLAGS) -I/usr/local/include" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lcurses $(LDFLAGS)" all
+	@$(MAKE) CC="$(SOLCC)" CFLAGS="$(CFLAGS) -I/usr/local/include" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lcurses $(LDFLAGS)" $(BINS)
 
 Linux linux:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(BINS)
 
 FreeBSD freebsd:
-	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lncurses $(LDFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="-I/usr/local/include $(CFLAGS)" LDFLAGS="-L/usr/local/lib -R/usr/local/lib -lncurses $(LDFLAGS)" $(BINS)
 
 Darwin macos:
-	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" all
+	@$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(BINS)
 
-
-all: acltool
 
 acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h error.h nfs4.h Makefile
 
