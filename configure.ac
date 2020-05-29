@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([ACL Tool], [1.14], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
+AC_INIT([ACL Tool], [1.15], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
 
 AC_CONFIG_SRCDIR([common.c])
 AC_CONFIG_HEADERS([config.h])

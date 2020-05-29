@@ -58,12 +58,12 @@
 #include "smb.h"
 #endif
 
-#if !defined(VERSION)
-#define VERSION "0.0"
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "0.0"
 #endif
 
 char *argv0 = "acltool";
-char *version = VERSION;
+char *version = PACKAGE_VERSION;
 
 COMMANDS commands = { 0 };
 
