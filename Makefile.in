@@ -1,13 +1,10 @@
-# Makefile for acltool
+# Makefile for acltool, to be processed by './configure'
 
 VPATH = @srcdir@
 PREFIX = @prefix@
-EXEC_PREFIX = @exec_prefix@
-BINDIR = @bindir@
-mandir = @mandir@
-man1dir = $(mandir)/man1
-datadir = @datadir@
-datarootdir = @datarootdir@
+BINDIR = $(PREFIX)/bin
+MANDIR = $(PREFIX)/man
+MAN1DIR = $(MANDIR)/man1
 
 CC = @CC@
 CPP = @CPP@
@@ -64,11 +61,10 @@ acltool: $(ACLTOOL_OBJS)
 	$(CC) $(LDFLAGS) -o acltool $(ACLTOOL_OBJS) $(LIBS)
 
 distclean: clean
-	rm -fr config.status config.log .deps autom4te.cache
+	rm -fr config.status config.log .deps autom4te.cache Makefile config.h
 
 clean:
 	-rm -f *~ *.o \#* core *.core acltool */*~
-	-rm -fr t/*
 
 
 push: 	distclean

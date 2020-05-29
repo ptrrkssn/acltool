@@ -1,16 +1,38 @@
+AC_PREREQ([2.69])
 AC_INIT([ACL Tool], [1.14], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
-AC_PREREQ([2.67])
+
+AC_CONFIG_SRCDIR([common.c])
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([Makefile])
 
 AC_CONFIG_AUX_DIR([aux])
 
-dnl Don't want all the cruft that comes with Automake. Yuk!
-dnl AM_INIT_AUTOMAKE
-
 AC_PROG_CC
+AC_PROG_LN_S
+AC_PROG_CPP
 AC_PROG_INSTALL
 
-AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile])
+dnl AC_USE_SYSTEM_EXTENSIONS
+
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h stdint.h stdlib.h string.h sys/acl.h sys/statvfs.h sys/time.h termios.h unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_UID_T
+AC_TYPE_MODE_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+
+# Checks for library functions.
+AC_FUNC_ERROR_AT_LINE
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+dnl AC_FUNC_STRNLEN
+
+AC_CHECK_FUNCS([acl getcwd memmove memset putenv regcomp strchr strdup strerror strndup strrchr strtol strtoul])
 
 
 AC_ARG_WITH([readline],

@@ -174,8 +174,8 @@ typedef struct gacl_entry {
 
 typedef struct gacl {
   GACL_TYPE type;
-  char owner[128];
-  char group[128];
+  char owner[256];
+  char group[256];
   int ac;
   int as;
   int ap;

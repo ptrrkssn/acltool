@@ -494,12 +494,13 @@ gacl_clean(GACL *ap) {
 
  RESTART:
   for (i = 0; (rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1; i++) {
-    GACL_PERMSET *ps;
-    GACL_FLAGSET *fs;
+    GACL_PERMSET *ps = NULL;
+    GACL_FLAGSET *fs = NULL;
 
 
     if (gacl_get_permset(ep, &ps) < 0)
       return -1;
+    
     if (gacl_get_flagset_np(ep, &fs) < 0)
       return -1;
 
@@ -530,6 +531,7 @@ _gacl_entry_compare(const void *va,
   uid_t *qa, *qb;
   
 
+  afs = bfs = NULL;
   gacl_get_flagset_np(a, &afs);
   gacl_get_flagset_np(b, &bfs);
   
@@ -551,6 +553,8 @@ _gacl_entry_compare(const void *va,
 
   
   /* order: owner@ - user - group@ - group - everyone@ */
+  ta = tb = 0;
+  
   if (gacl_get_tag_type(a, &ta) < 0)
     return -1;
   
@@ -585,6 +589,8 @@ _gacl_entry_compare(const void *va,
   default:
     break;
   }
+
+  aet_a = aet_b = 0;
   
   /* Deny entries goes before allow ones */
   if (gacl_get_entry_type_np(a, &aet_a) < 0)
@@ -696,6 +702,8 @@ gacl_is_trivial_np(GACL *ap,
   
   tf = 1;
   for (i = 0; (rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1; i++) {
+    t = GACL_TAG_TYPE_UNKNOWN;
+    
     if (gacl_get_tag_type(ep, &t) < 0)
       return -1;
 
@@ -737,6 +745,8 @@ gacl_strip_np(GACL *ap,
     return NULL;
   
   for (i = 0; (rc = gacl_get_entry(ap, i ? GACL_NEXT_ENTRY : GACL_FIRST_ENTRY, &ep)) == 1; i++) {
+    t = GACL_TAG_TYPE_UNKNOWN;
+    
     if (gacl_get_tag_type(ep, &t) < 0)
       return NULL;
 
@@ -1436,6 +1446,8 @@ gacl_entry_tag_to_text(GACL_ENTRY *ep,
 		       int flags) {
   GACL_TAG_TYPE et;
 
+
+  et = GACL_TAG_TYPE_UNKNOWN;
   
   if (gacl_get_tag_type(ep, &et) < 0)
     return -1;
@@ -1457,7 +1469,7 @@ gacl_entry_permset_to_text(GACL_ENTRY *ep,
 			   char *buf,
 			   size_t bufsize,
 			   int flags) {
-  GACL_PERMSET *epsp;
+  GACL_PERMSET *epsp = NULL;
   GACL_PERM p;
   int a, n;
 
@@ -1489,7 +1501,7 @@ gacl_entry_flagset_to_text(GACL_ENTRY *ep,
 			   char *buf,
 			   size_t bufsize,
 			   int flags) {
-  GACL_FLAGSET *efsp;
+  GACL_FLAGSET *efsp = NULL;
   GACL_FLAG f;
   int a, n;
 
@@ -1519,7 +1531,7 @@ gacl_entry_type_to_text(GACL_ENTRY *ep,
 			char *buf,
 			size_t bufsize,
 			int flags) {
-  GACL_ENTRY_TYPE et;
+  GACL_ENTRY_TYPE et = GACL_ENTRY_TYPE_UNDEFINED;
 
   
   if (gacl_get_entry_type_np(ep, &et) < 0)
@@ -1711,7 +1723,7 @@ gacl_to_text_np(GACL *ap,
        i++) {
     char es[1024], *cp;
     ssize_t rc, len;
-    GACL_TAG_TYPE et;
+    GACL_TAG_TYPE et = GACL_TAG_TYPE_UNKNOWN;
     
     if (gacl_get_tag_type(ep, &et) < 0)
       goto Fail;
