@@ -76,14 +76,12 @@ BUILD INSTRUCTIONS
      apply the patch in 'patches' for Samba first. Atleast if you care
      about the order of entries in ACLs that are written.
 
-  3a. Run "make -f Makefile.dist" to configure+make with default options
-   or:
-  3b. Run "./configure" (optionally with arguments).
+  3. Run "./configure" (optionally with arguments).
 
      The configure script will try to autodetect the optional
-     dependencies via 'pkg-config' and if that fails, by looking
-     in the standard locations. If installed in nonstandard
-     locations you can use:
+     dependencies by looking in the standard locations and via
+     "pkg-config" if that fails. You may also force it to look
+     in nonstandard locations via:
 
        --with-readline=/path/to/readline
        --with-libsmbclient=/path/to/samba
