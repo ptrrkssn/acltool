@@ -31,6 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,24 +47,23 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#if HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #include "acltool.h"
 
-#ifndef VERSION
-#define VERSION 0
-#endif
-
-#define STRINGIFY(foo) #foo
-#define MAKEVER(foo) STRINGIFY(foo)
-
-#if ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
 #include "smb.h"
 #endif
 
+#if !defined(VERSION)
+#define VERSION "0.0"
+#endif
+
 char *argv0 = "acltool";
-char *version = MAKEVER(VERSION);
+char *version = VERSION;
 
 COMMANDS commands = { 0 };
 
@@ -171,7 +172,7 @@ set_merge(const char *name,
   return 0;
 }
 
-#if ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
 int
 set_password(const char *name,
 	     const char *value,
@@ -308,7 +309,7 @@ OPTION global_options[] =
    { "depth",     	'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },
    { "style",     	'S', OPTS_TYPE_STR,                set_style,     NULL, "Select ACL print style" },
    { "type",      	't', OPTS_TYPE_STR,                set_filetype,  NULL, "File types to operate on" },
-#if ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
    { "password",      	'P', OPTS_TYPE_NONE,               set_password,  NULL, "Prompt for user password (SMB)" },
 #endif
    { "no-update", 	'n', OPTS_TYPE_NONE,               set_no_update, NULL, "Disable modification" },
@@ -349,7 +350,7 @@ version_cmd(int argc,
   puts("Author:  Peter Eriksson <pen@lysator.liu.se>");
   puts("Built:   " __DATE__ " " __TIME__);
   puts("Source:  https://github.com/ptrrkssn/acltool");
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   puts("Options: SMB");
 #endif  
   return 0;
@@ -500,6 +501,29 @@ opt_name_generator(const char *text,
   return NULL;
 }
 
+
+#if !defined(HAVE_LIBREADLINE)
+char *
+readline(char *prompt) {
+  static char buf[1024];
+  char *cp;
+  
+  
+  fputs(prompt, stderr);
+  
+  if (fgets(buf, sizeof(buf)-1, stdin) == NULL)
+    return NULL;
+
+  for (cp = buf+strlen(buf)-1; cp >= buf && isspace(*cp); cp--)
+    ;
+  cp[1] = '\0';
+
+  return s_dup(buf);
+}
+#endif
+
+
+#if defined(HAVE_LIBREADLINE)
 char **
 cmd_name_completion(const char *text,
 		    int start,
@@ -523,7 +547,7 @@ cmd_name_completion(const char *text,
   
   return rl_completion_matches(text, cng);
 }
-
+#endif
 
 
 int
@@ -538,6 +562,7 @@ run_cmd(int argc,
     error(rc, errno, "%s", argv[0]);
   return rc;
 }
+
 
 
 int
@@ -599,21 +624,25 @@ main(int argc,
       f_interactive = 1;
     }
 
+#if defined(HAVE_LIBREADLINE)
     rl_attempted_completion_function = cmd_name_completion;
+#endif
     
     rc = error_catch(saved_error_env);
     
     while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
-      char *cp;
+      char *bp, *cp;
 
-      
+#if defined(HAVE_LIBREADLINE)
       add_history(buf);
+#endif
 
-      while (*buf && isspace(*buf))
-	++buf;
+      bp = buf;
+      while (*bp && isspace(*bp))
+	++bp;
 
-      stdout_path = strrchr(buf, '>');
-      stdin_path  = strrchr(buf, '<');
+      stdout_path = strrchr(bp, '>');
+      stdin_path  = strrchr(bp, '<');
       
       if (stdout_path) {
 	*stdout_path++ = '\0';
@@ -641,16 +670,16 @@ main(int argc,
 	    exit(1);
       }
       
-      switch (*buf) {
+      switch (*bp) {
       case '!':
-	rc = system(buf+1);
+	rc = system(bp+1);
 	break;
 
       case '#':
 	break;
 
       default:
-	ac = argv_create(buf, NULL, NULL, &av);
+	ac = argv_create(bp, NULL, NULL, &av);
 	if (ac > 0) {
 	  rc = run_cmd(ac, av);
 	}

@@ -621,23 +621,23 @@ str2style(const char *str,
   if (!str || !*str)
     return 0;
   
-  if (strcasecmp(str, "default") == 0)
+  if (strcmp(str, "default") == 0)
     *sp = GACL_STYLE_DEFAULT;
-  else if (strcasecmp(str, "standard") == 0)
+  else if (strcmp(str, "standard") == 0)
     *sp = GACL_STYLE_STANDARD;
-  else if (strcasecmp(str, "brief") == 0)
+  else if (strcmp(str, "brief") == 0)
     *sp = GACL_STYLE_BRIEF;
-  else if (strcasecmp(str, "verbose") == 0)
+  else if (strcmp(str, "verbose") == 0)
     *sp = GACL_STYLE_VERBOSE;
-  else if (strcasecmp(str, "csv") == 0)
+  else if (strcmp(str, "csv") == 0)
     *sp = GACL_STYLE_CSV;
-  else if (strcasecmp(str, "samba") == 0)
+  else if (strcmp(str, "samba") == 0)
     *sp = GACL_STYLE_SAMBA;
-  else if (strcasecmp(str, "icacls") == 0)
+  else if (strcmp(str, "icacls") == 0)
     *sp = GACL_STYLE_ICACLS;
-  else if (strcasecmp(str, "solaris") == 0)
+  else if (strcmp(str, "solaris") == 0)
     *sp = GACL_STYLE_SOLARIS;
-  else if (strcasecmp(str, "primos") == 0)
+  else if (strcmp(str, "primos") == 0)
     *sp = GACL_STYLE_PRIMOS;
   else
     return -1;

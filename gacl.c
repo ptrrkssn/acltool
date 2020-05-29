@@ -1014,7 +1014,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
   GACL_TAG *etp = &ep->tag;
 
   
-  if (strncasecmp(cp, "user:", 5) == 0 || strncasecmp(cp, "u:", 2) == 0) {
+  if (strncmp(cp, "user:", 5) == 0 || strncmp(cp, "u:", 2) == 0) {
     etp->type = GACL_TAG_TYPE_USER;
 
     cp = strchr(cp, ':')+1;
@@ -1061,7 +1061,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     return 0;
   }
 
-  if (strncasecmp(cp, "group:", 6) == 0 || strncasecmp(cp, "g:", 2) == 0) {
+  if (strncmp(cp, "group:", 6) == 0 || strncmp(cp, "g:", 2) == 0) {
     etp->type = GACL_TAG_TYPE_GROUP;
     
     cp = strchr(cp, ':')+1;
@@ -1124,7 +1124,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
   if (np)
     ++np;
   
-  if (strcasecmp(etp->name, "owner@") == 0) {
+  if (strcmp(etp->name, "owner@") == 0) {
     etp->type = GACL_TAG_TYPE_USER_OBJ;
     etp->ugid = -1;
 
@@ -1132,7 +1132,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     return 0;
   }
 
-  if (strcasecmp(etp->name, "group@") == 0) {
+  if (strcmp(etp->name, "group@") == 0) {
     etp->type = GACL_TAG_TYPE_GROUP_OBJ;
     etp->ugid = -1;
     
@@ -1140,7 +1140,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     return 0;
   }
 
-  if (strcasecmp(etp->name, "everyone@") == 0) {
+  if (strcmp(etp->name, "everyone@") == 0) {
     etp->type = GACL_TAG_TYPE_EVERYONE;
     etp->ugid = -1;
 
@@ -1859,21 +1859,21 @@ _gacl_permset_from_text(const char *buf,
   if (!*buf)
     return 0;
 
-  if (strcasecmp(buf, "full_set") == 0 ||
-      strcasecmp(buf, "all") == 0)
+  if (strcmp(buf, "full_set") == 0 ||
+      strcmp(buf, "all") == 0)
     nps = GACL_PERM_FULL_SET;
-  else if (strcasecmp(buf, "modify_set") == 0 ||
-	   strcasecmp(buf, "modify") == 0)
+  else if (strcmp(buf, "modify_set") == 0 ||
+	   strcmp(buf, "modify") == 0)
     nps = GACL_PERM_MODIFY_SET;
-  else if (strcasecmp(buf, "write_set") == 0 ||
-	   strcasecmp(buf, "write") == 0)
+  else if (strcmp(buf, "write_set") == 0 ||
+	   strcmp(buf, "write") == 0)
     nps = GACL_PERM_WRITE_SET;
-  else if (strcasecmp(buf, "read_set") == 0 ||
-	   strcasecmp(buf, "read") == 0)
+  else if (strcmp(buf, "read_set") == 0 ||
+	   strcmp(buf, "read") == 0)
     nps = GACL_PERM_READ_SET;
-  else if (strcasecmp(buf, "empty_set") == 0 ||
-	   strcasecmp(buf, "empty") == 0 ||
-	   strcasecmp(buf, "none") == 0) /* XXX: Remove, but handle the magic 'none' case for edit-access */
+  else if (strcmp(buf, "empty_set") == 0 ||
+	   strcmp(buf, "empty") == 0 ||
+	   strcmp(buf, "none") == 0) /* XXX: Remove, but handle the magic 'none' case for edit-access */
     nps = 0;
   else {
     while ((c = *buf++) != '\0') {
@@ -1953,7 +1953,7 @@ _gacl_entry_from_text(char *cp,
   if (np)
     *np++ = '\0';
   
-  f_none = (strcasecmp(cp, "none") == 0);
+  f_none = (strcmp(cp, "none") == 0);
 
   if (_gacl_permset_from_text(cp, &ep->perms, flags) < 0)
     return -1;
@@ -1983,13 +1983,13 @@ _gacl_entry_from_text(char *cp,
       errno = EINVAL;
       return -1;
     }
-    if (strcasecmp(cp, "allow") == 0) 
+    if (strcmp(cp, "allow") == 0) 
       ep->type = GACL_ENTRY_TYPE_ALLOW;
-    else if (strcasecmp(cp, "deny") == 0)
+    else if (strcmp(cp, "deny") == 0)
       ep->type = GACL_ENTRY_TYPE_DENY;
-    else if (strcasecmp(cp, "audit") == 0)
+    else if (strcmp(cp, "audit") == 0)
       ep->type = GACL_ENTRY_TYPE_AUDIT;
-    else if (strcasecmp(cp, "alarm") == 0)
+    else if (strcmp(cp, "alarm") == 0)
       ep->type = GACL_ENTRY_TYPE_ALARM;
     else {
       errno = EINVAL;

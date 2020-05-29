@@ -538,8 +538,8 @@ str2renamelist(char *str,
     s2 = strchr(s1, ':');
     if (s2) {
       *s2++ = '\0';
-      if (strcasecmp(str, "g") == 0 ||
-	  strcasecmp(str, "group") == 0) {
+      if (strcmp(str, "g") == 0 ||
+	  strcmp(str, "group") == 0) {
 	
 	g_old = getgrnam(s1);
 	if (g_old)
@@ -555,8 +555,8 @@ str2renamelist(char *str,
 	
 	r->v[r->c++].type = GACL_TAG_TYPE_GROUP;
 	
-      } else if (strcasecmp(str, "u") == 0 ||
-		 strcasecmp(str, "user") == 0) {
+      } else if (strcmp(str, "u") == 0 ||
+		 strcmp(str, "user") == 0) {
 	
 	p_old = getpwnam(s1);
 	if (p_old)

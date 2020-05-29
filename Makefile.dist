@@ -1,0 +1,20 @@
+# Makefile.dist
+
+all:	acltool
+
+acltool: Makefile
+	$(MAKE)
+
+Makefile: Makefile.in
+	./configure
+
+distclean clean:
+	-rm -f *~ *.o \#* core *.core acltool */*~ Makefile
+	-rm -fr t/*
+
+push: 	clean
+	git add -A && git commit -a && git push
+
+pull:
+	git pull
+

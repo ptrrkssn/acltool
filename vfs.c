@@ -54,7 +54,7 @@
 #include "misc.h"
 #include "gacl.h"
 
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
 #include "smb.h"
 #endif
 
@@ -73,7 +73,7 @@ vfs_get_type(const char *path) {
       return VFS_TYPE_UNKNOWN;
   }
   
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   if ((path && strncmp(path, "smb://", 6) == 0) ||
       (cwd && (!path || *path != '/') && strncmp(cwd, "smb://", 6) == 0))
     return VFS_TYPE_SMB;
@@ -86,7 +86,7 @@ vfs_get_type(const char *path) {
 char *
 vfs_getcwd(char *buf,
 	   size_t bufsize) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   if (cwd && strncmp(cwd, "smb://", 6) == 0) {
     if (strlen(cwd)+1 > bufsize) {
       errno = EINVAL;
@@ -120,7 +120,7 @@ vfs_fullpath(const char *path,
     return vfs_getcwd(buf, bufsize);
 
   if (*path == '/'
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
       || strncmp(path, "smb://", 6) == 0
 #endif
       ) {
@@ -174,7 +174,7 @@ vfs_fullpath(const char *path,
 int
 vfs_chdir(const char *path) {
   int rc;
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
   
@@ -182,7 +182,7 @@ vfs_chdir(const char *path) {
     path = "";
   
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return -1;
@@ -211,13 +211,13 @@ vfs_chdir(const char *path) {
 int
 vfs_lstat(const char *path,
 	  struct stat *sp) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   memset(sp, 0, sizeof(*sp));
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return -1;
@@ -240,12 +240,12 @@ vfs_lstat(const char *path,
 int
 vfs_statvfs(const char *path,
 	    struct statvfs *sp) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return -1;
@@ -270,12 +270,12 @@ VFS_DIR *
 vfs_opendir(const char *path) {
   VFS_DIR *vdp;
   DIR *dh;
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return NULL;
@@ -309,7 +309,7 @@ vfs_opendir(const char *path) {
 struct dirent *
 vfs_readdir(VFS_DIR *vdp) {
   switch (vdp->type) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     return smb_readdir(vdp);
 #endif
@@ -329,7 +329,7 @@ vfs_closedir(VFS_DIR *vdp) {
   int rc;
 
   switch (vdp->type) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     rc = smb_closedir(vdp);
     break;
@@ -385,7 +385,7 @@ vfs_listxattr(const char *path,
 	      char *buf,
 	      size_t bufsize,
 	      int flags) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char pbuf[2048];
 #endif
 #if defined(__FreeBSD__)
@@ -401,7 +401,7 @@ vfs_listxattr(const char *path,
   
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
       return -1;
@@ -488,7 +488,7 @@ vfs_getxattr(const char *path,
 	     char *buf,
 	     size_t bufsize,
 	     int flags) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char pbuf[2048];
 #endif
 #if defined(__sun__)
@@ -497,7 +497,7 @@ vfs_getxattr(const char *path,
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
       return -1;
@@ -546,7 +546,7 @@ vfs_setxattr(const char *path,
 	     char *buf,
 	     size_t bufsize,
 	     int flags) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char pbuf[2048];
 #endif
 #if defined(__sun__)
@@ -555,7 +555,7 @@ vfs_setxattr(const char *path,
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
       return -1;
@@ -602,7 +602,7 @@ int
 vfs_removexattr(const char *path,
 		const char *attr,
 		int flags) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char pbuf[2048];
 #endif
 #if defined(__sun__)
@@ -610,7 +610,7 @@ vfs_removexattr(const char *path,
 #endif
   
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
       return -1;
@@ -665,12 +665,12 @@ vfs_removexattr(const char *path,
 GACL *
 vfs_acl_get_file(const char *path,
 		 GACL_TYPE type) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return NULL;
@@ -691,12 +691,12 @@ vfs_acl_get_file(const char *path,
 GACL *
 vfs_acl_get_link(const char *path,
 		 GACL_TYPE type) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     puts("SMB-link");
     if (!vfs_fullpath(path, buf, sizeof(buf)))
@@ -719,12 +719,12 @@ int
 vfs_acl_set_file(const char *path,
 		 GACL_TYPE type,
 		 GACL *ap) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   char buf[2048];
 #endif
 
   switch (vfs_get_type(path)) {
-#ifdef ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
   case VFS_TYPE_SMB:
     if (!vfs_fullpath(path, buf, sizeof(buf)))
       return -1;

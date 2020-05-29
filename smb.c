@@ -31,6 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +46,7 @@
 #include "vfs.h"
 #include "smb.h"
 
-#if ENABLE_SMB
+#if HAVE_LIBSMBCLIENT
 #include <libsmbclient.h>
 #include "misc.h"
 
