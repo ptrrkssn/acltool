@@ -3541,6 +3541,7 @@ fi
 
 
 
+
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
 	if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
@@ -3654,7 +3655,6 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-
 if test "x$with_readline" != xno; then :
 
   case "x$with_readline" in
@@ -3677,6 +3677,52 @@ $as_echo "no" >&6; }
       fi
       ;;
     *)
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
+$as_echo_n "checking for readline in -lreadline... " >&6; }
+if ${ac_cv_lib_readline_readline+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lreadline -lncurses $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char readline ();
+int
+main ()
+{
+return readline ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_readline_readline=yes
+else
+  ac_cv_lib_readline_readline=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_readline_readline" >&5
+$as_echo "$ac_cv_lib_readline_readline" >&6; }
+if test "x$ac_cv_lib_readline_readline" = xyes; then :
+
+        READLINE_LIBS="-lreadline -lncurses"
+
+
+$as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
+
+
+else
+
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE" >&5
@@ -3737,121 +3783,23 @@ fi
 	echo "$READLINE_PKG_ERRORS" >&5
 
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
-$as_echo_n "checking for readline in -lreadline... " >&6; }
-if ${ac_cv_lib_readline_readline+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lreadline -lncurses $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char readline ();
-int
-main ()
-{
-return readline ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_readline_readline=yes
-else
-  ac_cv_lib_readline_readline=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_readline_readline" >&5
-$as_echo "$ac_cv_lib_readline_readline" >&6; }
-if test "x$ac_cv_lib_readline_readline" = xyes; then :
-
-          READLINE_LIBS="-lreadline -lncurses"
-
-
-$as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
-
-
-else
-
           if test "x$with_readline" != xcheck; then
             { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-readline was given, but test for readline failed
 See \`config.log' for more details" "$LINENO" 5; }
           fi
-
-fi
-
 
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
-$as_echo_n "checking for readline in -lreadline... " >&6; }
-if ${ac_cv_lib_readline_readline+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lreadline -lncurses $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char readline ();
-int
-main ()
-{
-return readline ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_readline_readline=yes
-else
-  ac_cv_lib_readline_readline=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_readline_readline" >&5
-$as_echo "$ac_cv_lib_readline_readline" >&6; }
-if test "x$ac_cv_lib_readline_readline" = xyes; then :
-
-          READLINE_LIBS="-lreadline -lncurses"
-
-
-$as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
-
-
-else
-
           if test "x$with_readline" != xcheck; then
             { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-readline was given, but test for readline failed
 See \`config.log' for more details" "$LINENO" 5; }
           fi
-
-fi
-
 
 else
 	READLINE_CFLAGS=$pkg_cv_READLINE_CFLAGS
@@ -3859,11 +3807,19 @@ else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
+	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
+          readline_incdir="`pkg-config --variable=includedir readline`"
+          READLINE_CFLAGS="-I${readline_incdir}"
+
+
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
 
 fi
+
+fi
+
       ;;
   esac
 
@@ -3901,6 +3857,52 @@ $as_echo "no" >&6; }
       fi
       ;;
     *)
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for smbc_init in -lsmbclient" >&5
+$as_echo_n "checking for smbc_init in -lsmbclient... " >&6; }
+if ${ac_cv_lib_smbclient_smbc_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsmbclient  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char smbc_init ();
+int
+main ()
+{
+return smbc_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_smbclient_smbc_init=yes
+else
+  ac_cv_lib_smbclient_smbc_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_smbclient_smbc_init" >&5
+$as_echo "$ac_cv_lib_smbclient_smbc_init" >&6; }
+if test "x$ac_cv_lib_smbclient_smbc_init" = xyes; then :
+
+        LIBSMBCLIENT_LIBS="-lsmbclient"
+
+
+$as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
+
+
+else
+
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBSMBCLIENT" >&5
@@ -3961,121 +3963,23 @@ fi
 	echo "$LIBSMBCLIENT_PKG_ERRORS" >&5
 
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for smbc_init in -lsmbclient" >&5
-$as_echo_n "checking for smbc_init in -lsmbclient... " >&6; }
-if ${ac_cv_lib_smbclient_smbc_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsmbclient  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char smbc_init ();
-int
-main ()
-{
-return smbc_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_smbclient_smbc_init=yes
-else
-  ac_cv_lib_smbclient_smbc_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_smbclient_smbc_init" >&5
-$as_echo "$ac_cv_lib_smbclient_smbc_init" >&6; }
-if test "x$ac_cv_lib_smbclient_smbc_init" = xyes; then :
-
-          LIBSMBCLIENT_LIBS="-lsmbclient"
-
-
-$as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
-
-
-else
-
           if test "x$with_libsmbclient" != xcheck; then
             { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-libsmbclient was given, but test for libsmbclient failed
 See \`config.log' for more details" "$LINENO" 5; }
           fi
-
-fi
-
 
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for smbc_init in -lsmbclient" >&5
-$as_echo_n "checking for smbc_init in -lsmbclient... " >&6; }
-if ${ac_cv_lib_smbclient_smbc_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsmbclient  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char smbc_init ();
-int
-main ()
-{
-return smbc_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_smbclient_smbc_init=yes
-else
-  ac_cv_lib_smbclient_smbc_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_smbclient_smbc_init" >&5
-$as_echo "$ac_cv_lib_smbclient_smbc_init" >&6; }
-if test "x$ac_cv_lib_smbclient_smbc_init" = xyes; then :
-
-          LIBSMBCLIENT_LIBS="-lsmbclient"
-
-
-$as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
-
-
-else
-
           if test "x$with_libsmbclient" != xcheck; then
             { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-libsmbclient was given, but test for libsmbclient failed
 See \`config.log' for more details" "$LINENO" 5; }
           fi
-
-fi
-
 
 else
 	LIBSMBCLIENT_CFLAGS=$pkg_cv_LIBSMBCLIENT_CFLAGS
@@ -4088,6 +3992,9 @@ $as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
 
 
 fi
+
+fi
+
       ;;
   esac
 
