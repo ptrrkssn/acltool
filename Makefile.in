@@ -113,7 +113,8 @@ am_acltool_OBJECTS = acltool-gacl.$(OBJEXT) \
 	acltool-vfs.$(OBJEXT) acltool-smb.$(OBJEXT)
 acltool_OBJECTS = $(am_acltool_OBJECTS)
 am__DEPENDENCIES_1 =
-acltool_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+acltool_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 acltool_LINK = $(CCLD) $(acltool_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -233,9 +234,6 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
-LIBREADLINE = @LIBREADLINE@
-LIBREADLINE_CFLAGS = @LIBREADLINE_CFLAGS@
-LIBREADLINE_LIBS = @LIBREADLINE_LIBS@
 LIBS = @LIBS@
 LIBSMBCLIENT = @LIBSMBCLIENT@
 LIBSMBCLIENT_CFLAGS = @LIBSMBCLIENT_CFLAGS@
@@ -255,6 +253,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+READLINE = @READLINE@
+READLINE_CFLAGS = @READLINE_CFLAGS@
+READLINE_LIBS = @READLINE_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -302,8 +303,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 acltool_SOURCES = gacl.c gacl_impl.c error.c acltool.c argv.c buffer.c aclcmds.c basic.c commands.c misc.c opts.c strings.c range.c common.c cmd_edit.c vfs.c smb.c
-acltool_CFLAGS = $(LIBREADLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
-acltool_LDADD = $(LIBREADLINE_LIBS) $(LIBSMBCLIENT_LIBS)
+acltool_CFLAGS = $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+acltool_LDADD = $(READLINE_LIBS) $(READLINE) $(LIBSMBCLIENT_LIBS)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
