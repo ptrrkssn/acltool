@@ -3,9 +3,11 @@ AC_PREREQ([2.67])
 
 AC_CONFIG_AUX_DIR([aux])
 
-AM_INIT_AUTOMAKE
-AC_PROG_CC
+dnl Don't want all the cruft that comes with Automake. Yuk!
+dnl AM_INIT_AUTOMAKE
 
+AC_PROG_CC
+AC_PROG_INSTALL
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])

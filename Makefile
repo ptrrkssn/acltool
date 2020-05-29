@@ -1,36 +1,36 @@
 # Makefile for acltool
 
-VPATH = @srcdir@
-PREFIX = @prefix@
-EXEC_PREFIX = @exec_prefix@
-BINDIR = @bindir@
-mandir = @mandir@
+
+PREFIX = /usr/local
+EXEC_PREFIX = ${prefix}
+BINDIR = ${exec_prefix}/bin
+mandir = ${datarootdir}/man
 man1dir = $(mandir)/man1
-datadir = @datadir@
-datarootdir = @datarootdir@
+datadir = ${datarootdir}
+datarootdir = ${prefix}/share
 
-CC = @CC@
-CPP = @CPP@
+CC = gcc
+CPP = gcc -E
 
-PKG_CONFIG = @PKG_CONFIG@
-PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
-PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PKG_CONFIG = /usr/local/bin/pkg-config
+PKG_CONFIG_LIBDIR = 
+PKG_CONFIG_PATH = 
 
-LIBSMBCLIENT_CFLAGS = @LIBSMBCLIENT_CFLAGS@
-LIBSMBCLIENT_LIBS = @LIBSMBCLIENT_LIBS@
+LIBSMBCLIENT_CFLAGS = 
+LIBSMBCLIENT_LIBS = 
 
-READLINE_CFLAGS = @READLINE_CFLAGS@
-READLINE_LIBS = @READLINE_LIBS@
+READLINE_CFLAGS = 
+READLINE_LIBS = -lreadline -lncurses
 
-INSTALL=@INSTALL@
+INSTALL=/usr/bin/install -c
 
-PACKAGE=@PACKAGE_TARNAME@
-VERSION=@PACKAGE_VERSION@
+PACKAGE=acltool
+VERSION=1.14
 
-CPPFLAGS = @CPPFLAGS@ $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
-CFLAGS = -Wall @CFLAGS@ $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
-LDFLAGS = @LDFLAGS@
-LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
+CPPFLAGS =  $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+CFLAGS = -Wall -g -O2 $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+LDFLAGS = 
+LIBS =  $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
 TESTDIR=t
 
@@ -99,13 +99,14 @@ check-linux check-Linux:
 
 check-all: check-lac check-sac check-edac
 
-check-lac: auto
+check-lac: acltool
 	./acltool lac t
 
-check-sac: auto
+check-sac: acltool
 	./acltool sac -vp "user:nobody:rwx,user:$$USER:all" t
 
-check-edac: auto
+check-edac: acltool
 	./acltool edac -vp -e '/user:nobody:r.*/d' t
 
-distcheck: check
+distcheck:
+	@echo "Nothing to do"

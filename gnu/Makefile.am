@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = foreign
+
 bin_PROGRAMS = acltool
 
 man1_MANS = acltool.man
