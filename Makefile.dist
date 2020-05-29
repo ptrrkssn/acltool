@@ -1,6 +1,6 @@
 # Makefile.dist
 
-all:	acltool
+all:	distclean acltool
 
 acltool: Makefile
 	$(MAKE)
