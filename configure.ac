@@ -1,5 +1,5 @@
+AC_INIT([ACL Tool], [1.14], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
 AC_PREREQ([2.67])
-AC_INIT([ACL Tool], [1.13], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
 
 AC_CONFIG_AUX_DIR([aux])
 
@@ -20,18 +20,17 @@ READLINE=
 AS_IF([test "x$with_readline" != xno], [
   case "x$with_readline" in
     /*)
-      AC_SUBST([READLINE_CFLAGS], [-I${with_readline}/include])
-      AC_SUBST([READLINE], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
-      AC_DEFINE([HAVE_LIBREADLINE], [1])
+      AC_SUBST([READLINE_CFLAGS], ["-I${with_readline}/include"])
+      AC_SUBST([READLINE_LIBS], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
+      AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
       ;;
     *)
       PKG_CHECK_MODULES([READLINE], [readline], [
-        echo "PKG-CONFIG found LIBREADLINE"
-        AC_DEFINE([HAVE_LIBREADLINE], [1])
+        AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
+	echo "READLINE found via pkg-config"
       ], [			       
         AC_CHECK_LIB([readline], [readline], [
-	  echo "AC-CHECK-LIB found READLINE"
-          AC_SUBST([READLINE], ["-lreadline -lncurses"])
+          AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
           AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
         ], [
           if test "x$with_readline" != xcheck; then
@@ -55,25 +54,16 @@ LIBSMBCLIENT=
 AS_IF([test "x$with_libsmbclient" != xno], [
   case "$with_libsmbclient" in
     /*)
-      echo "Testing LIB=${with_libsmbclient}/lib"
-      
-      CFLAGS="-I${with_libsmbclient}/include ${CFLAGS}"
-      LDFLAGS="-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient ${LIBS}"
-
-      AC_CHECK_LIB([smbclient], [smbc_init], [
-        AC_SUBST([LIBSMBCLIENT_CFLAGS], ["-I${with_libsmbclient}/include"])
-        AC_SUBST([LIBSMBCLIENT_LIBS], ["-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"])
-        AC_SUBST([LIBSMBCLIENT], ["-lsmbclient"])
-        AC_DEFINE([HAVE_LIBSMBCLIENT], [1])
-	echo "OK"
-      ])
+      AC_SUBST([LIBSMBCLIENT_CFLAGS], ["-I${with_libsmbclient}/include"])
+      AC_SUBST([LIBSMBCLIENT_LIBS], ["-L${with_libsmbclient}/lib -R${with_libsmbclient}/lib -lsmbclient"])
+      AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
       ;;
     *)
       PKG_CHECK_MODULES([LIBSMBCLIENT], [libsmbclient], [
-        AC_DEFINE([HAVE_LIBSMBCLIENT], [1])
+        AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
       ], [
         AC_CHECK_LIB([smbclient], [smbc_init], [
-          AC_SUBST([LIBSMBCLIENT], ["-lsmbclient"])
+          AC_SUBST([LIBSMBCLIENT_LIBS], ["-lsmbclient"])
           AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
         ], [
           if test "x$with_libsmbclient" != xcheck; then

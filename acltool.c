@@ -633,6 +633,10 @@ main(int argc,
     while ((buf = readline(rc > 0 ? "! " : (rc < 0 ? "? " : "> "))) != NULL) {
       char *bp, *cp;
 
+    if (error_argv0)
+      free(error_argv0);
+    error_argv0 = s_dup(argv0);
+    
 #if defined(HAVE_LIBREADLINE)
       add_history(buf);
 #endif
