@@ -1,10 +1,12 @@
 # Makefile for acltool
 
 PREFIX=/usr/local
-DEST=$(PREFIX)
-DESTBIN=$(DEST)/bin
+VERSION=1.13
 
 BINS=acltool
+
+DEST=$(PREFIX)
+DESTBIN=$(DEST)/bin
 
 # Change this to point to the libsmbclient (Samba) files if you want SMB support
 SMBDIR=/usr/local/samba
@@ -22,7 +24,7 @@ ALIASES=lac sac edac
 SOLCC=gcc
 
 # CC=gcc
-CFLAGS=-O -g -Wall
+CFLAGS=-O -g -Wall -DVERSION=$(VERSION)
 LDFLAGS=-lreadline
 
 OBJS=gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o

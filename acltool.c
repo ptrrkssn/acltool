@@ -50,13 +50,19 @@
 
 #include "acltool.h"
 
+#ifndef VERSION
+#define VERSION 0
+#endif
+
+#define STRINGIFY(foo) #foo
+#define MAKEVER(foo) STRINGIFY(foo)
 
 #if ENABLE_SMB
 #include "smb.h"
 #endif
 
 char *argv0 = "acltool";
-char *version = "1.12.4";
+char *version = MAKEVER(VERSION);
 
 COMMANDS commands = { 0 };
 
