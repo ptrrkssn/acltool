@@ -31,10 +31,13 @@ AS_IF([test "x$with_readline" != xno], [
       fi
       ;;
     *)
-      AC_CHECK_LIB([readline], [readline], [
+      AC_CHECK_HEADERS([readline/readline.h])
+      AC_CHECK_LIB([readline], [readline], [ 
         AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
-        AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
-      ], [
+      ], [], -lncurses)
+      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline.h" = xyes; then 
+	AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
+      else
         PKG_CHECK_MODULES([READLINE], [readline], [
 	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
           readline_incdir="`pkg-config --variable=includedir readline`"
@@ -46,7 +49,7 @@ AS_IF([test "x$with_readline" != xno], [
             AC_MSG_FAILURE([--with-readline was given, but test for readline failed])
           fi
         ])
-      ], -lncurses)
+      fi
       ;;
   esac
 ])
@@ -72,6 +75,7 @@ AS_IF([test "x$with_libsmbclient" != xno], [
       fi
       ;;
     *)
+      AC_CHECK_HEADERS([libsmbclient.h])
       AC_CHECK_LIB([smbclient], [smbc_init], [
         AC_SUBST([LIBSMBCLIENT_LIBS], ["-lsmbclient"])
         AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
