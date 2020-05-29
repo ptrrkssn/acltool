@@ -4562,11 +4562,13 @@ if test "x$ac_cv_lib_smbclient_smbc_init" = xyes; then :
         LIBSMBCLIENT_LIBS="-lsmbclient"
 
 
+fi
+
+      if test "x$ac_cv_lib_libsmbclient_smbc_init" = xyes -a "x$ac_cv_header_libsmbclient.h" = xyes; then
+
 $as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
 
-
-else
-
+      else
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBSMBCLIENT" >&5
@@ -4656,9 +4658,7 @@ $as_echo "#define HAVE_LIBSMBCLIENT 1" >>confdefs.h
 
 
 fi
-
-fi
-
+      fi
       ;;
   esac
 

@@ -78,8 +78,10 @@ AS_IF([test "x$with_libsmbclient" != xno], [
       AC_CHECK_HEADERS([libsmbclient.h])
       AC_CHECK_LIB([smbclient], [smbc_init], [
         AC_SUBST([LIBSMBCLIENT_LIBS], ["-lsmbclient"])
+      ], [])
+      if test "x$ac_cv_lib_libsmbclient_smbc_init" = xyes -a "x$ac_cv_header_libsmbclient.h" = xyes; then 
         AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
-      ], [
+      else
         PKG_CHECK_MODULES([LIBSMBCLIENT], [libsmbclient], [
           AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
         ], [
@@ -87,7 +89,7 @@ AS_IF([test "x$with_libsmbclient" != xno], [
             AC_MSG_FAILURE([--with-libsmbclient was given, but test for libsmbclient failed])
           fi
         ])
-      ])
+      fi
       ;;
   esac
 ])
