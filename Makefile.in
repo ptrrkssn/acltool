@@ -99,15 +99,27 @@ pull:
 # Install targets
 install-all: install install-man install-aliases
 
-install:  $(PROGRAMS)
-	$(INSTALL) -m755 acltool $(BINDIR)
+install:  install-bin install-aliases install-man
+
+install-bin: $(PROGRAMS)
+	$(INSTALL) -m 755 -d $(BINDIR)
+	$(INSTALL) -m 755 acltool $(BINDIR)
 
 install-man:  acltool.man
-	$(INSTALL) -m644 acltool.man $(MAN1DIR)/acltool.1
+	$(INSTALL) -m 755 -d $(MAN1DIR)
+	$(INSTALL) -m 644 acltool.man $(MAN1DIR)/acltool.1
+	gzip -f $(MAN1DIR)/acltool.1
 
-install-aliases: acltool
+install-aliases: install-bin
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool $(BINDIR)/$$A; done
 
+uninstall:
+	for F in acltool sac lac edac; do \
+		if test -f "$(BINDIR)/$$F"; then rm "$(BINDIR)/$$F"; fi; \
+	done
+	for F in acltool.1 acltool.1.gz; do \
+		if test -f "$(MAN1DIR)/$$F"; then rm "$(MAN1DIR)/$$F"; fi; \
+	done
 
 # Check targets
 check:
