@@ -20,9 +20,16 @@ config.h.in:
 # FreeBSD Ports stuff
 PORTSDIR=/usr/ports/sysutils/acltool
 
-install-port:
-	mkdir -p $(PORTSDIR) && cp port/* $(PORTSDIR) && \
+install-port: port/Makefile port/pkg-descr
+	mkdir -p $(PORTSDIR) && cp port/Makefile port/pkg-descr $(PORTSDIR) && \
 	      (cd $(PORTSDIR) && make distclean && make makesum && portlint -AC)
+
+
+# Linux (Redhat/CentOS stuff)
+SPECSDIR=/root/rpmbuild/SPECS
+
+build-rpm: rpm/acltool.spec
+	mkdir -p $(SPECSDIR) && cp rpm/acltool.spec $(SPECSDIR) && (cd $(SPECSDIR) && rpmbuild -ba acltool.spec)
 
 
 distclean: clean

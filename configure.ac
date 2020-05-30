@@ -4,7 +4,7 @@ AC_INIT([ACL Tool], [1.15], [pen@lysator.liu.se], [acltool], [https://github.com
 
 AC_CONFIG_SRCDIR([common.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile rpm/acltool.spec port/Makefile])
 
 AC_CONFIG_AUX_DIR([aux])
 
