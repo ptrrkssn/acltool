@@ -88,6 +88,7 @@ clean:
 	-rm -f *~ *.o \#* core *.core acltool */*~
 
 
+# Git targets
 push: 	distclean
 	git add -A && git commit -a && git push
 
@@ -95,13 +96,20 @@ pull:
 	git pull
 
 
-install: $(PROGRAMS) install-aliases
+# Install targets
+install-all: install install-man install-aliases
+
+install:  $(PROGRAMS)
 	$(INSTALL) -m755 acltool $(BINDIR)
+
+install-man:  acltool.man
+	$(INSTALL) -m644 acltool.man $(MAN1DIR)/acltool.1
 
 install-aliases: acltool
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool $(BINDIR)/$$A; done
 
 
+# Check targets
 check:
 	@mkdir -p $(TESTDIR) && $(MAKE) check-`uname -s`
 
