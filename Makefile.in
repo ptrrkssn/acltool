@@ -42,19 +42,20 @@ ACLTOOL_OBJS=gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basi
 all: $(PROGRAMS)
 
 
-acltool.h:	vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h error.h nfs4.h
-acltool.o: 	acltool.c acltool.h
-argv.o: 	argv.c argv.h acltool.h
-opts.o: 	opts.c opts.h acltool.h
-buffer.o: 	buffer.c buffer.h acltool.h
-misc.o:		misc.c misc.h acltool.h
-strings.o:	strings.c strings.h acltool.h
-commands.o:	commands.c commands.h acltool.h
-basic.o:	basic.c basic.h acltool.h
-aclcmds.o:	aclcmds.c aclcmds.h acltool.h
-error.o:	error.c error.h
-gacl.o:		gacl.c gacl.h
-gacl_impl.o:	gacl_impl.c gacl_impl.h
+acltool.h:	config.h vfs.h gacl.h argv.h commands.h aclcmds.h basic.h strings.h misc.h opts.h common.h smb.h error.h nfs4.h Makefile
+
+acltool.o: 	acltool.c acltool.h Makefile
+argv.o: 	argv.c argv.h acltool.h Makefile
+opts.o: 	opts.c opts.h acltool.h Makefile
+buffer.o: 	buffer.c buffer.h acltool.h Makefile
+misc.o:		misc.c misc.h acltool.h Makefile
+strings.o:	strings.c strings.h acltool.h Makefile
+commands.o:	commands.c commands.h acltool.h Makefile
+basic.o:	basic.c basic.h acltool.h Makefile
+aclcmds.o:	aclcmds.c aclcmds.h acltool.h Makefile
+error.o:	error.c error.h Makefile
+gacl.o:		gacl.c gacl.h Makefile
+gacl_impl.o:	gacl_impl.c gacl_impl.h Makefile
 
 
 acltool: $(ACLTOOL_OBJS)
