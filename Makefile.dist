@@ -16,6 +16,15 @@ configure:
 config.h.in:
 	autoheader
 
+
+# FreeBSD Ports stuff
+PORTSDIR=/usr/ports/sysutils/acltool
+
+install-port:
+	mkdir -p $(PORTSDIR) && cp port/* $(PORTSDIR) && \
+	      (cd $(PORTSDIR) && make distclean && make makesum && portlint -AC)
+
+
 distclean: clean
 	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
 
