@@ -6,9 +6,10 @@
 
 VPATH = @srcdir@
 PREFIX = @prefix@
-BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/man
-MAN1DIR = $(MANDIR)/man1
+BINDIR = @exec_prefix@
+MANDIR = @mandir@
+MAN1DIR = ${mandir}/man1
+DATAROOTDIR = @datarootdir@
 
 CC = @CC@
 CPP = @CPP@
