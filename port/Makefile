@@ -3,7 +3,6 @@
 PORTNAME=	acltool
 DISTVERSIONPREFIX=v
 DISTVERSION=	1.15
-DISTVERSIONSUFFIX=-alpha
 CATEGORIES=	sysutils security
 
 MAINTAINER=	pen@lysator.liu.se
