@@ -1,4 +1,8 @@
-# Makefile for acltool, to be processed by './configure'
+# Makefile.in for acltool
+#
+# This file needs to be processed by './configure' in order to
+# create the real Makefile used to build this project
+#
 
 VPATH = @srcdir@
 PREFIX = @prefix@
@@ -62,7 +66,7 @@ acltool: $(ACLTOOL_OBJS)
 	$(CC) $(LDFLAGS) -o acltool $(ACLTOOL_OBJS) $(LIBS)
 
 distclean: clean
-	rm -fr config.status config.log .deps autom4te.cache Makefile config.h
+	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
 
 clean:
 	-rm -f *~ *.o \#* core *.core acltool */*~

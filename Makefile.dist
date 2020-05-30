@@ -1,0 +1,28 @@
+# Makefile.dist
+#
+# Simplified Makefile that (re)creates the real Makefile as needed
+
+all:	acltool
+
+acltool:  Makefile
+	  $(MAKE)
+
+Makefile: configure Makefile.in
+	  ./configure
+
+configure: 
+	   autoconf
+
+distclean: clean
+	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
+
+clean:
+	-rm -f *~ *.o \#* core *.core acltool */*~
+
+
+push: 	distclean
+	git add -A && git commit -a && git push
+
+pull:
+	git pull
+
