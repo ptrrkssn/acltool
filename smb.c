@@ -580,13 +580,14 @@ smb_acl_get_file(const char *path) {
 
     if (strcmp(s_user, SMB_TAG_TYPE_EVERYONE_TEXT) == 0) {
       e_type = GACL_TAG_TYPE_EVERYONE;
-      e_name = s_dup(GACL_TAG_TYPE_EVERYONE_TEXT);
+      e_name = GACL_TAG_TYPE_EVERYONE_TEXT;
     }
     else {
-      e_name = s_dup(s_user);
       int rc_uid, rc_gid;
       uid_t uid = -1;
       gid_t gid = -1;
+      
+      e_name = s_user;
       
       rc_uid = _smb_name_to_uid(s_user, &uid);
       rc_gid = _smb_name_to_gid(s_user, &gid);
@@ -617,7 +618,7 @@ smb_acl_get_file(const char *path) {
 
     ep->tag.type = e_type;
     ep->tag.ugid = e_ugid;
-    ep->tag.name = e_name;
+    strncpy(ep->tag.name, e_name, sizeof(ep->tag.name));
     
     switch (type) {
     case SMB_ACL_TYPE_ALLOW:
