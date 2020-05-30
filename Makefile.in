@@ -6,6 +6,10 @@
 # @configure_input@
 #
 
+# Some 'make' variants does not include CPPFLAGS when compiling, some do
+.c.o:
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
 @SET_MAKE@
 
 srcdir = @srcdir@
@@ -20,6 +24,7 @@ datarootdir = @datarootdir@
 BINDIR = @bindir@
 MANDIR = @mandir@
 MAN1DIR = ${MANDIR}/man1
+
 
 CC = @CC@
 CPP = @CPP@
@@ -39,8 +44,8 @@ INSTALL=@INSTALL@
 PACKAGE=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
 
-CPPFLAGS = @CPPFLAGS@ $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
-CFLAGS = -Wall @CFLAGS@ $(CPPFLAGS)
+CPPFLAGS = @CPPFLAGS@ -I. -I$(srcdir) $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+CFLAGS = @CFLAGS@ -Wall
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
