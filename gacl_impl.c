@@ -296,27 +296,35 @@ _gacl_init_from_nfs4(const char *buf,
 
     if (s_flags & NFS4_ACE_IDENTIFIER_GROUP) {
       if (strncmp(cp, "GROUP@", idlen) == 0) {
-	ep->tag.name = s_dup("group@");
+	strncpy(ep->tag.name, "group@", sizeof(ep->tag.name));
 	ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
 	ep->tag.ugid = -1;
       } else {
 	ep->tag.ugid = -1;
-	ep->tag.name = s_ndup(cp, idlen);
+	if (idlen >= sizeof(ep->tag.name)) {
+	  errno = EINVAL;
+	  return NULL;
+	}
+	strncpy(ep->tag.name, cp, idlen);
 	(void) _nfs4_id_to_gid(ep->tag.name, &ep->tag.ugid);
 	ep->tag.type = GACL_TAG_TYPE_GROUP;
       }
     } else {
       if (strncmp(cp, "OWNER@", idlen) == 0) {
-	ep->tag.name = s_dup("owner@");
+	strncpy(ep->tag.name, "owner@", sizeof(ep->tag.name));
 	ep->tag.type = GACL_TAG_TYPE_USER_OBJ;
 	ep->tag.ugid = -1;
       } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
-	ep->tag.name = s_dup("everyone@");
+	strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name));
 	ep->tag.type = GACL_TAG_TYPE_EVERYONE;
 	ep->tag.ugid = -1;
       } else {
 	ep->tag.ugid = -1;
-	ep->tag.name = s_ndup(cp, idlen);
+	if (idlen >= sizeof(ep->tag.name)) {
+	  errno = EINVAL;
+	  return NULL;
+	}
+	strncpy(ep->tag.name, cp, idlen);
 	ep->tag.type = GACL_TAG_TYPE_USER;
 	(void) _nfs4_id_to_uid(ep->tag.name, &ep->tag.ugid);
       }
