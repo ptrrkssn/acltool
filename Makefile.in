@@ -15,6 +15,7 @@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
+DESTDIR =
 PREFIX = @prefix@
 
 prefix = ${PREFIX}
@@ -115,23 +116,23 @@ install-all: install install-man install-aliases
 install:  install-bin install-aliases install-man
 
 install-bin: $(PROGRAMS)
-	$(INSTALL) -m 755 -d $(BINDIR)
-	$(INSTALL) -m 755 acltool $(BINDIR)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 acltool $(DESTDIR)$(BINDIR)
 
 install-man:  acltool.man
-	$(INSTALL) -m 755 -d $(MAN1DIR)
-	$(INSTALL) -m 644 acltool.man $(MAN1DIR)/acltool.1
-	if testgzip -f $(MAN1DIR)/acltool.1
+	$(INSTALL) -m 755 -d "$(DESTDIR)$(MAN1DIR)"
+	$(INSTALL) -m 644 acltool.man "$(DESTDIR)$(MAN1DIR)/acltool.1"
+	if test -f /usr/share/man/man1/cat.1.gz; then gzip -f "$(DESTDIR)$(MAN1DIR)/acltool.1"; fi
 
 install-aliases: install-bin
-	for A in $(ACLTOOL_ALIASES); do ln -sf acltool $(BINDIR)/$$A; done
+	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
 
 uninstall:
 	for F in acltool sac lac edac; do \
-		if test -f "$(BINDIR)/$$F"; then rm "$(BINDIR)/$$F"; fi; \
+		if test -f "$(DESTDIR)$(BINDIR)/$$F"; then rm "$(DESTDIR)$(BINDIR)/$$F"; fi; \
 	done
 	for F in acltool.1 acltool.1.gz; do \
-		if test -f "$(MAN1DIR)/$$F"; then rm "$(MAN1DIR)/$$F"; fi; \
+		if test -f "$(DESTDIR)$(MAN1DIR)/$$F"; then rm "$(DESTDIR)$(MAN1DIR)/$$F"; fi; \
 	done
 
 # Check targets
