@@ -5,13 +5,16 @@
 all:	acltool
 
 acltool:  Makefile
-	  $(MAKE)
+	$(MAKE)
 
-Makefile: configure Makefile.in
-	  ./configure
+Makefile: Makefile.in configure config.h.in
+	./configure
 
 configure: 
-	   autoconf
+	autoconf
+
+config.h.in:
+	autoheader
 
 distclean: clean
 	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h

@@ -81,11 +81,24 @@ gacl_impl.o:	gacl_impl.c gacl_impl.h Makefile
 acltool: $(ACLTOOL_OBJS)
 	$(CC) $(LDFLAGS) -o acltool $(ACLTOOL_OBJS) $(LIBS)
 
+
+# Clean targets
+maintainer-clean: distclean
+	@echo 'This command is intended for maintainers to use; it'
+	@echo 'deletes files that may need special tools to rebuild.'
+	@echo ''
+	@echo 'Deleting in 3 seconds...'
+	@sleep 3
+	echo rm -f configure config.h.in
+
 distclean: clean
 	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
 
-clean:
+clean:	mostlyclean
+
+mostlyclean:
 	-rm -f *~ *.o \#* core *.core acltool */*~
+
 
 
 # Git targets
@@ -108,7 +121,7 @@ install-bin: $(PROGRAMS)
 install-man:  acltool.man
 	$(INSTALL) -m 755 -d $(MAN1DIR)
 	$(INSTALL) -m 644 acltool.man $(MAN1DIR)/acltool.1
-	gzip -f $(MAN1DIR)/acltool.1
+	if testgzip -f $(MAN1DIR)/acltool.1
 
 install-aliases: install-bin
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool $(BINDIR)/$$A; done
