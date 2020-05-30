@@ -1264,7 +1264,6 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
   macos_acl_flagset_t ofs;
   struct passwd *pp;
   struct group *gp;
-  char buf[256];
 
   
   if (acl_get_tag_type(oep, &at) < 0)
@@ -1287,7 +1286,7 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
       nep->tag.type = GACL_TAG_TYPE_USER;
       pp = getpwuid(nep->tag.ugid);
       if (pp)
-	strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name))
+	strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name));
       else
 	snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
       break;

@@ -1000,9 +1000,6 @@ _gacl_set_tag(GACL_ENTRY *ep,
   ep->tag.type = etp->type;
   ep->tag.ugid = etp->ugid;
 
-  if (ep->tag.name)
-    free(ep->tag.name);
-  
   strncpy(ep->tag.name, etp->name, sizeof(ep->tag.name));
   return 0;
 }
