@@ -1,3 +1,4 @@
+
 AC_PREREQ([2.69])
 AC_INIT([ACL Tool], [1.15], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
 
@@ -11,6 +12,7 @@ AC_PROG_CC
 AC_PROG_LN_S
 AC_PROG_CPP
 AC_PROG_INSTALL
+AC_PROG_MAKE_SET
 
 dnl AC_USE_SYSTEM_EXTENSIONS
 

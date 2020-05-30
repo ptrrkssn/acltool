@@ -3,13 +3,23 @@
 # This file needs to be processed by './configure' in order to
 # create the real Makefile used to build this project
 #
+# @configure_input@
+#
 
+@SET_MAKE@
+
+srcdir = @srcdir@
 VPATH = @srcdir@
+
 PREFIX = @prefix@
-BINDIR = @exec_prefix@
+
+prefix = ${PREFIX}
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+
+BINDIR = @bindir@
 MANDIR = @mandir@
-MAN1DIR = ${mandir}/man1
-DATAROOTDIR = @datarootdir@
+MAN1DIR = ${MANDIR}/man1
 
 CC = @CC@
 CPP = @CPP@
