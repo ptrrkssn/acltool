@@ -618,35 +618,29 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
     return -1;
 
   case GACL_TAG_TYPE_USER_OBJ:
-    nep->tag.name = s_dup("owner@");
+    strncpy(nep->tag.name, "owner@", sizeof(nep->tag.name));
     break;
   case GACL_TAG_TYPE_GROUP_OBJ:
-    nep->tag.name = s_dup("group@");
+    strncpy(nep->tag.name, "group@", sizeof(nep->tag.name));
     break;
   case GACL_TAG_TYPE_EVERYONE:
-    nep->tag.name = s_dup("everyone@");
+    strncpy(nep->tag.name, "everyone@", sizeof(nep->tag.name));
     break;
     
   case GACL_TAG_TYPE_USER:
     pp = getpwuid(nep->tag.ugid);
     if (pp)
-      nep->tag.name = s_dup(pp->pw_name);
-    else {
-      char buf[256];
-      snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
-      nep->tag.name = s_dup(buf);
-    }
+      strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name)-1);
+    else
+      snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
     break;
     
   case GACL_TAG_TYPE_GROUP:
     gp = getgrgid(nep->tag.ugid);
     if (gp)
-      nep->tag.name = s_dup(gp->gr_name);
-    else {
-      char buf[256];
-      snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
-      nep->tag.name = s_dup(buf);
-    }
+      strncpy(nep->tag.name, gp->gr_name, sizeof(nep->tag.name)-1);
+    else
+      snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
     break;
   }
 
@@ -958,20 +952,20 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
   switch (ap->a_flags & (ACE_OWNER|ACE_GROUP|ACE_EVERYONE)) {
   case ACE_OWNER:
     ep->tag.type = GACL_TAG_TYPE_USER_OBJ;
-    ep->tag.name = s_dup("owner@");
     ep->tag.ugid = -1;
+    strncpy(ep->tag.name, "owner@", sizeof(ep->tag.name));
     break;
 
   case ACE_GROUP:
     ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
-    ep->tag.name = s_dup("group@");
     ep->tag.ugid = -1;
+    strncpy(ep->tag.name, "group@", sizeof(ep->tag.name))
     break;
 
   case ACE_EVERYONE:
     ep->tag.type = GACL_TAG_TYPE_EVERYONE;
-    ep->tag.name = s_dup("everyone@");
     ep->tag.ugid = -1;
+    strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name))
     break;
 
   default:
@@ -980,25 +974,17 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
       ep->tag.ugid = ap->a_who;
       gp = getgrgid(ap->a_who);
       if (gp)
-	ep->tag.name = s_dup(gp->gr_name);
-      else {
-	char buf[256];
-	
-	snprintf(buf, sizeof(buf), "%d", ap->a_who);
-	ep->tag.name = s_dup(buf);
-      }
+	strncpy(ep->tag.name, gp->gr_name, sizeof(ep->tag.name));
+      else
+	snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
     } else {
       ep->tag.type = GACL_TAG_TYPE_USER;
       ep->tag.ugid = ap->a_who;
       pp = getpwuid(ap->a_who);
       if (pp)
-	ep->tag.name = s_dup(pp->pw_name);
-      else {
-	char buf[256];
-	
-	snprintf(buf, sizeof(buf), "%d", ap->a_who);
-	ep->tag.name = s_dup(buf);
-      }
+	strncpy(ep->tag.name, pp->pw_name, sizeof(ep->tag.name))
+      else
+	snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
     }
   }
 
@@ -1293,22 +1279,18 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
       nep->tag.type = GACL_TAG_TYPE_USER;
       pp = getpwuid(nep->tag.ugid);
       if (pp)
-	nep->tag.name = s_dup(pp->pw_name);
-      else {
-	snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
-	nep->tag.name = s_dup(buf);
-      }
+	strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name))
+      else
+	snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
       break;
       
     case ID_TYPE_GID:
       nep->tag.type = GACL_TAG_TYPE_GROUP;
       gp = getgrgid(nep->tag.ugid);
       if (gp)
-	nep->tag.name = s_dup(gp->gr_name);
-      else {
-	snprintf(buf, sizeof(buf), "%d", nep->tag.ugid);
-	nep->tag.name = s_dup(buf);
-      }
+	strncpy(nep->tag.name, gp->gr_name, sizeof(nep->tag.name));
+      else
+	snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
       break;
 
     default:

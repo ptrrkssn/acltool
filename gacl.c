@@ -1003,7 +1003,7 @@ _gacl_set_tag(GACL_ENTRY *ep,
   if (ep->tag.name)
     free(ep->tag.name);
   
-  ep->tag.name = s_dup(etp->name);
+  strncpy(ep->tag.name, etp->name, sizeof(ep->tag.name));
   return 0;
 }
 
@@ -1022,7 +1022,8 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
   struct group *gp;
   char *np, *cp = *bufp;
   GACL_TAG *etp = &ep->tag;
-
+  size_t len;
+  
   
   if (strncmp(cp, "user:", 5) == 0 || strncmp(cp, "u:", 2) == 0) {
     etp->type = GACL_TAG_TYPE_USER;
@@ -1038,10 +1039,10 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       
       pp = getpwuid(etp->ugid);
       if (pp)
-	etp->name = s_dup(pp->pw_name);
+	strncpy(etp->name, pp->pw_name, sizeof(etp->name));
       else {
 	if (flags & GACL_TEXT_RELAXED)
-	  etp->name = s_ndup(cp, np-cp);
+	  snprintf(etp->name, sizeof(etp->name), "user:%d", etp->ugid);
 	else {
 	  errno = EINVAL;
 	  return -1;
@@ -1049,8 +1050,14 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       }
       
     } else {
+      len = np-cp;
       
-      etp->name = s_ndup(cp, np-cp);
+      if (len >= sizeof(etp->name)) {
+	errno = EINVAL;
+	return -1;
+      }
+	
+      strncpy(etp->name, cp, len);
       if ((pp = getpwnam(etp->name)) != NULL)
 	etp->ugid = pp->pw_uid;
       else {
@@ -1085,10 +1092,10 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       
       gp = getgrgid(etp->ugid);
       if (gp)
-	etp->name = s_dup(gp->gr_name);
+	strncpy(etp->name, gp->gr_name, sizeof(etp->name));
       else {
 	if (flags & GACL_TEXT_RELAXED)	
-	  etp->name = s_ndup(cp, np-cp);
+	  snprintf(etp->name, sizeof(etp->name), "group:%d", etp->ugid);
 	else {
 	  errno = EINVAL;
 	  return -1;
@@ -1096,7 +1103,14 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       }
       
     } else {
-      etp->name = s_ndup(cp, np-cp);
+      len = np-cp;
+
+      if (len >= sizeof(etp->name)) {
+	errno = EINVAL;
+	return -1;
+      }
+      
+      strncpy(etp->name, cp, len);
       if ((gp = getgrnam(etp->name)) != NULL)
 	etp->ugid = gp->gr_gid;
       else {
@@ -1124,12 +1138,14 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     errno = EINVAL;
     return -1;
   }
-		
-  etp->name = s_ndup(cp, np-cp);
-  if (!etp->name) {
+
+  len = np-cp;
+  if (len >= sizeof(etp->name)) {
     errno = EINVAL;
     return -1;
   }
+		
+  strncpy(etp->name, cp, len);
 
   if (np)
     ++np;
@@ -2058,9 +2074,13 @@ gacl_from_text(const char *buf) {
       goto Fail;
   }
 
+  free(tbuf);
   return ap;
 
  Fail:
+  if (tbuf)
+    free(tbuf);
+  
   gacl_free(ap);
   errno = EINVAL;
   return NULL;

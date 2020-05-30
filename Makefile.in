@@ -159,4 +159,15 @@ check-sac: acltool
 check-edac: acltool
 	./acltool edac -vp -e '/user:nobody:r.*/d' t
 
+check-valgrind: check-valgrind-lac check-valgrind-edac check-valgrind-sac
+
+check-valgrind-lac:
+	valgrind --leak-check=full --track-origins=yes ./acltool lac t
+
+check-valgrind-edac:
+	valgrind --leak-check=full --track-origins=yes ./acltool edac "user:$$USER:all" t
+
+check-valgrind-sac:
+	valgrind --leak-check=full --track-origins=yes ./acltool sac owner@:all t
+
 distcheck: check

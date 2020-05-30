@@ -359,6 +359,7 @@ acecr_from_simple_text(ACECR **head,
     cur->filter.ep = malloc(sizeof(*(cur->filter.ep)));
     if (!cur->filter.ep)
       goto Fail;
+    memset(cur->filter.ep, 0, sizeof(*(cur->filter.ep)));
     
     if (_gacl_entry_from_text(es, cur->filter.ep, GACL_TEXT_RELAXED) < 0)
       goto Fail;
@@ -412,7 +413,9 @@ acecr_from_simple_text(ACECR **head,
     *next = cur;
     next = &cur->next;
   }
-  
+
+  if (tbuf)
+    free(tbuf);
   return 0;
 
  Fail:
@@ -471,13 +474,22 @@ ace_match(gacl_entry_t oae,
   oip = gacl_get_qualifier(oae);
   
 
-  if ((ott == GACL_TAG_TYPE_USER || ott == GACL_TAG_TYPE_GROUP) && (!oip || !mip || *oip != *mip))
+  if ((ott == GACL_TAG_TYPE_USER || ott == GACL_TAG_TYPE_GROUP) && (!oip || !mip || *oip != *mip)) {
+    if (mip)
+      gacl_free(mip);
+    if (oip)
+      gacl_free(oip);
     return 0;
+  }
 
+  if (mip)
+    gacl_free(mip);
+  if (oip)
+    gacl_free(oip);
+  
   /* Check the ACE type set */
-  if (met != oet)
+    if (met != oet)
       return 0;
-
 
   if (gacl_get_permset(mae, &mps) < 0 ||
       gacl_get_flagset_np(mae, &mfs) < 0)
@@ -531,9 +543,9 @@ cmd_edit_ace(gacl_entry_t oae,
   /* New ACE */
   gacl_tag_t ntt;
   gacl_entry_type_t net;
-  uid_t *nip;
   gacl_permset_t nps;
   gacl_flagset_t nfs;
+  uid_t *nip = NULL;
 
   
   /* Get old ACE */
@@ -551,7 +563,7 @@ cmd_edit_ace(gacl_entry_t oae,
   
   if (gacl_get_permset(nae, &nps) < 0 ||
       gacl_get_flagset_np(nae, &nfs) < 0)
-    return -1;
+    goto Fail;
 
   /* Update the tag type */
   if (gacl_set_tag_type(oae, ntt) < 0)
@@ -570,9 +582,12 @@ cmd_edit_ace(gacl_entry_t oae,
   if (gacl_set_entry_type_np(oae, net) < 0)
     goto Fail;
 
+  free(nip);
   return 1;
 
  Fail:
+  if (nip)
+    gacl_free(nip);
   return -1;
 }
 

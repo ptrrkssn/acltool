@@ -76,7 +76,7 @@ typedef enum gacl_tag_type {
 typedef struct gacl_entry_tag {
   GACL_TAG_TYPE type;
   uid_t ugid;
-  char *name;
+  char name[256];
 } GACL_TAG;
 
 
