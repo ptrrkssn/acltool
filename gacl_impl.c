@@ -967,13 +967,13 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
   case ACE_GROUP:
     ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
     ep->tag.ugid = -1;
-    strncpy(ep->tag.name, "group@", sizeof(ep->tag.name))
+    strncpy(ep->tag.name, "group@", sizeof(ep->tag.name));
     break;
 
   case ACE_EVERYONE:
     ep->tag.type = GACL_TAG_TYPE_EVERYONE;
     ep->tag.ugid = -1;
-    strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name))
+    strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name));
     break;
 
   default:
@@ -990,7 +990,7 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
       ep->tag.ugid = ap->a_who;
       pp = getpwuid(ap->a_who);
       if (pp)
-	strncpy(ep->tag.name, pp->pw_name, sizeof(ep->tag.name))
+	strncpy(ep->tag.name, pp->pw_name, sizeof(ep->tag.name));
       else
 	snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
     }
