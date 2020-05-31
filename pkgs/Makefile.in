@@ -1,0 +1,29 @@
+# Makefile for acltool packages
+
+@SET_MAKE@
+
+SUBDIRS=port rpm svr ips
+
+
+all:
+	@echo "Valid targets: 'distclean', 'clean', 'push' or 'pull'"
+	@echo "(Go to the right sub directory for your Unix to build packages)"
+	@echo 1
+
+
+distclean:
+	@for D in $(SUBDIRS); do echo $$D; (cd $$D && $(MAKE) distclean); done
+	-rm -f Makefile
+
+clean:
+	rm -f *~ \#* core
+	@for D in $(SUBDIRS); do echo $$D; (cd $$D && $(MAKE) clean); done
+
+
+
+push: 	distclean
+	git add -A && git commit -a && git push
+
+pull:
+	git pull
+

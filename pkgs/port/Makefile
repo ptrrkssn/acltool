@@ -1,33 +1,35 @@
-# $FreeBSD$
+# pkgs/port/Makefile
+#
+# Make stuff for FreeBSD Ports
 
-PORTNAME=	acltool
-DISTVERSIONPREFIX=v
-DISTVERSION=	1.15
-CATEGORIES=	sysutils security
+PORTSDIR=/usr/ports/sysutils/acltool
 
-MAINTAINER=	pen@lysator.liu.se
-COMMENT=	ACL manipulation utility
+all:
+	@exit 1
 
-LICENSE=	BSD3CLAUSE
-LICENSE_FILE=	${WRKSRC}/LICENSE
+install:	$(PORTSDIR)/Makefile $(PORTSDIR)/pkg-descr
+	(cd $(PORTSDIR) && make distclean && make makesum && portlint -AC)
 
-OPTIONS_DEFINE=	READLINE SAMBA
-OPTIONS_DEFAULT=READLINE
+$(PORTSDIR):
+	mkdir -p $(PORTSDIR)
 
-READLINE_USES=	readline
-READLINE_DESC=	Build with GNU Readline for interactive editing
+$(PORTSDIR)/Makefile: Makefile.port $(PORTSDIR)
+	cp Makefile.port $(PORTSDIR)/Makefile
 
-SAMBA_USES=	samba
-SAMBA_DESC=	Build with Samba (libsmbclient) for SMB support
+$(PORTSDIR)/pkg-descr: pkg-descr $(PORTSDIR)
+	cp pkd-descr $(PORTSDIR)
 
-READLINE_CONFIGURE_WITH=readline
-SAMBA_CONFIGURE_WITH=libsmbclient
 
-USE_GITHUB=	yes
-GH_ACCOUNT=	ptrrkssn
+distclean: clean
+	rm -f Makefile.port
 
-GNU_CONFIGURE=	yes
+clean:
+	-rm -fr *~ \#* core
 
-PLIST_FILES=	bin/acltool bin/edac bin/lac bin/sac man/man1/acltool.1.gz
 
-.include <bsd.port.mk>
+push: 	distclean
+	git add -A && git commit -a && git push
+
+pull:
+	git pull
+

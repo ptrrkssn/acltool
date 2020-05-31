@@ -2238,7 +2238,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 ac_config_headers="$ac_config_headers config.h"
 
-ac_config_files="$ac_config_files Makefile pkgs/rpm/acltool.spec pkgs/port/Makefile pkgs/svr/pkginfo"
+ac_config_files="$ac_config_files Makefile pkgs/Makefile pkgs/rpm/acltool.spec pkgs/port/Makefile.port pkgs/svr/Makefile pkgs/svr/pkginfo pkgs/ips/build.sh"
 
 
 ac_aux_dir=
@@ -5140,9 +5140,12 @@ do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "pkgs/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/Makefile" ;;
     "pkgs/rpm/acltool.spec") CONFIG_FILES="$CONFIG_FILES pkgs/rpm/acltool.spec" ;;
-    "pkgs/port/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/port/Makefile" ;;
+    "pkgs/port/Makefile.port") CONFIG_FILES="$CONFIG_FILES pkgs/port/Makefile.port" ;;
+    "pkgs/svr/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/svr/Makefile" ;;
     "pkgs/svr/pkginfo") CONFIG_FILES="$CONFIG_FILES pkgs/svr/pkginfo" ;;
+    "pkgs/ips/build.sh") CONFIG_FILES="$CONFIG_FILES pkgs/ips/build.sh" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

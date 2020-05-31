@@ -1,14 +1,12 @@
 # Makefile.in for acltool
 #
-# This file needs to be processed by './configure' in order to
-# create the real Makefile used to build this project
-#
 # @configure_input@
-#
+
 
 # Some 'make' variants does not include CPPFLAGS when compiling, some do
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
 
 @SET_MAKE@
 
