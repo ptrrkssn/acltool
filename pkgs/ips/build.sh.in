@@ -27,6 +27,8 @@ set_arch 64
 
 init
 clone_github_source $PROG "$GITHUB/ptrrkssn/$PROG" v$VER
+BUILDDIR+=/$PROG
+EXTRACTED_SRC+=/$PROG
 prep_build
 build
 make_package

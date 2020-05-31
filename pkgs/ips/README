@@ -2,4 +2,8 @@ Configuration stuff to build an IPS (Solaris 11) style package and
 publish to a local IPS repository (or via the OmniOS "extra" repository)
 
 
+Oracle info on how to create IPS packages:
+https://www.oracle.com/technical-resources/articles/it-infrastructure/admin-o11-097-create-pkg-ips.html
+
+
 
