@@ -1,0 +1,5 @@
+Configuration stuff to build an IPS (Solaris 11) style package and
+publish to a local IPS repository (or via the OmniOS "extra" repository)
+
+
+

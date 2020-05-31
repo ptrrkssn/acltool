@@ -2,7 +2,7 @@
 
 @SET_MAKE@
 
-SUBDIRS=port rpm svr ips
+SUBDIRS=port svr brew rpm ips # apt
 
 
 all:
