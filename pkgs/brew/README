@@ -1,3 +1,10 @@
 Configuration files for Homebrew packages for MacOS (and possibly Linux)
 
 http://brew.sh
+
+The "acltool.rb" needs to be updated for each new release
+
+Commands used:
+
+brew create https://github.com/ptrrkssn/acltool/archive/v1.15.tar.gz
+brew edit acltool

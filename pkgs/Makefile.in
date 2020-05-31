@@ -12,13 +12,12 @@ all:
 
 
 distclean:
-	@for D in $(SUBDIRS); do echo $$D; (cd $$D && $(MAKE) distclean); done
+	@for D in $(SUBDIRS); do if test -f $$D/Makefile; then (cd $$D && $(MAKE) distclean); fi; done
 	-rm -f Makefile
 
 clean:
 	rm -f *~ \#* core
-	@for D in $(SUBDIRS); do echo $$D; (cd $$D && $(MAKE) clean); done
-
+	@for D in $(SUBDIRS); do if test -f $$D/Makefile; then (cd $$D && $(MAKE) clean); fi; done
 
 
 push: 	distclean
