@@ -37,6 +37,16 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#define GACL_MAGIC_BASE 0x1532f2d0
+
+typedef enum gacl_magic {
+  GACL_MAGIC_UNKNOWN   = 0,
+  GACL_MAGIC_ACL       = (GACL_MAGIC_BASE|0x1),
+  GACL_MAGIC_TEXT      = (GACL_MAGIC_BASE|0x2),
+  GACL_MAGIC_QUALIFIER = (GACL_MAGIC_BASE|0x3),
+  GACL_MAGIC_FREED     = 0xdeadbeef,
+} GACL_MAGIC;
+
 
 typedef enum gacl_brand {
   GACL_BRAND_NONE  = 0,

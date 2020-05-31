@@ -287,7 +287,7 @@ walker_print(const char *path,
   
   fp = stdout;
 
-  ap = get_acl(path, sp);  
+  ap = get_acl(path, sp);
   if (!ap)
     return error(1, errno, "%s: Getting ACL", path);
 
@@ -295,6 +295,7 @@ walker_print(const char *path,
     putchar('\n');
   
   print_acl(fp, ap, path, sp);
+
   gacl_free(ap);
   
   ++w_c;

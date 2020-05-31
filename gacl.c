@@ -80,11 +80,79 @@ static struct gace_flag2c {
 		{ GACL_FLAG_NO_PROPAGATE_INHERIT, 'n' },
 		{ GACL_FLAG_SUCCESSFUL_ACCESS, 'S' },
 		{ GACL_FLAG_FAILED_ACCESS, 'F' },
-#ifdef GACL_FLAG_INHERITED
 		{ GACL_FLAG_INHERITED, 'I' },
-#endif
 		{ 0, 0 }
 };
+
+
+
+
+/*
+ * Allocate an object + 's' extra bytes and tag it with the MAGIC number
+ */
+static void *
+_gacl_alloc(GACL_MAGIC m,
+	    size_t s) {
+  GACL_MAGIC *p;
+  
+
+  switch (m) {
+  case GACL_MAGIC_ACL:
+    s += sizeof(GACL);
+    break;
+    
+  case GACL_MAGIC_TEXT:
+  case GACL_MAGIC_QUALIFIER:
+    break;
+    
+  default:
+    abort();
+  }
+
+  s += sizeof(GACL_MAGIC);
+  
+  p = (GACL_MAGIC *) malloc(s);
+  if (!p)
+    return NULL;
+
+  memset(p, 0, s);
+  *p++ = m;
+
+  return p;
+}
+
+
+
+/*
+ * Free a previously allocated object 
+ */
+int
+gacl_free(void *op) {
+  GACL_MAGIC *mp;
+
+  if (!op)
+    return 0;
+
+  mp = (GACL_MAGIC *) op;
+  --mp;
+  
+  switch (*mp) {
+  case GACL_MAGIC_ACL:
+  case GACL_MAGIC_TEXT:
+  case GACL_MAGIC_QUALIFIER:
+    *mp = GACL_MAGIC_FREED;
+    free(mp);
+    return 0;
+
+  case GACL_MAGIC_FREED:
+    fprintf(stderr, "*** gacl_free(%p): Freeing already freed object\n", op);
+    abort();
+    
+  default:
+    errno = EINVAL;
+    return -1;
+  }
+}
 
 
 
@@ -238,18 +306,23 @@ gacl_merge_flagset(GACL_FLAGSET *d,
 
 
 
-
 GACL *
 gacl_init(int count) {
   GACL *ap;
+#if 0
   size_t s;
+#endif
 
   
   if (count < GACL_MIN_ENTRIES)
     count = GACL_DEFAULT_ENTRIES;
-  
+
+#if 1
+  ap = _gacl_alloc(GACL_MAGIC_ACL, count*sizeof(ap->av[0]));
+#else
   s = sizeof(*ap) + count*sizeof(ap->av[0]);
   ap = malloc(s);
+#endif
   if (!ap)
     return NULL;
 
@@ -263,13 +336,6 @@ gacl_init(int count) {
   return ap;
 }
 
-
-int
-gacl_free(void *op) {
-  if (op)
-    free(op);
-  return 0;
-}
 
 
 int
@@ -1246,7 +1312,11 @@ gacl_get_qualifier(GACL_ENTRY *ep) {
   switch (ep->tag.type) {
   case GACL_TAG_TYPE_USER:
   case GACL_TAG_TYPE_GROUP:
+#if 1
+    idp = _gacl_alloc(GACL_MAGIC_QUALIFIER, sizeof(uid_t));
+#else
     idp = malloc(sizeof(*idp));
+#endif
     if (!idp)
       return NULL;
 
@@ -1727,7 +1797,7 @@ gacl_to_text_np(GACL *ap,
   int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 18 : _gacl_max_tagwidth(ap)+8);
 
   
-  bp = buf = malloc(bufsize);
+  bp = buf = _gacl_alloc(GACL_MAGIC_TEXT, bufsize);
   if (!buf)
     return NULL;
 
@@ -1776,7 +1846,7 @@ gacl_to_text_np(GACL *ap,
   return buf;
 
  Fail:
-  free(buf);
+  gacl_free(buf);
   return NULL;
 }
 
