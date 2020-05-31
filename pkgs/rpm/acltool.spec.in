@@ -1,10 +1,10 @@
-Name:		acltool
+Name:		@PACKAGE_TARNAME@
 Version:	@PACKAGE_VERSION@
 Release:	1%{?dist}
 Summary:	ACL management tool
 
 License:	BSD
-URL:		https://github.com/ptrrkssn/acltool
+URL:		@PACKAGE_URL@
 Source0:	https://codeload.github.com/ptrrkssn/%{name}/tar.gz/v%{version}?dummy=/%{name}-%{version}.tar.gz
 Prefix:         %{_prefix}
 Packager:       Peter Eriksson

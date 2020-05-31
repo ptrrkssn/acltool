@@ -2238,7 +2238,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 ac_config_headers="$ac_config_headers config.h"
 
-ac_config_files="$ac_config_files Makefile rpm/acltool.spec port/Makefile"
+ac_config_files="$ac_config_files Makefile pkgs/rpm/acltool.spec pkgs/port/Makefile"
 
 
 ac_aux_dir=
@@ -5140,8 +5140,8 @@ do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "rpm/acltool.spec") CONFIG_FILES="$CONFIG_FILES rpm/acltool.spec" ;;
-    "port/Makefile") CONFIG_FILES="$CONFIG_FILES port/Makefile" ;;
+    "pkgs/rpm/acltool.spec") CONFIG_FILES="$CONFIG_FILES pkgs/rpm/acltool.spec" ;;
+    "pkgs/port/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/port/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
