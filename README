@@ -93,7 +93,11 @@ BUILD INSTRUCTIONS
      build the tool.
 
   4. Run "make install" to install
-  
+
+  5. Some partial support for creating "packages" for operating systems
+     can be found in the "pkgs" directory. See the README files in the
+     specific subdirectories for details.
+
 
 USAGE
 
@@ -160,7 +164,7 @@ MORE INFORMATION
 
 SOME KNOWN PROBLEMS
 
-Samba force it's own ACL sorting rules when setting them via "smb://"-path:s
+Samba forces it's own ACL sorting rules when setting them via "smb://"-path:s
 so our sorting order is ignored/overridden.
 
 Linux currently only allows updating of ACLs over NFSv4. _Not_directly on ZFS.
