@@ -119,8 +119,12 @@ dir_cmd(int argc,
       char buf[2048];
 
       
-      if (!vfs_fullpath(argv[i], buf, sizeof(buf)))
-	error(1, errno, "Unable to get full directory name");
+      if (!vfs_fullpath(argv[i], buf, sizeof(buf))) {
+	int ec = errno;
+	
+	slist_free(nlist);
+	error(1, ec, "Unable to get full directory name");
+      }
       
       printf("Directory of %s\n\n", buf);
     }
@@ -136,8 +140,11 @@ dir_cmd(int argc,
 	else
 	  path = s_dup(nlist->v[j]);
 
-	if (!vfs_fullpath(path, pbuf, sizeof(pbuf)))
-	  error(1, errno, "Unable to get full directory name");
+	if (!vfs_fullpath(path, pbuf, sizeof(pbuf))) {
+	  int ec = errno;
+	  slist_free(nlist);
+	  error(1, ec, "Unable to get full directory name");
+	}
 
 	if (vfs_lstat(pbuf, &sb) < 0) {
 	  if (config.f_debug)
@@ -223,7 +230,9 @@ dir_cmd(int argc,
       } else
 	puts(nlist->v[j]);
     }
+    
     slist_free(nlist);
+    
     if (config.f_verbose > 1) {
       struct statvfs vb;
       unsigned long long avail = 0;

@@ -289,6 +289,7 @@ slist_free(SLIST *sp) {
 
   for (i = 0; i < sp->c; i++)
     free(sp->v[i]);
+  free(sp->v);
   free(sp);
 }
 
