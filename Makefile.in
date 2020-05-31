@@ -84,21 +84,14 @@ acltool: $(ACLTOOL_OBJS)
 
 
 # Clean targets
-maintainer-clean: distclean
-	@echo 'This command is intended for maintainers to use; it'
-	@echo 'deletes files that may need special tools to rebuild.'
-	@echo ''
-	@echo 'Deleting in 3 seconds...'
-	@sleep 3
-	echo rm -f configure config.h.in
+maintainer-clean:
+	$(MAKE) -f Makefile.dist distclean
 
-distclean: clean
-	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
+distclean:
+	$(MAKE) -f Makefile.dist distclean
 
-clean:	mostlyclean
-
-mostlyclean:
-	-rm -f *~ *.o \#* core *.core acltool */*~
+clean mostlyclean:
+	$(MAKE) -f Makefile.dist clean
 
 
 

@@ -10,12 +10,23 @@ acltool:  Makefile
 Makefile: Makefile.in configure config.h.in
 	./configure
 
+
+# How to recreate certains files if needed:
 configure: 
 	autoconf
 
 config.h.in:
 	autoheader
 
+
+# Cleaning targets:
+maintainer-clean: distclean
+	@echo 'This command is intended for maintainers to use; it'
+	@echo 'deletes files that may need special tools to rebuild.'
+	@echo ''
+	@echo 'Deleting in 3 seconds...'
+	@sleep 3
+	echo rm -f configure config.h.in
 
 distclean: clean
 	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h
@@ -25,9 +36,9 @@ clean:
 	find . \( -name '*~' -o -name '*.o' -o -name '#*' -o -name 'core' \) -print | xargs rm -f
 
 
+# GIT targets:
 push: 	distclean
 	git add -A && git commit -a && git push
 
 pull:
 	git pull
-

@@ -20,12 +20,9 @@ build-rpm: rpm/acltool.spec
 	mkdir -p $(SPECSDIR) && cp rpm/acltool.spec $(SPECSDIR) && (cd $(SPECSDIR) && rpmbuild -ba acltool.spec)
 
 
-distclean:
-	(cd .. ; $(MAKE) -f Makefile.dist distclean)
-
-clean:
-	(cd .. ; $(MAKE) -f Makefile.dist clean)
-
+distclean clean:
+	rm -f *~ \#* core
+	for D in port svr rpm ips; do (cd $D && make distclean); done
 
 
 push: 	distclean

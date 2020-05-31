@@ -1,0 +1,22 @@
+set name=pkg.fmri value=developer/versioning/acltool@1.15,0.1
+set name=pkg.summary value="Acltool is a utility to display & update filesystem ACLs"
+set name=pkg.description value="The ACL Tool (acltool) utility"
+set name=pkg.human-version value=1.15
+set name=info.source-url value=https://github.com/ptrrkssn/acltool
+set name=publisher value=ptrrkssn
+dir  path=usr owner=root group=bin mode=0755
+dir  path=usr/local owner=root group=bin mode=0755
+dir  path=usr/local/bin owner=root group=bin mode=0755
+file usr/local/bin/acltool path=usr/local/bin/acltool owner=root group=bin \
+    mode=0755
+link path=usr/local/bin/edac target=acltool
+link path=usr/local/bin/lac target=acltool
+link path=usr/local/bin/sac target=acltool
+dir  path=usr/local/share owner=root group=bin mode=0755
+dir  path=usr/local/share/man owner=root group=bin mode=0755
+dir  path=usr/local/share/man/man1 owner=root group=bin mode=0755
+file usr/local/share/man/man1/acltool.1 \
+    path=usr/local/share/man/man1/acltool.1 owner=root group=bin mode=0644
+
+depend fmri=pkg://omnios/library/readline@8.0-151032.0 type=require
+depend fmri=pkg:/system/library@0.5.11-151032.0 type=require
