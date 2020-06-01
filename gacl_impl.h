@@ -1,5 +1,5 @@
 /*
- * gacl_impl.h - Generic ACLs - Emulate FreeBSD ACL functionality on Linux & Solaris
+ * gacl_impl.h - Generic ACLs, OS-specific parts
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -51,11 +51,7 @@
 #define acl_flag_t       freebsd_acl_flag_t
 #define acl_flagset_t    freebsd_acl_flagset_t
 
-
-#ifdef GACL_C_INTERNAL
 #define _ACL_PRIVATE 1
-#endif
-
 #include <sys/acl.h>
 
 #undef acl_t
@@ -139,48 +135,6 @@ typedef enum gacl_entry_type {
 
 #define GACL_FREEBSD_EMULATION 1
 #define GACL_SOLARIS_EMULATION 1
-
-#include "nfs4.h"
-
-#if 0
-
-typedef enum gacl_entry_type {
-  GACL_TYPE_UNDEFINED = -1,
-  GACL_TYPE_ALLOW = NFS4_ACE_ACCESS_ALLOWED_ACE_TYPE,
-  GACL_TYPE_DENY  = NFS4_ACE_ACCESS_DENIED_ACE_TYPE,
-  GACL_TYPE_AUDIT = NFS4_ACE_SYSTEM_AUDIT_ACE_TYPE,
-  GACL_TYPE_ALARM = NFS4_ACE_SYSTEM_ALARM_ACE_TYPE,
-} GACL_ENTRY_TYPE;
-
-#define GACL_FLAG_FILE_INHERIT          NFS4_ACE_FILE_INHERIT_ACE
-#define GACL_FLAG_DIRECTORY_INHERIT     NFS4_ACE_DIRECTORY_INHERIT_ACE
-#define GACL_FLAG_NO_PROPAGATE_INHERIT  NFS4_ACE_NO_PROPAGATE_INHERIT_ACE
-#define GACL_FLAG_INHERIT_ONLY          NFS4_ACE_INHERIT_ONLY_ACE
-#define GACL_FLAG_SUCCESSFUL_ACCESS     NFS4_ACE_SUCCESSFUL_ACCESS_ACE_FLAG
-#define GACL_FLAG_FAILED_ACCESS         NFS4_ACE_FAILED_ACCESS_ACE_FLAG
-
-#ifdef NFS4_ACE_INHERITED_ACE
-#define GACL_FLAG_INHERITED             NFS4_ACE_INHERITED_ACE
-#endif
-
-#define GACL_PERM_READ_DATA           NFS4_ACE_READ_DATA
-#define GACL_PERM_LIST_DIRECTORY      NFS4_ACE_LIST_DIRECTORY
-#define GACL_PERM_WRITE_DATA          NFS4_ACE_WRITE_DATA
-#define GACL_PERM_ADD_FILE            NFS4_ACE_ADD_FILE
-#define GACL_PERM_APPEND_DATA         NFS4_ACE_APPEND_DATA
-#define GACL_PERM_ADD_SUBDIRECTORY    NFS4_ACE_ADD_SUBDIRECTORY
-#define GACL_PERM_READ_NAMED_ATTRS    NFS4_ACE_READ_NAMED_ATTRS
-#define GACL_PERM_WRITE_NAMED_ATTRS   NFS4_ACE_WRITE_NAMED_ATTRS
-#define GACL_PERM_EXECUTE             NFS4_ACE_EXECUTE
-#define GACL_PERM_DELETE_CHILD        NFS4_ACE_DELETE_CHILD
-#define GACL_PERM_READ_ATTRIBUTES     NFS4_ACE_READ_ATTRIBUTES
-#define GACL_PERM_WRITE_ATTRIBUTES    NFS4_ACE_WRITE_ATTRIBUTES
-#define GACL_PERM_DELETE              NFS4_ACE_DELETE
-#define GACL_PERM_READ_ACL            NFS4_ACE_READ_ACL
-#define GACL_PERM_WRITE_ACL           NFS4_ACE_WRITE_ACL
-#define GACL_PERM_WRITE_OWNER         NFS4_ACE_WRITE_OWNER
-#define GACL_PERM_SYNCHRONIZE         NFS4_ACE_SYNCHRONIZE
-#endif
 
 /* ---------------------------------------- Linux - END ---------------------------------------- */
 

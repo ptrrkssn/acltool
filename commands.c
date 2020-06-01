@@ -31,14 +31,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
-#include "misc.h"
-#include "strings.h"
 #include "commands.h"
+
+#include "error.h"
+#include "strings.h"
+
+
+/* For 'argv0' and 'global_options' */
+#include "acltool.h"
 
 
 static COMMANDS global_commands;

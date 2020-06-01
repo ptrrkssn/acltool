@@ -1,5 +1,5 @@
 /*
- * gacl.h - Generic ACLs - Emulate FreeBSD ACL functionality on Linux & Solaris
+ * gacl.h - Generic ACLs - Emulate FreeBSD ACL functionality
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *

@@ -91,10 +91,6 @@ ft_foreach(const char *path,
 	   mode_t filetypes);
 
 
-extern char *
-strxcat(const char *str,
-	...);
-
 extern int
 prompt_user(char *buf,
 	    size_t bufsize,

@@ -1,5 +1,5 @@
 /*
- * gacl.c - Generic ACLs - Emulate FreeBSD acl* functionality
+ * gacl.c - Generic ACLs - Emulate FreeBSD ACL functionality
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,6 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,13 +42,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "strings.h"
-
-#define GACL_C_INTERNAL 1
 #include "gacl.h"
 #include "gacl_impl.h"
 
 #include "vfs.h"
+
 
 static struct gace_perm2c {
   int p;
@@ -2116,6 +2116,12 @@ gacl_from_text(const char *buf) {
   const char *cp;
   int ne = 0;
 
+  
+  if (!buf) {
+    errno = EINVAL;
+    return NULL;
+  }
+    
   /* Count the number of potential ACEs */
   for (cp = buf; *cp; ++cp)
     if (*cp == ',')
@@ -2123,7 +2129,7 @@ gacl_from_text(const char *buf) {
   if (*buf)
     ++ne;
   
-  bp = tbuf = s_dup(buf);
+  bp = tbuf = strdup(buf);
 
   ap = gacl_init(ne);
   if (!ap) {

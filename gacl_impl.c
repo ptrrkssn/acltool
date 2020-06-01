@@ -1,5 +1,5 @@
 /*
- * gacl.c - Generic ACLs - Emulate FreeBSD acl* functionality
+ * gacl.c - Generic ACLs, OS-specific parts
  *
  * Copyright (c) 2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,6 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,10 +42,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "strings.h"
-
-
-#define GACL_C_INTERNAL 1
 #include "gacl.h"
 #include "gacl_impl.h"
 
@@ -55,7 +53,6 @@
 #ifdef __linux__
 #include <arpa/inet.h>
 #include <sys/xattr.h>
-#include "gacl.h"
 #include "nfs4.h"
 
 #define ACL_NFS4_XATTR "system.nfs4_acl"
@@ -99,6 +96,7 @@ _nfs4_id_domain(void) {
     t = strsep(&bp, " \t\n");
     if (!t)
       continue;
+    
     if (strcmp(t, "Domain") == 0) {
       t = strsep(&bp, " \t\n");
       if (!t || strcmp(t, "=") != 0)
@@ -109,7 +107,7 @@ _nfs4_id_domain(void) {
 	return NULL;
       }
 	
-      saved_domain = s_dup(t);
+      saved_domain = strdup(t);
       break;
     }
   }

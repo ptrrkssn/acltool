@@ -1,5 +1,5 @@
 /*
- * vfs.c
+ * vfs.c - A "virtual" filesystem layer allowing protocol://path stuff
  *
  * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
  *
@@ -31,6 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +53,7 @@
 
 #define IN_ACLTOOL_VFS_C 1
 #include "vfs.h"
-#include "misc.h"
+
 #include "gacl.h"
 
 #if HAVE_LIBSMBCLIENT
