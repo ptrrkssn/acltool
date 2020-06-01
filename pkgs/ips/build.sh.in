@@ -25,10 +25,20 @@ DESC+="FreeBSD and MacOS."
 
 set_arch 64
 
+## To download a tagged release
+set_mirror "$GITHUB/ptrrkssn/$PROG/archive"
+SKIP_CHECKSUM=1
+
 init
-clone_github_source $PROG "$GITHUB/ptrrkssn/$PROG" v$VER
-BUILDDIR+=/$PROG
-EXTRACTED_SRC+=/$PROG
+
+## To clone from Github:
+#clone_github_source $PROG "$GITHUB/ptrrkssn/$PROG" v$VER
+#BUILDDIR+=/$PROG
+#EXTRACTED_SRC+=/$PROG
+
+## To download a tagged release:
+download_source v$VER $PROG v$VER
+
 prep_build
 build
 make_package

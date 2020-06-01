@@ -14,13 +14,22 @@ IPSTMPDIR=/tmp/acltool-ips-root
 
 all:
 	@echo "Valid targets: 'distclean', 'clean', 'push' or 'pull'"
-	@echo "Or: 'install-omnios' or 'install-ips' (but modify Makefile first!)"
+	@echo "Or: 'install-omnios', 'build-omnios' or 'install-ips' (but modify Makefile first!)"
 	@exit 1
 
 
 install-omnios:
-	cp build.sh local.mog $(OMNIOSEXTRADIR)
 	(cd $(OMNIOSEXTRADIR) && ./build.sh)
+
+build-omnios: install-omnios
+	(cd $(OMNIOSEXTRADIR) && ./build.sh)
+
+omnios-depends-min:
+	pkg install ripgrep
+	pkg install pigz
+
+omnios-developer-tools:
+	pkg install ooce/extra-build-tools
 
 
 install-ips: publish-ips
