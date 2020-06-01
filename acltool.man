@@ -5,10 +5,24 @@
 acltool \- manipulate NFSv4 and ZFS ACLs
 .SH SYNOPSIS
 .B acltool
-.RI "[" "<options>*" "]"
+.RI "[" "<option>*" "]"
 .RI "[" "<action>" ""
-.RI "[" "<options>*" "]"
+.RI "[" "<option>*" "]"
 .RI "[" "<path>*" "]" "" "]"
+.P
+.B lac
+.RI "[" "<option>*" "]"
+.RI "<path>*"
+.P
+.B sac
+.RI "[" "<option>*" "]"
+.RI "[" "<acl>" "]"
+.RI "<path>+"
+.P
+.B edac
+.RI "[" "<option>*" "]"
+.RI "[" "<simple-change>" "]"
+.RI "<path>+"
 .SH DESCRIPTION
 .B acltool
 is a tool to manipulate NFSv4 & ZFS ACLs in various ways. POSIX.1e ACLs is

@@ -48,6 +48,10 @@ CFLAGS = @CFLAGS@ -Wall
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
+VALGRIND=@VALGRIND@
+VALGRINDFLAGS=--leak-check=full --track-origins=yes --error-exitcode=1 # --show-leak-kinds=all 
+
+
 TESTDIR=t
 
 PROGRAMS=acltool
@@ -110,19 +114,26 @@ pull:
 # Install targets
 install-all: install install-man install-aliases
 
-install:  install-bin install-aliases install-man
+install:  install-bin install-man
 
 install-bin: $(PROGRAMS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(BINDIR)
 	$(INSTALL) -m 755 acltool $(DESTDIR)$(BINDIR)
+	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
 
 install-man:  acltool.man
 	$(INSTALL) -m 755 -d "$(DESTDIR)$(MAN1DIR)"
 	$(INSTALL) -m 644 acltool.man "$(DESTDIR)$(MAN1DIR)/acltool.1"
-	if test -f /usr/share/man/man1/cat.1.gz; then gzip -f "$(DESTDIR)$(MAN1DIR)/acltool.1"; fi
-
-install-aliases: install-bin
-	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
+	if test -f /usr/share/man/man1/cat.1.gz; then \
+		gzip -f "$(DESTDIR)$(MAN1DIR)/acltool.1" && \
+		for N in $(ACLTOOL_ALIASES); do \
+			ln -sf acltool.1.gz $(DESTDIR)$(MAN1DIR)/$$N.1.gz; \
+		done; \
+	else \
+		for N in $(ACLTOOL_ALIASES); do \
+			ln -sf acltool.1 $(DESTDIR)$(MAN1DIR)/$$N.1; \
+		done; \
+	fi
 
 uninstall:
 	for F in acltool sac lac edac; do \
@@ -131,6 +142,7 @@ uninstall:
 	for F in acltool.1 acltool.1.gz; do \
 		if test -f "$(DESTDIR)$(MAN1DIR)/$$F"; then rm "$(DESTDIR)$(MAN1DIR)/$$F"; fi; \
 	done
+
 
 # Check targets
 check:
@@ -145,27 +157,40 @@ check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 check-linux check-Linux:
 	-@df -t nfs4 $(TESTDIR) 2>/dev/null && $(MAKE) check-all
 
-check-all: check-lac check-sac check-edac
+
+CHECKCMD="./acltool"
+
+check-all: check-dir check-lac check-sac check-edac
+	@echo "";echo "*** All checks passed ***"
+
+check-dir: acltool
+	$(CHECKCMD) dir .
 
 check-lac: acltool
-	./acltool lac t
+	$(CHECKCMD) lac t
 
 check-sac: acltool
-	./acltool sac -vp "user:nobody:rwx,user:$$USER:all" t
+	$(CHECKCMD) sac -vp "user:nobody:rwx,user:$$USER:all" t
 
 check-edac: acltool
-	./acltool edac -vp -e '/user:nobody:r.*/d' t
+	$(CHECKCMD) edac -vp -e '/user:nobody:r.*/d' t
 
-check-valgrind: check-valgrind-lac check-valgrind-edac check-valgrind-sac
 
-check-valgrind-lac:
-	valgrind --leak-check=full --track-origins=yes ./acltool lac t
+check-valgrind-all: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-all
 
-check-valgrind-edac:
-	valgrind --leak-check=full --track-origins=yes ./acltool edac "user:$$USER:all" t
+check-valgrind-dir: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-dir
 
-check-valgrind-sac:
-	valgrind --leak-check=full --track-origins=yes ./acltool sac owner@:all t
+check-valgrind-lac: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-lac
+
+check-valgrind-edac: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-edac
+
+check-valgrind-sac: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-sac
+
 
 distcheck: check
 

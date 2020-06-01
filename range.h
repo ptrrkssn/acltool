@@ -37,7 +37,15 @@
 #include <stdio.h>
 #include <limits.h>
 
+#define RANGE_MAGIC       0x7b4a34f1
+#define RANGE_MAGIC_FREED 0xdeaddead
+
+#define RANGE_DEBUG 1
+
 typedef struct range {
+#if RANGE_DEBUG
+  unsigned int magic;
+#endif
   int min;
   int max;
   struct range *next;

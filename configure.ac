@@ -14,7 +14,8 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
-dnl AC_USE_SYSTEM_EXTENSIONS
+AC_CHECK_PROGS(VALGRIND, [valgrind])
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h stdint.h stdlib.h string.h sys/acl.h sys/statvfs.h sys/time.h termios.h unistd.h])

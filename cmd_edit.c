@@ -559,6 +559,7 @@ cmd_edit_ace(gacl_entry_t oae,
   /* Get new ACE */
   gacl_get_tag_type(nae, &ntt);
   gacl_get_entry_type_np(nae, &net);
+  
   nip = gacl_get_qualifier(nae);
   
   if (gacl_get_permset(nae, &nps) < 0 ||
@@ -582,12 +583,13 @@ cmd_edit_ace(gacl_entry_t oae,
   if (gacl_set_entry_type_np(oae, net) < 0)
     goto Fail;
 
-  free(nip);
+  gacl_free(nip);
   return 1;
 
  Fail:
   if (nip)
     gacl_free(nip);
+  
   return -1;
 }
 

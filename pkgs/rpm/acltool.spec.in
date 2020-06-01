@@ -36,4 +36,7 @@ make DESTDIR="$RPM_BUILD_ROOT" install
 %{_bindir}/lac
 %{_bindir}/edac
 %{_mandir}/man1/acltool.1.gz
+%{_mandir}/man1/lac.1.gz
+%{_mandir}/man1/sac.1.gz
+%{_mandir}/man1/edac.1.gz
 

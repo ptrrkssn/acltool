@@ -17,6 +17,9 @@ dir  path=usr/local/share/man owner=root group=bin mode=0755
 dir  path=usr/local/share/man/man1 owner=root group=bin mode=0755
 file usr/local/share/man/man1/acltool.1 \
     path=usr/local/share/man/man1/acltool.1 owner=root group=bin mode=0644
+link path=usr/local/share/man/man1/lac.1 target=acltool.1
+link path=usr/local/share/man/man1/sac.1 target=acltool.1
+link path=usr/local/share/man/man1/edac.1 target=acltool.1
 
 depend fmri=pkg://omnios/library/readline@8.0-151032.0 type=require
 depend fmri=pkg:/system/library@0.5.11-151032.0 type=require

@@ -48,10 +48,13 @@ _alloc_range(int p1,
 	     int p2) {
   RANGE *rp = malloc(sizeof(*rp));
 
-  
   if (!rp)
     return NULL;
 
+#if RANGE_DEBUG
+  rp->magic = RANGE_MAGIC;
+#endif
+  
   if (p1 <= p2) {
     rp->min = p1;
     rp->max = p2;
@@ -69,8 +72,10 @@ _alloc_range(int p1,
 static int
 _in_range(RANGE *rp,
 	  int p) {
-  if (!rp)
+  if (!rp) {
+    errno = EINVAL;
     return 0;
+  }
   
   return (p >= rp->min && p <= rp->max);
 }
@@ -83,10 +88,23 @@ range_free(RANGE **rpp) {
   RANGE *rp, *nrp;
 
   
-  if (!rpp || !*rpp)
+  if (!rpp || !*rpp) {
+    errno = EINVAL;
     return;
-  
+  }
+
   for (rp = *rpp; rp; rp = nrp) {
+#if RANGE_DEBUG
+    if (rp->magic != RANGE_MAGIC) {
+      if (rp->magic == RANGE_MAGIC_FREED)
+	fprintf(stderr, "*** range_free(%p): Double free\n", rp);
+      else
+	fprintf(stderr, "*** range_free(%p): Invalid magic=0x%08x\n", rp, rp->magic);
+      abort();
+    }
+    rp->magic = RANGE_MAGIC_FREED;
+#endif
+    
     nrp = rp->next;
     free(rp);
   }
@@ -100,9 +118,18 @@ range_len(RANGE *rp) {
   int n, d;
 
   
-  if (!rp)
+  if (!rp) {
+    errno = EINVAL;
     return -1;
+  }
 
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_len(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
+  
   n = 0;
   while (rp) {
     if (rp->max == RANGE_END && rp->min == RANGE_END)
@@ -124,9 +151,18 @@ range_len(RANGE *rp) {
 int
 range_first(RANGE *rp,
 	    int *p) {
-  if (!rp)
+  if (!rp) {
+    errno = EINVAL;
     return -1;
+  }
 
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_first(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
+  
   *p = rp->min;
   return 0;
 }
@@ -136,9 +172,18 @@ range_first(RANGE *rp,
 int
 range_last(RANGE *rp,
 	   int *p) {
-  if (!rp)
+  if (!rp) {
+    errno = EINVAL;
     return -1;
+  }
 
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_last(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
+  
   while (rp->next)
     rp = rp->next;
   
@@ -153,8 +198,17 @@ range_next(RANGE *rp,
   RANGE *trp = rp;
 
   
-  if (!rp || !pp)
+  if (!rp || !pp) { 
+    errno = EINVAL;
     return -1;
+  }
+  
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_next(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
   
   while (rp) {
     if (_in_range(rp, *pp)) {
@@ -180,9 +234,18 @@ range_prev(RANGE *rp,
   RANGE *prp;
 
   
-  if (!rp || !pp)
+  if (!rp || !pp) {
+    errno = EINVAL;
     return -1;
+  }
 
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_prev(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
+  
   prp = NULL;
   while (rp) {
     if (_in_range(rp, *pp)) {
@@ -212,8 +275,10 @@ range_add(RANGE **rpp,
   RANGE *rp;
 
 
-  if (!rpp)
+  if (!rpp) {
+    errno = ENOMEM;
     return -1;
+  }
 
   if (p2 < p1) {
     int t = p2;
@@ -225,6 +290,12 @@ range_add(RANGE **rpp,
 
   /* Locate where to insert/append */
   for (rp = *rpp; rp; rp = rp->next) {
+#if RANGE_DEBUG
+    if (rp->magic != RANGE_MAGIC) {
+      fprintf(stderr, "*** range_add(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+      abort();
+    }
+#endif
     
     /* Completely contained within a previous segment */
     if (_in_range(rp, p1) && _in_range(rp, p2))
@@ -287,11 +358,19 @@ range_adds(RANGE **rpp,
   char *ep;
   int n = 0;
   
-  
-  if (!spp || !*spp)
-    return -1;
 
+  if (!rpp) {
+    errno = ENOMEM;
+    return -1;
+  }
+  
+  if (!spp || !*spp) {
+    errno = EINVAL;
+    return -1;
+  }
+  
   sp = *spp;
+  
   while (*sp && (isdigit(*sp) || *sp == '$')) {
     int p1, p2;
 
@@ -367,6 +446,13 @@ _print_value(int v,
 
 int
 range_print(RANGE *rp, FILE *fp) {
+#if RANGE_DEBUG
+  if (rp->magic != RANGE_MAGIC) {
+    fprintf(stderr, "*** range_printf(%p): Invalid magic (0x%08x)\n", rp, rp->magic);
+    abort();
+  }
+#endif
+  
   while (rp) {
     if (_print_value(rp->min, fp) < 0)
       return -1;
