@@ -6,9 +6,8 @@ Summary:	ACL management tool
 License:	BSD
 URL:		@PACKAGE_URL@
 Source0:	https://codeload.github.com/ptrrkssn/%{name}/tar.gz/v%{version}?dummy=/%{name}-%{version}.tar.gz
-Prefix:         %{_prefix}
-Packager:       Peter Eriksson
-BuildRoot:      %{_tmppath}/%{name}-root
+Prefix:		%{_prefix}
+BuildRoot:	%{_tmppath}/%{name}-root
 
 %description
 This is a tool to manage NFSv4/ZFS (also known as Extended on MacOS) ACLs.
@@ -19,7 +18,7 @@ removing redundant entries and more.
 %setup -q -n %{name}-%{version}
 
 %build
-CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} --mandir=%{_mandir}
+CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} --mandir=%{_mandir} --libdir=%{_libdir}
 make
 
 %install

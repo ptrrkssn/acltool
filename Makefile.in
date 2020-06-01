@@ -162,3 +162,18 @@ check-valgrind-sac:
 	valgrind --leak-check=full --track-origins=yes ./acltool sac owner@:all t
 
 distcheck: check
+
+
+DISTROOT=/tmp
+DISTDIR=$(DISTROOT)/build-acltool-$(VERSION)
+
+dist:
+	rm -fr $(DISTDIR) && \
+	  mkdir -p $(DISTDIR) && \
+	  cp -r . $(DISTDIR)/acltool-$(VERSION) && \
+	  (cd $(DISTDIR)/acltool-$(VERSION) && make -f Makefile.dist distclean) && \
+	  (cd $(DISTDIR) && tar --exclude='*/.??*' -zcvf $(DISTROOT)/acltool-$(VERSION).tar.gz acltool-$(VERSION))
+	rm -fr $(DISTDIR)
+	@echo ""
+	@echo "*** Distribution archive saved as: $(DISTROOT)/acltool-$(VERSION).tar.gz"
+
