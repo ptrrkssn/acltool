@@ -5,9 +5,9 @@
 SUBDIRS=     pkgs
 
 
-all:	acltool
+all:	distclean acltool
 
-acltool:  Makefile
+acltool: Makefile
 	$(MAKE)
 
 Makefile: Makefile.in configure config.h.in
