@@ -159,8 +159,8 @@ check-linux check-Linux:
 
 
 CHECKCMD=./acltool
-CHECKS=dir lac sac touch edac sxa lxa rxa
-VALGRINDCHECKS=dir lac sac touch edac
+CHECKS=dir lac sac touch edac last sxa lxa rxa
+VALGRINDCHECKS=dir lac sac touch edac last
 
 check-all:
 	@for T in $(CHECKS); do $(MAKE) check-$$T; done
@@ -176,17 +176,26 @@ check-lac: acltool
 	$(CHECKCMD) lac -v t
 	$(CHECKCMD) lac -vv t
 
+
+SACACL1=owner@:all
+SACACL2=owner@:all,user:$$USER:all,group@:read_set,everyone@:empty_set
+SACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all
+
 check-sac: acltool
-	$(CHECKCMD) sac "user:nobody:rwx,user:$$USER:all" t
-	$(CHECKCMD) sac -vp "user:nobody:rwx,user:$$USER:all" t
+	$(CHECKCMD) sac "$(SACACL1)" t
+	$(CHECKCMD) sac -v "$(SACACL2)" t
+	$(CHECKCMD) sac -vp "$(SACACL3)" t
 
 check-touch: acltool
 	$(CHECKCMD) touch  t
 	$(CHECKCMD) touch -fv t
-	$(CHECKCMD) touch -vs t
+	$(CHECKCMD) touch -vsp t
 
 check-edac: acltool
-	$(CHECKCMD) edac -vp -e '/user:nobody:r.*/d' t
+	$(CHECKCMD) edac -vp -e "/user:$$USER:.*/d" t
+
+check-last: acltool
+	$(CHECKCMD) lac -vv t
 
 check-sxa: acltool
 	$(CHECKCMD) sxa t acltooltestattr=foo

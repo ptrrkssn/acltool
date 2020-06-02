@@ -1016,8 +1016,10 @@ walker_edit(const char *path,
 	range_free(&range);
     }
   }
-  
+
+#if 0  
   gacl_clean(nap);
+#endif
 
   rc = set_acl(path, sp, nap, oap);
   if (rc < 0)

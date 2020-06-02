@@ -912,6 +912,9 @@ _gacl_entry_to_ace(GACL_ENTRY *ep,
     return -1;
   }
 
+
+  ap->a_flags = 0;
+  
   switch (ep->tag.type) {
   case GACL_TAG_TYPE_USER_OBJ:
     ap->a_flags = ACE_OWNER;
@@ -944,8 +947,7 @@ _gacl_entry_to_ace(GACL_ENTRY *ep,
   for (i = 0; i < sizeof(permtab)/sizeof(permtab[0]); i++)
     if (ep->perms & permtab[i].g)
       ap->a_access_mask |= permtab[i].s;
-  
-  ap->a_flags = 0;
+
   for (i = 0; i < sizeof(flagtab)/sizeof(flagtab[0]); i++)
     if (ep->flags & flagtab[i].g)
       ap->a_flags |= flagtab[i].s;
