@@ -187,136 +187,188 @@ static struct flag2str_windows {
 
 
 char *
-permset2str(gacl_permset_t psp, char *res) {
-  static char buf[64];
+permset2str(gacl_permset_t psp,
+	    char *buf,
+	    size_t bufsize) {
+  static char sbuf[64];
   int i, a;
 
   
-  if (!res)
-    res = buf;
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
+  }
   
-  for (i = 0; p2c[i].c; i++) {
+  for (i = 0; i < bufsize-1 && p2c[i].c; i++) {
     a = gacl_get_perm_np(psp, p2c[i].p);
-    res[i] = a ? p2c[i].c : '-';
+    buf[i] = a ? p2c[i].c : '-';
   }
-  res[i] = '\0';
-  return res;
+  if (i >= bufsize-1) {
+    errno = ENOMEM;
+    return NULL;
+  }
+  
+  buf[i] = '\0';
+  return buf;
 }
 
-char *
+static char *
 permset2str_samba(gacl_permset_t psp,
-		  char *res) {
-  static char buf[64];
+		  char *buf,
+		  size_t bufsize) {
+  static char sbuf[64];
   int i, a, n;
 
   
-  if (!res)
-    res = buf;
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
+  }
 
-  res[0] = '\0';
+  buf[0] = '\0';
   n = 0;
   for (i = 0; p2c_windows[i].c; i++) {
     a = gacl_get_perm_np(psp, p2c_windows[i].p);
     if (a) {
       if (n++)
-	strcat(res, "|");
-      strcat(res, p2c_windows[i].c);
+	if (s_cat(buf, bufsize, "|") < 0)
+	  return NULL;
+      
+      if (s_cat(buf, bufsize, p2c_windows[i].c) < 0)
+	return NULL;
     }
   }
-  return res;
+  
+  return buf;
 }
 
 
-char *
+static char *
 permset2str_icacls(gacl_permset_t psp,
-		   char *res) {
-  static char buf[64];
+		   char *buf,
+		   size_t bufsize) {
+  static char sbuf[64];
   int i, a, n;
 
   
-  if (!res)
-    res = buf;
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
+  }
 
-  res[0] = '\0';
+  buf[0] = '\0';
   n = 0;
-  strcat(res, "(");
+  s_cat(buf, bufsize, "(");
   for (i = 0; p2c_windows[i].c; i++) {
     a = gacl_get_perm_np(psp, p2c_windows[i].p);
     if (a) {
       if (n++)
-	strcat(res, ",");
-      strcat(res, p2c_windows[i].c);
+	if (s_cat(buf, bufsize, ",") < 0)
+	  return NULL;
+      
+      if (s_cat(buf, bufsize, p2c_windows[i].c) < 0)
+	return NULL;
     }
   }
-  strcat(res, ")");
-  return res;
+  if (s_cat(buf, bufsize, ")") < 0)
+    return NULL;
+  
+  return buf;
 }
 
+
 char *
-flagset2str(gacl_flagset_t fsp, char *res) {
-  static char buf[64];
+flagset2str(gacl_flagset_t fsp,
+	    char *buf,
+	    size_t bufsize) {
+  static char sbuf[64];
   int i, a;
 
   
-  if (!res)
-    res = buf;
-  
-  for (i = 0; f2c[i].c; i++) {
-    a = gacl_get_flag_np(fsp, f2c[i].f);
-    res[i] = a ? f2c[i].c : '-';
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
   }
-  res[i] = '\0';
-  return res;
+  
+  for (i = 0; i < bufsize-1 && f2c[i].c; i++) {
+    a = gacl_get_flag_np(fsp, f2c[i].f);
+    buf[i] = a ? f2c[i].c : '-';
+  }
+  if (i >= bufsize-1) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  buf[i] = '\0';
+  return buf;
 }
 
-char *
+
+static char *
 flagset2str_samba(gacl_flagset_t fsp,
-		  char *res) {
-  static char buf[64];
+		  char *buf,
+		  size_t bufsize) {
+  static char sbuf[64];
   int i, a, n;
 
   
-  if (!res)
-    res = buf;
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
+  }
 
-  res[0] = '\0';
+  buf[0] = '\0';
 
   n = 0;
   for (i = 0; f2c_windows[i].s; i++) {
     a = gacl_get_flag_np(fsp, f2c_windows[i].f);
     if (a) {
       if (n++)
-	strcat(res, "|");
-      strcat(res, f2c_windows[i].s);
+	if (s_cat(buf, bufsize, "|") < 0)
+	  return NULL;
+      
+      if (s_cat(buf, bufsize, f2c_windows[i].s) < 0)
+	return NULL;
     }
   }
 
-  return res;
+  return buf;
 }
 
-char *
+static char *
 flagset2str_icacls(gacl_flagset_t fsp,
-		   char *res) {
-  static char buf[64];
+		   char *buf,
+		   size_t bufsize) {
+  static char sbuf[64];
   int i, a;
 
   
-  if (!res)
-    res = buf;
+  if (!buf) {
+    buf = sbuf;
+    if (bufsize > sizeof(sbuf))
+      bufsize = sizeof(sbuf);
+  }
 
-  res[0] = '\0';
+  buf[0] = '\0';
 
   for (i = 0; f2c_windows[i].s; i++) {
     a = gacl_get_flag_np(fsp, f2c_windows[i].f);
     if (a) {
-      strcat(res, "(");
-      strcat(res, f2c_windows[i].s);
-      strcat(res, ")");
+      if (s_cat(buf, bufsize, "(") < 0 ||
+	  s_cat(buf, bufsize, f2c_windows[i].s) < 0 ||
+	  s_cat(buf, bufsize, ")") < 0)
+	return NULL;
     }
   }
 
-  return res;
+  return buf;
 }
+
 
 
 const char *
@@ -477,7 +529,7 @@ ace2str_samba(gacl_entry_t ae,
   if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
-  flagset2str_samba(afs, rbuf);
+  flagset2str_samba(afs, rbuf, rsize);
   rc = strlen(rbuf);
   rbuf += rc;
   rsize -= rc;
@@ -489,7 +541,7 @@ ace2str_samba(gacl_entry_t ae,
   if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
-  permset2str_samba(aps, rbuf);
+  permset2str_samba(aps, rbuf, rsize);
   rc = strlen(rbuf);
   rbuf += rc;
   rsize -= rc;
@@ -498,7 +550,7 @@ ace2str_samba(gacl_entry_t ae,
   ++rbuf;
   --rsize;
   
-  permset2str(aps, rbuf);
+  permset2str(aps, rbuf, rsize);
   
   return res;
 }
@@ -637,7 +689,7 @@ ace2str_icacls(gacl_entry_t ae,
   if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
-  flagset2str_icacls(afs, rbuf);
+  flagset2str_icacls(afs, rbuf, rsize);
   rc = strlen(rbuf);
   rbuf += rc;
   rsize -= rc;
@@ -646,7 +698,7 @@ ace2str_icacls(gacl_entry_t ae,
   if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
-  permset2str_icacls(aps, rbuf);
+  permset2str_icacls(aps, rbuf, rsize);
 
   return res;
 }
@@ -749,7 +801,7 @@ ace2str(gacl_entry_t ae,
   if (gacl_get_permset(ae, &aps) < 0)
     return NULL;
   
-  permset2str(aps, rbuf);
+  permset2str(aps, rbuf, rsize);
   rc = strlen(rbuf);
   rbuf += rc;
   rsize -= rc;
@@ -761,7 +813,7 @@ ace2str(gacl_entry_t ae,
   if (gacl_get_flagset_np(ae, &afs) < 0)
     return NULL;
   
-  flagset2str(afs, rbuf);
+  flagset2str(afs, rbuf, rsize);
   rc = strlen(rbuf);
   rbuf += rc;
   rsize -= rc;

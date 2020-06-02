@@ -162,7 +162,7 @@ CHECKCMD=./acltool
 CHECKLOG=/tmp/acltool-checks.log
 
 BASICCHECKS=version echo help pwd cd dir
-ACLCHECKS=lac sac touch edac
+ACLCHECKS=lac gac sac tac edac
 XATTRCHECKS=sxa lxa rxa
 
 
@@ -208,6 +208,9 @@ check-lac: acltool
 	  $(CHECKCMD) list-access -v t && \
 	  $(CHECKCMD) list-access -vv t) >$(CHECKLOG) && echo "acltool list-access: OK"
 
+check-gac: acltool
+	@($(CHECKCMD) gac X=t && \
+	  $(CHECKCMD) get-access -v X=t) >$(CHECKLOG) && echo "acltool get-access: OK"
 
 ### MacOS doesn't have owner@/group@/everyone@ - sigh
 USACACL1=owner@:all
@@ -230,8 +233,8 @@ check-sac-FreeBSD check-sac-SunOS check-sac-Linux: acltool
 	  $(CHECKCMD) set-access -v "$(USACACL2)" t && \
 	  $(CHECKCMD) set-access -vp "$(USACACL3)" t) >$(CHECKLOG) && echo "acltool set-access: OK"
 
-check-touch: acltool
-	@($(CHECKCMD) touch  t && \
+check-tac: acltool
+	@($(CHECKCMD) tac  t && \
 	  $(CHECKCMD) touch-access -fv t && \
 	  $(CHECKCMD) touch-access -vsp t) >$(CHECKLOG) && echo "acltool touch-access: OK"
 

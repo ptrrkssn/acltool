@@ -318,13 +318,11 @@ int
 get_cmd(int argc,
 	char **argv) {
   int i;
-  size_t ns;
-  char *nv;
   
   
   for (i = 1; i < argc; i++) {
     gacl_t ap;
-    char *pp, *as;
+    char *pp, *as, *ns;
 
     pp = strchr(argv[i], '=');
     if (!pp)
@@ -344,24 +342,25 @@ get_cmd(int argc,
       return error(1, ec, "%s: Converting ACL to text", pp);
     }
 
-    ns = strlen(argv[i])+1+strlen(as)+1;
-    nv = malloc(ns);
-    if (!nv) {
+    ns = s_dupcat(argv[i], "=", as, NULL);
+    if (!ns) {
       int ec = errno;
       
       gacl_free(ap);
-      return error(1, ec, "%s: Malloc(%d)", argv[i], (int) ns);
+      return error(1, ec, "%s: Memory allocation");
     }
     
-    snprintf(nv, ns, "%s=%s", argv[i], as);
-    if (putenv(nv) < 0) {
+    gacl_free(as);
+    
+    if (putenv(ns) < 0) {
       int ec = errno;
 
+      free(ns);
       gacl_free(ap);
       return error(1, ec, "%s: Putenv: %s\n", argv[i]);
     }
     
-    gacl_free(as);
+    free(ns);
     gacl_free(ap);
   }
 

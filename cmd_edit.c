@@ -744,6 +744,8 @@ acecr_free(ACECR *cr) {
       else
 	regfree(&cr->filter.preg);
     }
+    if (cr->change.data)
+      free(cr->change.data);
     if (cr->change.ep)
       free(cr->change.ep);
     if (cr->modifiers)

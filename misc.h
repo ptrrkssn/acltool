@@ -53,28 +53,34 @@ ts_delta(struct timespec *x,
 
 
 extern char *
-permset2str(acl_permset_t psp, char *res);
+permset2str(gacl_permset_t psp,
+	    char *buf,
+	    size_t bufsize);
+
 
 extern char *
-flagset2str(acl_flagset_t fsp,
-	    char *res);
+flagset2str(gacl_flagset_t fsp,
+	    char *buf,
+	    size_t bufsize);
+
 
 extern const char *
 aet2str(gacl_entry_type_t aet);
 
 extern char *
-ace2str(acl_entry_t ae,
+ace2str(gacl_entry_t ae,
 	char *rbuf,
 	size_t rsize);
 
+
 extern char *
-ace2str_samba(acl_entry_t ae,
+ace2str_samba(gacl_entry_t ae,
 	      char *rbuf,
 	      size_t rsize,
 	      const struct stat *sp);
 
 extern char *
-ace2str_icacls(acl_entry_t ae,
+ace2str_icacls(gacl_entry_t ae,
 	       char *rbuf,
 	       size_t rsize,
 	       const struct stat *sp);
