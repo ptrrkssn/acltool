@@ -146,7 +146,7 @@ uninstall:
 
 # Check targets
 check:
-	@mkdir -p $(TESTDIR) && $(MAKE) check-`uname -s`
+	@$(MAKE) check-`uname -s`
 
 check-macos check-Darwin: check-all
 
@@ -159,12 +159,44 @@ check-linux check-Linux:
 
 
 CHECKCMD=./acltool
-CHECKS=dir lac sac touch edac last sxa lxa rxa
-VALGRINDCHECKS=dir lac sac touch edac last
 
-check-all:
-	@for T in $(CHECKS); do $(MAKE) check-$$T; done
-	@echo "";echo "*** All checks passed ***"
+BASICCHECKS=version echo help pwd cd dir
+ACLCHECKS=lac sac touch edac last
+ATTRCHECKS=sxa lxa rxa
+
+
+check-all: check-basic check-acl # check-attr (skip for now)
+
+check-basic:
+	@for T in $(BASICCHECKS); do $(MAKE) check-$$T; done
+	@echo "";echo "*** All basic checks passed ***"
+
+check-acl:
+	@for T in $(ACLCHECKS); do $(MAKE) check-$$T; done
+	@echo "";echo "*** All ACL checks passed ***"
+
+check-attr:
+	@for T in $(ATTRCHECKS); do $(MAKE) check-$$T; done
+	@echo "";echo "*** All ATTR checks passed ***"
+
+
+check-version: acltool
+	$(CHECKCMD) version
+
+check-cd: acltool
+	$(CHECKCMD) cd /
+
+check-pwd: acltool
+	$(CHECKCMD) pwd
+
+check-help: acltool
+	$(CHECKCMD) help
+
+check-config: acltool
+	$(CHECKCMD) config
+
+check-echo: acltool
+	$(CHECKCMD) echo foo
 
 check-dir: acltool
 	$(CHECKCMD) dir doc
@@ -208,8 +240,8 @@ check-rxa: acltool
 	$(CHECKCMD) rxa t acltooltestattr
 
 
-valgrind-check: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" CHECKS="$(VALGRINDCHECKS)" check-all
+check-valgrind: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-all
 
 
 distcheck: check

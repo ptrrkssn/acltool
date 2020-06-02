@@ -422,6 +422,8 @@ help_cmd(int argc,
     puts("  ACL styles supported: default, csv, brief, verbose, samba, icacls, solaris, primos");
     putchar('\n');
     puts("  You may access environment variables using ${NAME}.");
+
+    return 0;
   } else {
     for (i = 1; i < argc; i++) {
       rc = cmd_help(&commands, argv[i], stdout, 1);
