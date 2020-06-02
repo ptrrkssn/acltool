@@ -797,9 +797,11 @@ walker_edit(const char *path,
     error_return(rc, saved_error_env);
   }
   
-  oap = get_acl(path, sp);  
-  if (!oap)
+  rc = get_acl(path, sp, &oap);  
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
+  if (rc == 0)
+    error_return(0, saved_error_env);
 
   nap = gacl_dup(oap);
   if (!nap) {

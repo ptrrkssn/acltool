@@ -96,10 +96,12 @@ walker_strip(const char *path,
   int tf;
   
 
-  ap = get_acl(path, sp);
-  if (!ap)
-    return 1;
-
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
+    return error(1, errno, "%s: Getting ACL", path);
+  if (rc == 0)
+    return 0;
+  
   tf = 0;
   if (gacl_is_trivial_np(ap, &tf) < 0) {
     int s_errno = errno;
@@ -135,9 +137,11 @@ walker_delete(const char *path,
   int rc;
   
   
-  if (S_ISLNK(sp->st_mode))
+  if (S_ISLNK(sp->st_mode)) {
     rc = gacl_delete_link_np(path, GACL_TYPE_NFS4);
-  else
+    if (errno == ENOTSUP) /* Solaris does not support ACLs on symbolic links */
+      return 0;
+  } else
     rc = gacl_delete_file_np(path, GACL_TYPE_NFS4);
   
   if (rc < 0)
@@ -160,10 +164,12 @@ walker_sort(const char *path,
   gacl_t ap, na;
 
 
-  ap = get_acl(path, sp);
-  if (!ap)
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
-
+  if (rc == 0)
+    return 0;
+  
   na = gacl_sort(ap);
   if (!na)
     return error(1, errno, "%s: Sorting ACL", path);
@@ -189,9 +195,11 @@ walker_touch(const char *path,
   gacl_t ap;
 
 
-  ap = get_acl(path, sp);
-  if (!ap)
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
+  if (rc == 0)
+    return 0;
 
   rc = set_acl(path, sp, ap, ap);
   gacl_free(ap);
@@ -242,15 +250,15 @@ walker_find(const char *path,
 	    size_t level,
 	    void *vp) {
   gacl_t ap, map = (gacl_t) vp;
-  int i, j;
+  int i, j, rc;
   gacl_entry_t ae, mae;
 
 
-  ap = get_acl(path, sp);
-  if (!ap) {
-    /* Silently ignore this one - no ACL set? */
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
+    return error(1, errno, "%s: Getting ACL", path);
+  if (rc == 0)
     return 0;
-  }
 
   for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
     for (j = 0; gacl_get_entry(map, j == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &mae) == 1; j++) {
@@ -282,15 +290,16 @@ walker_print(const char *path,
 	     size_t base,
 	     size_t level,
 	     void *vp) {
-  gacl_t ap;
+  gacl_t ap = NULL;
   FILE *fp;
   int *np = (int *) vp;
-
+  int rc;
+  
   
   fp = stdout;
 
-  ap = get_acl(path, sp);
-  if (!ap)
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
 
   if (np && ++*np > 1)
@@ -298,7 +307,8 @@ walker_print(const char *path,
   
   print_acl(fp, ap, path, sp);
 
-  gacl_free(ap);
+  if (ap)
+    gacl_free(ap);
   
   ++w_c;
   
@@ -317,7 +327,7 @@ list_cmd(int argc,
 int
 get_cmd(int argc,
 	char **argv) {
-  int i;
+  int i, rc;
   
   
   for (i = 1; i < argc; i++) {
@@ -330,8 +340,8 @@ get_cmd(int argc,
 
     *pp++ = '\0';
 
-    ap = get_acl(pp, NULL);
-    if (!ap)
+    rc = get_acl(pp, NULL, &ap);
+    if (rc <= 0)
       return error(1, errno, "%s: Getting ACL", pp);
 
     as = gacl_to_text_np(ap, NULL, GACL_TEXT_COMPACT);
@@ -373,17 +383,23 @@ int
 copy_cmd(int argc,
 	 char **argv) {
   int rc;
+#if 0
   struct stat s0;
+#endif
   DACL a;
 
-  
+
+#if 0
   if (vfs_lstat(argv[1], &s0) != 0)
     return error(1, errno, "%s: Accessing", argv[1]);
-
-  a.da = get_acl(argv[1], &s0);
-  if (!a.da)
+#endif
+  
+  rc = get_acl(argv[1], NULL, &a.da);
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", argv[1]);
-
+  if (rc == 0)
+    return 0;
+  
   a.fa = gacl_dup(a.da);
   if (!a.fa) {
     int ec = errno;
@@ -484,9 +500,11 @@ walker_rename(const char *path,
   int f_updated = 0;
 
   
-  ap = get_acl(path, sp);
-  if (!ap)
+  rc = get_acl(path, sp, &ap);
+  if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
+  if (rc == 0)
+    return 0;
 
   for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
     gacl_tag_t tt;
@@ -669,11 +687,13 @@ walker_inherit(const char *path,
   
   if (!a->da) {
     gacl_entry_t ep;
-    int p;
+    int p, rc;
     
-    ap = get_acl(path, sp);
-    if (!ap)
-      return -1;
+    rc = get_acl(path, sp, &ap);
+    if (rc < 0)
+      return error(1, errno, "%s: Getting ACL", path);
+    if (rc == 0)
+      return 0;
 
     a->da = gacl_dup(ap);
     if (!a->da)
@@ -721,13 +741,15 @@ walker_inherit(const char *path,
     
     return 0;
   } else {
-    gacl_t oap = get_acl(path, sp);
     int rc;
-
+    gacl_t oap;
     
-    if (!oap)
-      return -1;
-
+    rc = get_acl(path, sp, &oap);
+    if (rc < 0)
+      return error(1, errno, "%s: Getting ACL", path);
+    if (rc == 0)
+      return 0;
+    
     if (S_ISDIR(sp->st_mode))
       rc = set_acl(path, sp, a->da, oap);
     else

@@ -48,9 +48,10 @@ typedef enum gacl_style
   } GACL_STYLE;
 
 
-extern gacl_t 
+extern int
 get_acl(const char *path, 
-	const struct stat *sp);
+	const struct stat *sp,
+	gacl_t *app);
 
 extern int
 print_ace(gacl_t ap,

@@ -49,18 +49,17 @@
 #include "common.h"
 
 
-gacl_t 
+int
 get_acl(const char *path, 
-	const struct stat *sp) {
+	const struct stat *sp,
+	gacl_t *app) {
   gacl_t ap;
   struct stat sbuf;
 
 
   if (!sp) {
-    if (vfs_lstat(path, &sbuf) < 0) {
-      error(1, errno, "%s: Getting ACL (lstat)", path);
-      return NULL;
-    }
+    if (vfs_lstat(path, &sbuf) < 0)
+      return -1;
     
     sp = &sbuf;
   }
@@ -68,18 +67,19 @@ get_acl(const char *path,
   if (S_ISLNK(sp->st_mode)) {
     ap = vfs_acl_get_link(path, GACL_TYPE_NFS4);
     if (!ap) {
-      error(1, errno, "%s: Getting ACL (acl_get_link)", path);
-      return NULL;
+      if (errno == ENOTSUP) /* Solaris does not support ACLs on symbolic links */
+	return 0;
+      
+      return -1;
     }
   } else {
     ap = vfs_acl_get_file(path, GACL_TYPE_NFS4);
-    if (!ap) {
-      error(1, errno, "%s: Getting ACL (acl_get_file)", path);
-      return NULL;
-    }
+    if (!ap)
+      return -1;
   }
 
-  return ap;
+  *app = ap;
+  return 1;
 }
 
 
@@ -291,8 +291,10 @@ print_acl(FILE *fp,
   gacl_entry_t ae;
   int i, is_trivial, len;
   uid_t *idp;
-  char *as;
-  char acebuf[2048], ubuf[64], gbuf[64], tbuf[80], *us, *gs;
+  char *as = NULL;
+  char acebuf[2048], ubuf[64], gbuf[64], tbuf[80];
+  char *us = NULL;
+  char *gs = NULL;
   struct passwd *pp = NULL;
   struct group *gp = NULL;
   struct tm *tp;
@@ -301,15 +303,12 @@ print_acl(FILE *fp,
   if (strncmp(path, "./", 2) == 0)
     path += 2;
 
-  us = gs = NULL;
-  pp = NULL;
-  gp = NULL;
   if (sp) {
     pp = getpwuid(sp->st_uid);
     gp = getgrgid(sp->st_gid);
   }
 
-  if (a->owner[0])
+  if (a && a->owner[0])
     us = s_dup(a->owner);
   else {
     if (!pp) {
@@ -321,7 +320,7 @@ print_acl(FILE *fp,
       us = s_dup(pp->pw_name);
   }
   
-  if (a->group[0])
+  if (a && a->group[0])
     gs = s_dup(a->group);
   else {
     if (!gp) {
@@ -332,24 +331,16 @@ print_acl(FILE *fp,
     } else
       gs = s_dup(gp->gr_name);
   }
-  
-  switch (config.f_style) {
-  case GACL_STYLE_DEFAULT:
-    as = gacl_to_text_np(a, NULL, (config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
-    if (!as) {
-      fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
-      return 1;
-    }
 
+  if (!a) {
     fprintf(fp, "# file: %s\n", path);
-
     if (us) {
       if (config.f_verbose)
 	fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);
       else
 	fprintf(fp, "# owner: %s\n", us);
     }
-
+    
     if (gs) {
       if (config.f_verbose)
 	fprintf(fp, "# group: %s (%d)\n", gs, sp->st_gid);
@@ -369,18 +360,58 @@ print_acl(FILE *fp,
 	fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
 #endif
     }
+    goto End;
+  }
 
+  
+  switch (config.f_style) {
+  case GACL_STYLE_DEFAULT:
+    as = gacl_to_text_np(a, NULL, (config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
+    if (!as) {
+      fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
+      return 1;
+    }
+    
+    fprintf(fp, "# file: %s\n", path);
+    
+    if (us) {
+      if (config.f_verbose)
+	fprintf(fp, "# owner: %s (%d)\n", us, sp->st_uid);
+      else
+	fprintf(fp, "# owner: %s\n", us);
+    }
+    
+    if (gs) {
+      if (config.f_verbose)
+	fprintf(fp, "# group: %s (%d)\n", gs, sp->st_gid);
+      else
+	fprintf(fp, "# group: %s\n", gs);
+    }
+    
+    if (config.f_verbose)
+      fprintf(fp, "# type: %s\n", mode2typestr(sp->st_mode));
+    if (config.f_verbose > 1) {
+      fprintf(fp, "# size: %llu\n", (long long unsigned) sp->st_size);
+      fprintf(fp, "# modified: %s", ctime(&sp->st_mtime));
+      fprintf(fp, "# changed:  %s", ctime(&sp->st_ctime));
+      fprintf(fp, "# accessed: %s", ctime(&sp->st_atime));
+#ifdef st_birthtime
+      if (sp->st_birthtime)
+	fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
+#endif
+    }
+    
     fputs(as, fp);
     gacl_free(as);
     break;
-
+    
   case GACL_STYLE_STANDARD:
     as = gacl_to_text_np(a, NULL, GACL_TEXT_STANDARD|(config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
     }
-
+    
     fprintf(fp, "# file: %s\n", path);
     fprintf(fp, "# owner: %s\n", us);
     fprintf(fp, "# group: %s\n", gs);
@@ -390,7 +421,7 @@ print_acl(FILE *fp,
     
   case GACL_STYLE_CSV:
     /* One-liner, CSV-style */
-
+    
     as = gacl_to_text_np(a, NULL, GACL_TEXT_COMPACT);
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL: %s\n", argv0, path, strerror(errno));
@@ -608,7 +639,8 @@ print_acl(FILE *fp,
   default:
     return -1;
   }
-  
+
+ End:
   free(us);
   free(gs);
   return 0;

@@ -1099,7 +1099,7 @@ _gacl_get_fd_file(int fd,
     
     if (S_ISLNK(sb.st_mode)) {
       /* Solaris doesn't support doing ACL operations on symbolic links - sorry */
-      errno = ENOSYS;
+      errno = ENOTSUP;
       return NULL;
     }
   }
@@ -1219,7 +1219,7 @@ _gacl_set_fd_file(int fd,
     
     if (S_ISLNK(sb.st_mode)) {
       /* Solaris doesn't support doing ACL operations on symbolic links - sorry */
-      errno = ENOSYS;
+      errno = ENOTSUP;
       return -1;
     }
   }
