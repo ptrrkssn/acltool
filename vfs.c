@@ -589,13 +589,9 @@ vfs_setxattr(const char *path,
     return setxattr(path, attr, buf, bufsize, 0, flags);
 #elif defined(__sun__)
 
-    fprintf(stderr, "attropen('%s', '%s')\n", path, attr);
-    
     fd = attropen(path, attr, O_CREAT|O_WRONLY, 0600);
-    if (fd < 0) {
-      fprintf(stderr, "attropen failed\n");
+    if (fd < 0)
       return -1;
-    }
 
     len = write(fd, buf, bufsize);
     close(fd);
