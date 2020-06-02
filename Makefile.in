@@ -146,7 +146,7 @@ uninstall:
 
 # Check targets
 check:
-	@$(MAKE) -s check-`uname -s`
+	@mkdir -p t/d1 t/d2 && touch t/f1 t/f2 && ln -s f1 t/s1 && $(MAKE) -s check-`uname -s`
 
 check-macos check-Darwin: check-all
 
@@ -157,10 +157,10 @@ check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 # Linux can only test ACLs & XATTRS on NFSv4 for now
 check-linux check-Linux:
 	-@if df -t nfs4 $(TESTDIR) 2>/dev/null; then \
-	  $(MAKE) check-all; \
+	  $(MAKE) -s check-all; \
 	else \
 	  echo "*** $(TESTDIR): Not on NFSv4 - only basic tests done."; \
-	  $(MAKE) check-basic; \
+	  $(MAKE) -s check-basic; \
 	fi
 
 
@@ -176,13 +176,13 @@ XATTRCHECKS=sxa lxa rxa
 check-all: check-basic check-acl # check-attr (skip for now)
 
 check-basic: acltool
-	@for T in $(BASICCHECKS); do $(MAKE) check-$$T; done
+	@for T in $(BASICCHECKS); do $(MAKE) -s check-$$T; done
 
 check-acl: acltool
-	@for T in $(ACLCHECKS); do $(MAKE) check-$$T; done
+	@for T in $(ACLCHECKS); do $(MAKE) -s check-$$T; done
 
 check-xattr: acltool
-	@for T in $(XATTRCHECKS); do $(MAKE) check-$$T; done
+	@for T in $(XATTRCHECKS); do $(MAKE) -s check-$$T; done
 
 
 check-version: acltool
@@ -204,15 +204,17 @@ check-echo: acltool
 	@$(CHECKCMD) echo foo >$(CHECKLOG) && echo "acltool echo: OK"
 
 check-dir: acltool
-	@($(CHECKCMD) dir doc && \
-	  $(CHECKCMD) dir -v doc && \
-	  $(CHECKCMD) dir -vv doc) >$(CHECKLOG) && echo "acltool dir: OK"
+	@($(CHECKCMD) dir . && \
+	  $(CHECKCMD) dir -v . && \
+	  $(CHECKCMD) dir -vv . && \
+	  $(CHECKCMD) dir -rv . ) >$(CHECKLOG) && echo "acltool dir: OK"
 
 
 check-lac: acltool
 	@($(CHECKCMD) lac t && \
 	  $(CHECKCMD) list-access -v t && \
-	  $(CHECKCMD) list-access -vv t) >$(CHECKLOG) && echo "acltool list-access: OK"
+	  $(CHECKCMD) list-access -vv t && \
+	  $(CHECKCMD) list-access -rv t) >$(CHECKLOG) && echo "acltool list-access: OK"
 
 
 ### MacOS doesn't have owner@/group@/everyone@ - sigh
@@ -224,7 +226,7 @@ MSACACL2=user:$$USER:all,$$USER:rwx:fd
 MSACACL3=user:$$USER:all,$$USER:rwx:fd,$$USER:d::deny
 
 check-sac:
-	@$(MAKE) check-sac-`uname -s`
+	@$(MAKE) -s check-sac-`uname -s`
 
 check-sac-Darwin: acltool
 	@($(CHECKCMD) sac "$(MSACACL1)" t && \
@@ -264,19 +266,29 @@ check-valgrind: acltool
 	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-all
 
 
-distcheck: check
+DISTCHECKDIR=/tmp/distcheck-acltool-$(VERSION)
+
+distcheck: acltool-$(VERSION).tar.gz
+	rm -fr $(DISTCHECKDIR) && mkdir -p $(DISTCHECKDIR) && \
+	  gunzip <acltool-$(VERSION).tar.gz | \
+	    (cd $(DISTCHECKDIR) && tar xf - && \
+	     mkdir b && cd b && ../acltool-$(VERSION)/configure && \
+	     $(MAKE) && $(MAKE) -s check) && echo "*** distcheck: OK"
+	rm -fr $(DISTCHECKDIR)
 
 
-DISTROOT=/tmp
-DISTDIR=$(DISTROOT)/build-acltool-$(VERSION)
+DISTDIR=/tmp/build-acltool-$(VERSION)
 
-dist:
+
+dist:	acltool-$(VERSION).tar.gz
+
+acltool-$(VERSION).tar.gz: acltool
 	rm -fr $(DISTDIR) && \
 	  mkdir -p $(DISTDIR) && \
 	  cp -r . $(DISTDIR)/acltool-$(VERSION) && \
-	  (cd $(DISTDIR)/acltool-$(VERSION) && make -f Makefile.dist distclean) && \
-	  (cd $(DISTDIR) && tar --exclude='*/.??*' -zcvf $(DISTROOT)/acltool-$(VERSION).tar.gz acltool-$(VERSION))
+	  (cd $(DISTDIR)/acltool-$(VERSION) && $(MAKE) -f Makefile.dist distclean) && \
+	  (cd $(DISTDIR) && tar --exclude='*/.??*' -zcvf - acltool-$(VERSION)) >acltool-$(VERSION).tar.gz
 	rm -fr $(DISTDIR)
 	@echo ""
-	@echo "*** Distribution archive saved as: $(DISTROOT)/acltool-$(VERSION).tar.gz"
+	@echo "*** acltool-$(VERSION).tar.gz created"
 
