@@ -3375,6 +3375,7 @@ fi
 
   test -n "$VALGRIND" && break
 done
+test -n "$VALGRIND" || VALGRIND=":"
 
 
 
