@@ -269,12 +269,16 @@ check-valgrind: acltool
 DISTCHECKDIR=/tmp/distcheck-acltool-$(VERSION)
 
 distcheck: acltool-$(VERSION).tar.gz
-	rm -fr $(DISTCHECKDIR) && mkdir -p $(DISTCHECKDIR) && \
+	@if test -d $(DISTCHECKDIR); then \
+	  chmod -R +w $(DISTCHECKDIR) && rm -fr $(DISTCHECKDIR); \
+	fi;
+	mkdir -p $(DISTCHECKDIR) && \
 	  gunzip <acltool-$(VERSION).tar.gz | \
 	    (cd $(DISTCHECKDIR) && tar xf - && \
+	     chmod -R -w acltool-$(VERSION) && \
 	     mkdir b && cd b && ../acltool-$(VERSION)/configure && \
 	     $(MAKE) && $(MAKE) -s check) && echo "*** distcheck: OK"
-	rm -fr $(DISTCHECKDIR)
+	@chmod -R +w $(DISTCHECKDIR) && rm -fr $(DISTCHECKDIR);
 
 
 DISTDIR=/tmp/build-acltool-$(VERSION)
