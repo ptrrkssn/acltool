@@ -146,7 +146,7 @@ uninstall:
 
 # Check targets
 check:
-	@mkdir -p t/d1 t/d2 && touch t/f1 t/f2 && ln -s f1 t/s1 && $(MAKE) -s check-`uname -s`
+	@mkdir -p t/d1 t/d2 && touch t/f1 t/f2 && ln -sf f1 t/s1 && $(MAKE) -s check-`uname -s`
 
 check-macos check-Darwin: check-all
 

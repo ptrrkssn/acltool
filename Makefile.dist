@@ -32,7 +32,7 @@ maintainer-clean: distclean
 	echo rm -f configure config.h.in
 
 distclean: clean
-	rm -fr config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h *.tar.gz
+	rm -fr t config.status config.log stamp-h1 .deps autom4te.cache Makefile config.h *.tar.gz
 	@for D in $(SUBDIRS); do if test -f $$D/Makefile; then (cd $$D && make distclean); fi; done
 
 clean:
