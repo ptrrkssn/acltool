@@ -1447,6 +1447,10 @@ _acl_entry_from_gace(macos_acl_entry_t nep,
     if (mbr_gid_to_uuid(oep->tag.ugid, (unsigned char *) &guid) < 0)
       return -1;
     break;
+    
+  case GACL_TAG_TYPE_USER_OBJ:
+  case GACL_TAG_TYPE_GROUP_OBJ:
+  case GACL_TAG_TYPE_EVERYONE:
   default:
     errno = EINVAL;
     return -1;
@@ -1561,7 +1565,7 @@ _gacl_set_fd_file(int fd,
     errno = EINVAL;
     return -1;
   }
-    
+
   nap = acl_init(ap->ac);
   if (!nap)
     return -1;
@@ -1591,8 +1595,7 @@ _gacl_set_fd_file(int fd,
   return rc;
 
  Fail:
-  acl_free(ap);
-  gacl_free(nap);
+  acl_free(nap);
   return -1;
 }
 #endif

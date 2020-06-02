@@ -171,15 +171,12 @@ check-all: check-basic check-acl # check-attr (skip for now)
 
 check-basic: acltool
 	@for T in $(BASICCHECKS); do $(MAKE) check-$$T; done
-	@echo "*** All basic checks passed ***" ; echo ""
 
 check-acl: acltool
 	@for T in $(ACLCHECKS); do $(MAKE) check-$$T; done
-	@echo "*** All ACL checks passed ***" ; echo ""
 
 check-xattr: acltool
 	@for T in $(XATTRCHECKS); do $(MAKE) check-$$T; done
-	@echo "*** All XATTR checks passed ***" ; echo ""
 
 
 check-version: acltool
@@ -212,9 +209,13 @@ check-lac: acltool
 	  $(CHECKCMD) list-access -vv t) >$(CHECKLOG) && echo "acltool list-access: OK"
 
 
-SACACL1=owner@:all
-SACACL2=owner@:all,user:$$USER:all,group@:read_set,everyone@:empty_set
-SACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all
+### MacOS doesn't have owner@/group@/everyone@ - sigh
+#SACACL1=owner@:all
+#SACACL2=owner@:all,user:$$USER:rwx,group@:read_set,everyone@:empty_set
+#SACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all
+SACACL1=$$USER:all
+SACACL2=user:$$USER:all,$$USER:rwx:fd
+SACACL3=user:$$USER:all,$$USER:rwx:fd,$$USER:d::deny
 
 check-sac: acltool
 	@($(CHECKCMD) sac "$(SACACL1)" t && \
