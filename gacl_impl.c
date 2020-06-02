@@ -644,7 +644,7 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
       return -1;
     break;
   case GACL_TAG_TYPE_EVERYONE:
-    if (s_cpy(nep->tag.name, sizoef(nep->tag.name), "everyone@") < 0)
+    if (s_cpy(nep->tag.name, sizeof(nep->tag.name), "everyone@") < 0)
       return -1;
     break;
     
