@@ -288,10 +288,10 @@ dist:	acltool-$(VERSION).tar.gz
 
 acltool-$(VERSION).tar.gz: acltool
 	rm -fr $(DISTDIR) && \
-	  mkdir -p $(DISTDIR) && \
-	  cp -r . $(DISTDIR)/acltool-$(VERSION) && \
+	  mkdir -p $(DISTDIR)/acltool-$(VERSION) && \
+	  cp -r * $(DISTDIR)/acltool-$(VERSION) && \
 	  (cd $(DISTDIR)/acltool-$(VERSION) && $(MAKE) -f Makefile.dist distclean) && \
-	  (cd $(DISTDIR) && tar --exclude='*/.??*' -zcvf - acltool-$(VERSION)) >acltool-$(VERSION).tar.gz
+	  (cd $(DISTDIR) && tar -cv acltool-$(VERSION)) | gzip >acltool-$(VERSION).tar.gz
 	rm -fr $(DISTDIR)
 	@echo ""
 	@echo "*** acltool-$(VERSION).tar.gz created"
