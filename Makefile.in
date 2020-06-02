@@ -154,11 +154,12 @@ check-freebsd check-FreeBSD: check-all
 
 check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 
+# Linux can only test ACLs & XATTRS on NFSv4 for now
 check-linux check-Linux:
 	-@if df -t nfs4 $(TESTDIR) 2>/dev/null; then \
 	  $(MAKE) check-all; \
 	else \
-	  echo "*** $(TESTDIR) is not an on NFSv4, only basic tests done."; \
+	  echo "*** $(TESTDIR): Not on NFSv4 - only basic tests done."; \
 	  $(MAKE) check-basic; \
 	fi
 
