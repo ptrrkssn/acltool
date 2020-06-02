@@ -146,7 +146,7 @@ uninstall:
 
 # Check targets
 check:
-	@$(MAKE) check-`uname -s`
+	@$(MAKE) -s check-`uname -s`
 
 check-macos check-Darwin: check-all
 
