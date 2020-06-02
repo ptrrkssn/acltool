@@ -58,7 +58,7 @@ get_acl(const char *path,
 
   if (!sp) {
     if (vfs_lstat(path, &sbuf) < 0) {
-      error(1, errno, "Getting ACL (lstat)");
+      error(1, errno, "%s: Getting ACL (lstat)", path);
       return NULL;
     }
     
@@ -68,13 +68,13 @@ get_acl(const char *path,
   if (S_ISLNK(sp->st_mode)) {
     ap = vfs_acl_get_link(path, GACL_TYPE_NFS4);
     if (!ap) {
-      error(1, errno, "Getting ACL (acl_get_link)");
+      error(1, errno, "%s: Getting ACL (acl_get_link)", path);
       return NULL;
     }
   } else {
     ap = vfs_acl_get_file(path, GACL_TYPE_NFS4);
     if (!ap) {
-      error(1, errno, "Getting ACL (acl_get_file)");
+      error(1, errno, "%s: Getting ACL (acl_get_file)", path);
       return NULL;
     }
   }
