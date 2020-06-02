@@ -131,8 +131,7 @@ dir_cmd(int argc,
     
     for (j = 0; j < nlist->c; j++) {
       if (config.f_verbose) {
-	char *path;
-	char pbuf[2048];
+	char pbuf[2048], *path = NULL;
 	struct stat sb;
 	
 	if (argv[i])
@@ -142,10 +141,14 @@ dir_cmd(int argc,
 
 	if (!vfs_fullpath(path, pbuf, sizeof(pbuf))) {
 	  int ec = errno;
+
+	  free(path);
 	  slist_free(nlist);
 	  error(1, ec, "Unable to get full directory name");
 	}
 
+	free(path);
+	
 	if (vfs_lstat(pbuf, &sb) < 0) {
 	  if (config.f_debug)
 	    printf("%-20s  %-6s  %10s  %s\n", "?", "?", "", nlist->v[j]);

@@ -303,7 +303,7 @@ OPTION global_options[] =
    { "force",     	'f', OPTS_TYPE_NONE,               set_force,     NULL, "Force updates" },
    { "print",     	'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
    { "sort",      	's', OPTS_TYPE_NONE,               set_sort,      NULL, "Sort ACLs" },
-   { "merge",     	'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redunant ACL entries" },
+   { "merge",     	'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redundant ACL entries" },
    { "relaxed",      	'R', OPTS_TYPE_NONE,               set_relaxed,   NULL, "Relaxed mode" },
    { "recurse",   	'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
    { "depth",     	'd', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_depth,     NULL, "Increase/decrease max depth" },

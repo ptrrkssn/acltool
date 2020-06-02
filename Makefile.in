@@ -158,38 +158,49 @@ check-linux check-Linux:
 	-@df -t nfs4 $(TESTDIR) 2>/dev/null && $(MAKE) check-all
 
 
-CHECKCMD="./acltool"
+CHECKCMD=./acltool
+CHECKS=dir lac sac touch edac sxa lxa rxa
+VALGRINDCHECKS=dir lac sac touch edac
 
-check-all: check-dir check-lac check-sac check-edac
+check-all:
+	@for T in $(CHECKS); do $(MAKE) check-$$T; done
 	@echo "";echo "*** All checks passed ***"
 
 check-dir: acltool
-	$(CHECKCMD) dir .
+	$(CHECKCMD) dir doc
+	$(CHECKCMD) dir -v doc
+	$(CHECKCMD) dir -vv doc
 
 check-lac: acltool
 	$(CHECKCMD) lac t
+	$(CHECKCMD) lac -v t
+	$(CHECKCMD) lac -vv t
 
 check-sac: acltool
+	$(CHECKCMD) sac "user:nobody:rwx,user:$$USER:all" t
 	$(CHECKCMD) sac -vp "user:nobody:rwx,user:$$USER:all" t
+
+check-touch: acltool
+	$(CHECKCMD) touch  t
+	$(CHECKCMD) touch -fv t
+	$(CHECKCMD) touch -vs t
 
 check-edac: acltool
 	$(CHECKCMD) edac -vp -e '/user:nobody:r.*/d' t
 
+check-sxa: acltool
+	$(CHECKCMD) sxa t acltooltestattr=foo
 
-check-valgrind-all: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-all
+check-lxa: acltool
+	$(CHECKCMD) lxa t
+	$(CHECKCMD) lxa -v t
 
-check-valgrind-dir: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-dir
+check-rxa: acltool
+	$(CHECKCMD) rxa t acltooltestattr
 
-check-valgrind-lac: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-lac
 
-check-valgrind-edac: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-edac
-
-check-valgrind-sac: acltool
-	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" check-sac
+valgrind-check: acltool
+	@$(MAKE) CHECKCMD="$(VALGRIND) $(VALGRINDFLAGS) $(CHECKCMD)" CHECKS="$(VALGRINDCHECKS)" check-all
 
 
 distcheck: check
