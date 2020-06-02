@@ -14,7 +14,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
-AC_CHECK_PROGS(VALGRIND, [valgrind])
+AC_CHECK_PROGS(VALGRIND, [valgrind], [:])
 
 
 # Checks for header files.
