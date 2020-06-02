@@ -332,7 +332,7 @@ _gacl_init_from_nfs4(const char *buf,
 	  errno = EINVAL;
 	  return NULL;
 	}
-	if (s_ncpy(ep->tag.name, sizeof(eo->tag.name), cp, idlen) < 0)
+	if (s_ncpy(ep->tag.name, sizeof(ep->tag.name), cp, idlen) < 0)
 	  return NULL;
 	
 	ep->tag.type = GACL_TAG_TYPE_USER;
