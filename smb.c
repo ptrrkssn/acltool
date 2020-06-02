@@ -677,7 +677,7 @@ smb_gacl_entry_to_text(GACL_ENTRY *ep,
 		       char *owner,
 		       char *group) {
   char *name;
-  int type, i, n;
+  int type, i, n, rc;
   int perms, flags;
   
   
@@ -736,11 +736,21 @@ smb_gacl_entry_to_text(GACL_ENTRY *ep,
       flags |= flagtab[i].s;
   }
   
-  return snprintf(buf, bufsize, "ACL:%s:%u/%u/%u", /* 0x%08x */
-		  name,
-		  type,
-		  flags,
-		  perms);
+  rc = snprintf(buf, bufsize, "ACL:%s:%u/%u/%u", /* 0x%08x */
+		name,
+		type,
+		flags,
+		perms);
+
+  if (rc < 0)
+    return rc;
+
+  if (rc >= bufsize-1) {
+    errno = ENOMEM;
+    return -1;
+  }
+
+  return rc;
 }
 
 
