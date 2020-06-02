@@ -177,17 +177,22 @@ dir_cmd(int argc,
 		   nlist->v[j]);
 	  } else if (S_ISLNK(sb.st_mode)) {
 	    char buf[2048];
-
-	    ++n_others;
+	    ssize_t n;
 	    
-	    if (readlink(path, buf, sizeof(buf)) < 0)
-	      buf[0] = '\0';
+	    ++n_others;
+
+	    n = readlink(pbuf, buf, sizeof(buf));
+	    if (n < 0)
+	      s_cpy(buf, sizeof(buf), "?");
+	    else
+	      buf[n] = '\0';
+	    
 	    printf("%-20s  %-6s  %13llu  %s -> %s\n",
 		   tbuf,
 		   "<LINK>",
 		   (unsigned long long) sb.st_size,
 		   nlist->v[j],
-		   buf[0] ? buf : "?");
+		   buf);
 	  } else if (S_ISFIFO(sb.st_mode)) {
 	    ++n_others;
 	    
