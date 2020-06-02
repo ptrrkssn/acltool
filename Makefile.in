@@ -48,7 +48,7 @@ CFLAGS = @CFLAGS@ -Wall
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
-VALGRIND=@VALGRIND@
+VALGRIND=valgrind
 VALGRINDFLAGS=--leak-check=full --track-origins=yes --error-exitcode=1 # --show-leak-kinds=all 
 
 
