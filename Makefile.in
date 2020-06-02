@@ -159,54 +159,57 @@ check-linux check-Linux:
 
 
 CHECKCMD=./acltool
+CHECKLOG=/tmp/acltool-checks.log
 
 BASICCHECKS=version echo help pwd cd dir
-ACLCHECKS=lac sac touch edac last
-ATTRCHECKS=sxa lxa rxa
+ACLCHECKS=lac sac touch edac
+XATTRCHECKS=sxa lxa rxa
+
 
 
 check-all: check-basic check-acl # check-attr (skip for now)
 
-check-basic:
+check-basic: acltool
 	@for T in $(BASICCHECKS); do $(MAKE) check-$$T; done
-	@echo "";echo "*** All basic checks passed ***"
+	@echo "*** All basic checks passed ***" ; echo ""
 
-check-acl:
+check-acl: acltool
 	@for T in $(ACLCHECKS); do $(MAKE) check-$$T; done
-	@echo "";echo "*** All ACL checks passed ***"
+	@echo "*** All ACL checks passed ***" ; echo ""
 
-check-attr:
-	@for T in $(ATTRCHECKS); do $(MAKE) check-$$T; done
-	@echo "";echo "*** All ATTR checks passed ***"
+check-xattr: acltool
+	@for T in $(XATTRCHECKS); do $(MAKE) check-$$T; done
+	@echo "*** All XATTR checks passed ***" ; echo ""
 
 
 check-version: acltool
-	$(CHECKCMD) version
+	@$(CHECKCMD) version >$(CHECKLOG) && echo "acltool version: OK"
 
 check-cd: acltool
-	$(CHECKCMD) cd /
+	@$(CHECKCMD) cd / >$(CHECKLOG) && echo "acltool cd: OK"
 
 check-pwd: acltool
-	$(CHECKCMD) pwd
+	@$(CHECKCMD) pwd >$(CHECKLOG) && echo "acltool pwd: OK"
 
 check-help: acltool
-	$(CHECKCMD) help
+	@$(CHECKCMD) help >$(CHECKLOG) && echo "acltool help: OK"
 
 check-config: acltool
-	$(CHECKCMD) config
+	@$(CHECKCMD) config >$(CHECKLOG) && echo "acltool config: OK"
 
 check-echo: acltool
-	$(CHECKCMD) echo foo
+	@$(CHECKCMD) echo foo >$(CHECKLOG) && echo "acltool echo: OK"
 
 check-dir: acltool
-	$(CHECKCMD) dir doc
-	$(CHECKCMD) dir -v doc
-	$(CHECKCMD) dir -vv doc
+	@($(CHECKCMD) dir doc && \
+	  $(CHECKCMD) dir -v doc && \
+	  $(CHECKCMD) dir -vv doc) >$(CHECKLOG) && echo "acltool dir: OK"
+
 
 check-lac: acltool
-	$(CHECKCMD) lac t
-	$(CHECKCMD) lac -v t
-	$(CHECKCMD) lac -vv t
+	@($(CHECKCMD) lac t && \
+	  $(CHECKCMD) list-access -v t && \
+	  $(CHECKCMD) list-access -vv t) >$(CHECKLOG) && echo "acltool list-access: OK"
 
 
 SACACL1=owner@:all
@@ -214,30 +217,32 @@ SACACL2=owner@:all,user:$$USER:all,group@:read_set,everyone@:empty_set
 SACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all
 
 check-sac: acltool
-	$(CHECKCMD) sac "$(SACACL1)" t
-	$(CHECKCMD) sac -v "$(SACACL2)" t
-	$(CHECKCMD) sac -vp "$(SACACL3)" t
+	@($(CHECKCMD) sac "$(SACACL1)" t && \
+	  $(CHECKCMD) set-access -v "$(SACACL2)" t && \
+	  $(CHECKCMD) set-access -vp "$(SACACL3)" t) >$(CHECKLOG) && echo "acltool set-access: OK"
 
 check-touch: acltool
-	$(CHECKCMD) touch  t
-	$(CHECKCMD) touch -fv t
-	$(CHECKCMD) touch -vsp t
+	@($(CHECKCMD) touch  t && \
+	  $(CHECKCMD) touch-access -fv t && \
+	  $(CHECKCMD) touch-access -vsp t) >$(CHECKLOG) && echo "acltool touch-access: OK"
 
 check-edac: acltool
-	$(CHECKCMD) edac -vp -e "/user:$$USER:.*/d" t
-
-check-last: acltool
-	$(CHECKCMD) lac -vv t
+	@($(CHECKCMD) edac -e "/user:$$USER:.*/p" t && \
+	  $(CHECKCMD) edit-access -v -e "/user:$$USER:.*/s user:$$USER:rwx" t && \
+	  $(CHECKCMD) edit-access -p -e "/user:$$USER:.*/a user:$$USER:rwx:fd" t && \
+	  $(CHECKCMD) edit-access -vp -e "/user:$$USER:.*/d" t) >$(CHECKLOG) && echo "acltool edit-access: OK"
 
 check-sxa: acltool
-	$(CHECKCMD) sxa t acltooltestattr=foo
+	@($(CHECKCMD) sxa t acltooltestattr1=foo && \
+	  $(CHECKCMD) set-xattr t acltooltestattr2=foo) >$(CHECKLOG) && echo "acltool set-xattr: OK"
 
 check-lxa: acltool
-	$(CHECKCMD) lxa t
-	$(CHECKCMD) lxa -v t
+	@($(CHECKCMD) lxa t && \
+	  $(CHECKCMD) list-xattr -v t) >$(CHECKLOG) && echo "acltool list-xattr: OK"
 
 check-rxa: acltool
-	$(CHECKCMD) rxa t acltooltestattr
+	@($(CHECKCMD) rxa t acltooltestattr1 && \
+	  $(CHECKCMD) remove-xattr t acltooltestattr2) >$(CHECKLOG) && echo "acltool remove-xattr: OK"
 
 
 check-valgrind: acltool
