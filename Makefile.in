@@ -210,17 +210,25 @@ check-lac: acltool
 
 
 ### MacOS doesn't have owner@/group@/everyone@ - sigh
-#SACACL1=owner@:all
-#SACACL2=owner@:all,user:$$USER:rwx,group@:read_set,everyone@:empty_set
-#SACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all
-SACACL1=$$USER:all
-SACACL2=user:$$USER:all,$$USER:rwx:fd
-SACACL3=user:$$USER:all,$$USER:rwx:fd,$$USER:d::deny
+USACACL1=owner@:all
+USACACL2=owner@:all,user:$$USER:rwx,group@:read_set,everyone@:empty_set
+USACACL3=owner@:all,everyone@:empty_set,group@:read_set,user:$$USER:all,$$USER:d::deny
+MSACACL1=$$USER:all
+MSACACL2=user:$$USER:all,$$USER:rwx:fd
+MSACACL3=user:$$USER:all,$$USER:rwx:fd,$$USER:d::deny
 
-check-sac: acltool
-	@($(CHECKCMD) sac "$(SACACL1)" t && \
-	  $(CHECKCMD) set-access -v "$(SACACL2)" t && \
-	  $(CHECKCMD) set-access -vp "$(SACACL3)" t) >$(CHECKLOG) && echo "acltool set-access: OK"
+check-sac:
+	@$(MAKE) check-sac-`uname -s`
+
+check-sac-Darwin: acltool
+	@($(CHECKCMD) sac "$(MSACACL1)" t && \
+	  $(CHECKCMD) set-access -v "$(MSACACL2)" t && \
+	  $(CHECKCMD) set-access -vp "$(MSACACL3)" t) >$(CHECKLOG) && echo "acltool set-access: OK"
+
+check-sac-FreeBSD check-sac-SunOS check-sac-Linux: acltool
+	@($(CHECKCMD) sac "$(USACACL1)" t && \
+	  $(CHECKCMD) set-access -v "$(USACACL2)" t && \
+	  $(CHECKCMD) set-access -vp "$(USACACL3)" t) >$(CHECKLOG) && echo "acltool set-access: OK"
 
 check-touch: acltool
 	@($(CHECKCMD) touch  t && \
