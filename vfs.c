@@ -53,6 +53,7 @@
 
 #define IN_ACLTOOL_VFS_C 1
 #include "vfs.h"
+#include "strings.h"
 
 #include "gacl.h"
 
@@ -95,7 +96,9 @@ vfs_getcwd(char *buf,
       return NULL;
     }
     
-    strcpy(buf, cwd);
+    if (s_cpy(buf, bufsize, cwd) < 0)
+      return NULL;
+    
     return buf;
   }
 #endif
@@ -131,10 +134,9 @@ vfs_fullpath(const char *path,
       errno = ERANGE;
       return NULL;
     }
-    strcpy(buf, path);
-#if 0
-    return buf;
-#endif
+    if (s_cpy(buf, bufsize, path) < 0)
+      return NULL;
+    
   } else {
 
     if (vfs_getcwd(buf, bufsize) == NULL)
@@ -149,8 +151,11 @@ vfs_fullpath(const char *path,
       return NULL;
     }
     
-    strcat(buf, "/");
-    strcat(buf, path);
+    if (s_cat(buf, bufsize, "/") < 0)
+      return NULL;
+    
+    if (s_cat(buf, bufsize, path) < 0)
+      return NULL;
   }
 
   i = 0;
@@ -467,7 +472,9 @@ vfs_listxattr(const char *path,
 	errno = ERANGE;
 	return -1;
       }
-      strcpy(buf+tlen, dp->d_name);
+      if (s_cpy(buf+tlen, bufsize-tlen, dp->d_name) < 0)
+	return -1;
+      
       tlen += len+1;
     }
     closedir(dirp);

@@ -771,7 +771,9 @@ ace2str(gacl_entry_t ae,
   --rsize;
 
   gacl_get_entry_type_np(ae, &aet);
-  strcpy(rbuf, aet2str(aet));
+  if (s_cpy(rbuf, rsize, aet2str(aet)) < 0)
+    return NULL;
+  
   return res;
 }
 

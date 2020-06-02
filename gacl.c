@@ -46,6 +46,7 @@
 #include "gacl_impl.h"
 
 #include "vfs.h"
+#include "strings.h"
 
 
 static struct gace_perm2c {
@@ -1066,7 +1067,9 @@ _gacl_set_tag(GACL_ENTRY *ep,
   ep->tag.type = etp->type;
   ep->tag.ugid = etp->ugid;
 
-  strncpy(ep->tag.name, etp->name, sizeof(ep->tag.name));
+  if (s_cpy(ep->tag.name, sizeof(ep->tag.name), etp->name) < 0)
+    return -1;
+  
   return 0;
 }
 
@@ -1101,12 +1104,20 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     if (sscanf(cp, "%d", &etp->ugid) == 1) {
       
       pp = getpwuid(etp->ugid);
-      if (pp)
-	strncpy(etp->name, pp->pw_name, sizeof(etp->name));
-      else {
-	if (flags & GACL_TEXT_RELAXED)
-	  snprintf(etp->name, sizeof(etp->name), "user:%d", etp->ugid);
-	else {
+      if (pp) {
+	if (s_cpy(etp->name, sizeof(etp->name), pp->pw_name) < 0)
+	  return -1;
+      } else {
+	if (flags & GACL_TEXT_RELAXED) {
+	  int rc = snprintf(etp->name, sizeof(etp->name), "user:%d", etp->ugid);
+
+	  if (rc < 0)
+	    return -1;
+	  if (rc >= sizeof(etp->name)) {
+	    errno = ENOMEM;
+	    return -1;
+	  }
+	} else {
 	  errno = EINVAL;
 	  return -1;
 	}
@@ -1115,12 +1126,9 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     } else {
       len = np-cp;
       
-      if (len >= sizeof(etp->name)) {
-	errno = EINVAL;
+      if (s_ncpy(etp->name, sizeof(etp->name), cp, len) < 0)
 	return -1;
-      }
-	
-      strncpy(etp->name, cp, len);
+      
       if ((pp = getpwnam(etp->name)) != NULL)
 	etp->ugid = pp->pw_uid;
       else {
@@ -1154,12 +1162,20 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     if (sscanf(cp, "%d", &etp->ugid) == 1) {
       
       gp = getgrgid(etp->ugid);
-      if (gp)
-	strncpy(etp->name, gp->gr_name, sizeof(etp->name));
-      else {
-	if (flags & GACL_TEXT_RELAXED)	
-	  snprintf(etp->name, sizeof(etp->name), "group:%d", etp->ugid);
-	else {
+      if (gp) {
+	if (s_cpy(etp->name, sizeof(etp->name), gp->gr_name) < 0)
+	  return -1;
+      } else {
+	if (flags & GACL_TEXT_RELAXED) {
+	  int rc = snprintf(etp->name, sizeof(etp->name), "group:%d", etp->ugid);
+
+	  if (rc < 0)
+	    return -1;
+	  if (rc >= sizeof(etp->name)) {
+	    errno = ENOMEM;
+	    return -1;
+	  }
+	} else {
 	  errno = EINVAL;
 	  return -1;
 	}
@@ -1168,12 +1184,9 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     } else {
       len = np-cp;
 
-      if (len >= sizeof(etp->name)) {
-	errno = EINVAL;
+      if (s_ncpy(etp->name, sizeof(etp->name), cp, len) < 0)
 	return -1;
-      }
       
-      strncpy(etp->name, cp, len);
       if ((gp = getgrnam(etp->name)) != NULL)
 	etp->ugid = gp->gr_gid;
       else {
@@ -1203,12 +1216,9 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
   }
 
   len = np-cp;
-  if (len >= sizeof(etp->name)) {
-    errno = EINVAL;
-    return -1;
-  }
 		
-  strncpy(etp->name, cp, len);
+  if (s_ncpy(etp->name, sizeof(etp->name), cp, len) < 0)
+    return -1;
 
   if (np)
     ++np;

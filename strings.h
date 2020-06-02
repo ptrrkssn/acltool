@@ -99,4 +99,27 @@ s_sepint(int *ip,
 	 char **spp,
 	 char *delim);
 
+
+extern int
+s_cpy(char *dst,
+      size_t dstsize,
+      const char *src);
+
+extern int
+s_ncpy(char *dst,
+       size_t dstsize,
+       const char *src,
+       size_t len);
+
+extern int
+s_cat(char *dst,
+      size_t dstsize,
+      const char *src);
+
+extern int
+s_ncat(char *dst,
+       size_t dstsize,
+       const char *src,
+       size_t len);
+
 #endif

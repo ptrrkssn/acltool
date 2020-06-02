@@ -69,35 +69,6 @@ s_ndup(const char *s,
   return strndup(s, len);
 }
 
-#if 0
-char *
-s_cat(const char *s,
-      ...) {
-  char *res, *cp;
-  size_t len;
-  va_list ap;
-  
-  
-  va_start(ap, s);
-  len = strlen(s);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    len += strlen(cp);
-  va_end(ap);
-
-  res = malloc(len+1);
-  if (!res)
-    return NULL;
-  
-  strcpy(res, s);
-  va_start(ap, s);
-  while ((cp = va_arg(ap, char *)) != NULL)
-    strcat(res, cp);
-  va_end(ap);
-
-  return res;
-}
-#endif
-
 
 int
 s_trim(char *s) {
@@ -178,8 +149,8 @@ s_dupcat(const char *str,
   if (!str)
     return NULL;
   
-  len = strlen(str)+1;
   va_start(ap, str);
+  len = strlen(str)+1;
   while ((cp = va_arg(ap, char *)) != NULL)
     len += strlen(cp);
   va_end(ap);
@@ -188,10 +159,10 @@ s_dupcat(const char *str,
   if (!buf)
     return NULL;
   
-  strcpy(buf, str);
   va_start(ap, str);
+  s_cpy(buf, len, str);
   while ((cp = va_arg(ap, char *)) != NULL)
-    strcat(buf, cp);
+    s_cat(buf, len, cp);
   va_end(ap);
   
   return buf;
@@ -312,18 +283,17 @@ slist_join(SLIST *sp,
   tlen = 0;
   for (i = 0; i < sp->c; i++)
     tlen += strlen(sp->v[i]);
-
   tlen += (sp->c-1)*dlen + 1;
 
   buf = malloc(tlen);
   if (!buf)
     return NULL;
 
-  strcpy(buf, sp->v[0]);
+  s_cpy(buf, tlen, sp->v[0]);
   for (i = 1; i < sp->c; i++) {
     if (delim)
-      strcat(buf, delim);
-    strcat(buf, sp->v[i]);
+      s_cat(buf, tlen, delim);
+    s_cat(buf, tlen, sp->v[i]);
   }
 
   return buf;
@@ -427,4 +397,146 @@ s_sepint(int *ip,
 
   *ip *= sign;
   return 1;
+}
+
+
+
+
+int
+s_cpy(char *dst,
+      size_t dstsize,
+      const char *src) {
+  int i;
+  
+
+  if (!dst) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (dstsize == 0) {
+    errno = ERANGE;
+    return -1;
+  }
+    
+  if (!src)
+    src = "";
+
+  for (i = 0; src[i] && i < dstsize-1; i++)
+    dst[i] = src[i];
+  dst[i] = '\0';
+
+  if (src[i]) {
+    /* We couldn't fit all data */
+    errno = ENOMEM;
+    return -1;
+  }
+  
+  return i;
+}
+
+
+int
+s_ncpy(char *dst,
+       size_t dstsize,
+       const char *src,
+       size_t len) {
+  int i;
+  
+
+  if (!dst) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (dstsize == 0) {
+    errno = ERANGE;
+    return -1;
+  }
+    
+  if (!src)
+    src = "";
+
+  for (i = 0; src[i] && i < dstsize-1 && i < len; i++)
+    dst[i] = src[i];
+  dst[i] = '\0';
+
+  if (i < len && src[i]) {
+    /* We couldn't fit all data */
+    errno = ENOMEM;
+    return -1;
+  }
+  
+  return i;
+}
+
+int
+s_cat(char *dst,
+      size_t dstsize,
+      const char *src) {
+  int i, j;
+
+
+  if (!dst) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (dstsize == 0) {
+    errno = ERANGE;
+    return -1;
+  }
+    
+  if (!src)
+    src = "";
+
+  j = strlen(dst);
+  
+  for (i = 0; src[i] && j+i < dstsize-1; i++)
+    dst[j+i] = src[i];
+  dst[j+i] = '\0';
+
+  if (src[i]) {
+    /* We couldn't fit all data */
+    errno = ENOMEM;
+    return -1;
+  }
+  
+  return i+j;
+}
+
+int
+s_ncat(char *dst,
+       size_t dstsize,
+       const char *src,
+       size_t len) {
+  int i, j;
+
+
+  if (!dst) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (dstsize == 0) {
+    errno = ERANGE;
+    return -1;
+  }
+    
+  if (!src)
+    src = "";
+
+  j = strlen(dst);
+  
+  for (i = 0; src[i] && j+i < dstsize-1 && i < len; i++)
+    dst[j+i] = src[i];
+  dst[j+i] = '\0';
+
+  if (i < len && src[i]) {
+    /* We couldn't fit all data */
+    errno = ENOMEM;
+    return -1;
+  }
+  
+  return i+j;
 }

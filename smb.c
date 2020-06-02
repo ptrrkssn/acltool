@@ -42,9 +42,9 @@
 #include <grp.h>
 #include <sys/statvfs.h>
 
-#include "strings.h"
 #include "vfs.h"
 #include "smb.h"
+#include "strings.h"
 
 #if HAVE_LIBSMBCLIENT
 #include <libsmbclient.h>
@@ -79,7 +79,7 @@ get_auth_data_with_context_fn(SMBCCTX *context,
   
   if (_smb_flags & SMB_PROMPT_PASSWORD) {
     if (saved_password)
-      strncpy(pPassword, saved_password, maxLenPassword);
+      s_cpy(pPassword, maxLenPassword-1, saved_password);
     else 
       if (prompt_user(pPassword, maxLenPassword, 0, "%s\\%s's Password: ", pWorkgroup, pUsername) > 0)
 	saved_password = s_dup(pPassword);
@@ -352,6 +352,7 @@ smb_readdir(VFS_DIR *vdp) {
   struct smbc_dirent *sdep;
   struct dirent *dep;
   int dh;
+  size_t dnamesize;
   
 
   if (vdp->type != VFS_TYPE_SMB) {
@@ -367,7 +368,9 @@ smb_readdir(VFS_DIR *vdp) {
       return NULL;
   } while (sdep->smbc_type != SMBC_DIR && sdep->smbc_type != SMBC_FILE && sdep->smbc_type != SMBC_LINK);
 
-  dep = malloc(sizeof(*dep));
+  dnamesize = strlen(sdep->name)+1;
+  
+  dep = malloc(sizeof(*dep)+dnamesize);
   if (!dep)
     return NULL;
 
@@ -387,7 +390,9 @@ smb_readdir(VFS_DIR *vdp) {
   }
 #endif
 
-  strcpy(dep->d_name, sdep->name); /* XXX: Check name length */
+  if (s_cpy(dep->d_name, dnamesize, sdep->name) < 0)
+    return NULL;
+  
   return dep;
 }
 
@@ -546,8 +551,11 @@ smb_acl_get_file(const char *path) {
     goto Fail;
   s_group += 6;
 
-  strncpy(ap->owner, s_owner, sizeof(ap->owner)-1);
-  strncpy(ap->group, s_group, sizeof(ap->group)-1);
+  if (s_cpy(ap->owner, sizeof(ap->owner), s_owner) < 0)
+    goto Fail;
+  
+  if (s_cpy(ap->group, sizeof(ap->group), s_group) < 0)
+    goto Fail;
 
   while ((cp = strsep(&bp, ",")) != NULL) {
     char *s_tag;
@@ -618,7 +626,8 @@ smb_acl_get_file(const char *path) {
 
     ep->tag.type = e_type;
     ep->tag.ugid = e_ugid;
-    strncpy(ep->tag.name, e_name, sizeof(ep->tag.name));
+    if (s_cpy(ep->tag.name, sizeof(ep->tag.name) e_name) < 0)
+      goto Fail;
     
     switch (type) {
     case SMB_ACL_TYPE_ALLOW:
@@ -765,11 +774,13 @@ smb_acl_set_file(const char *path,
   if (need_owner) {
     const char *owner_attr = "system.nt_sec_desc.owner+";
     char buf[256];
+
     
     if (smb_getxattr(path, owner_attr, buf, sizeof(buf)) < 0)
       return -1;
 
-    strncpy(ap->owner, buf, sizeof(ap->owner));
+    if (s_cpy(ap->owner, sizeof(ap->owner), buf) < 0)
+      return -1;
   }
 
   if (need_group) {
@@ -779,7 +790,8 @@ smb_acl_set_file(const char *path,
     if (smb_getxattr(path, group_attr, buf, sizeof(buf)) < 0)
       return -1;
 
-    strncpy(ap->group, buf, sizeof(ap->group));
+    if (s_cpy(ap->group, sizeof(ap->group), buf) < 0)
+      return -1;
   }
 
 #if 0 /* We can skip these (atleast for now) */

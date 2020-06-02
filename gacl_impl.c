@@ -46,6 +46,8 @@
 #include "gacl_impl.h"
 
 #include "vfs.h"
+#include "strings.h"
+
 
 
 /* ----- OS-specific stuff below here -------------- */
@@ -294,7 +296,9 @@ _gacl_init_from_nfs4(const char *buf,
 
     if (s_flags & NFS4_ACE_IDENTIFIER_GROUP) {
       if (strncmp(cp, "GROUP@", idlen) == 0) {
-	strncpy(ep->tag.name, "group@", sizeof(ep->tag.name));
+	if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "group@") < 0)
+	  return NULL;
+	
 	ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
 	ep->tag.ugid = -1;
       } else {
@@ -303,17 +307,23 @@ _gacl_init_from_nfs4(const char *buf,
 	  errno = EINVAL;
 	  return NULL;
 	}
-	strncpy(ep->tag.name, cp, idlen);
+	if (s_ncpy(ep->tag.name, sizeof(ep->tag.name), cp, idlen) < 0)
+	  return NULL;
+	
 	(void) _nfs4_id_to_gid(ep->tag.name, &ep->tag.ugid);
 	ep->tag.type = GACL_TAG_TYPE_GROUP;
       }
     } else {
       if (strncmp(cp, "OWNER@", idlen) == 0) {
-	strncpy(ep->tag.name, "owner@", sizeof(ep->tag.name));
+	if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "owner@") < 0)
+	  return NULL;
+	
 	ep->tag.type = GACL_TAG_TYPE_USER_OBJ;
 	ep->tag.ugid = -1;
       } else if (strncmp(cp, "EVERYONE@", idlen) == 0) {
-	strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name));
+	if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "everyone@") < 0)
+	  return NULL;
+	
 	ep->tag.type = GACL_TAG_TYPE_EVERYONE;
 	ep->tag.ugid = -1;
       } else {
@@ -322,7 +332,9 @@ _gacl_init_from_nfs4(const char *buf,
 	  errno = EINVAL;
 	  return NULL;
 	}
-	strncpy(ep->tag.name, cp, idlen);
+	if (s_ncpy(ep->tag.name, sizeof(eo->tag.name), cp, idlen) < 0)
+	  return NULL;
+	
 	ep->tag.type = GACL_TAG_TYPE_USER;
 	(void) _nfs4_id_to_uid(ep->tag.name, &ep->tag.ugid);
       }
@@ -624,29 +636,50 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
     return -1;
 
   case GACL_TAG_TYPE_USER_OBJ:
-    strncpy(nep->tag.name, "owner@", sizeof(nep->tag.name));
+    if (s_cpy(nep->tag.name, sizeof(nep->tag.name), "owner@") < 0)
+      return -1;
     break;
   case GACL_TAG_TYPE_GROUP_OBJ:
-    strncpy(nep->tag.name, "group@", sizeof(nep->tag.name));
+    if (s_cpy(nep->tag.name, sizeof(nep->tag.name), "group@") < 0)
+      return -1;
     break;
   case GACL_TAG_TYPE_EVERYONE:
-    strncpy(nep->tag.name, "everyone@", sizeof(nep->tag.name));
+    if (s_cpy(nep->tag.name, sizoef(nep->tag.name), "everyone@") < 0)
+      return -1;
     break;
     
   case GACL_TAG_TYPE_USER:
     pp = getpwuid(nep->tag.ugid);
-    if (pp)
-      strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name)-1);
-    else
-      snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+    if (pp) {
+      if (s_cpy(nep->tag.name, sizeof(nep->tag.name), pp->pw_name) < 0)
+	return -1;
+    } else {
+      int rc = snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+      
+      if (rc < 0)
+	return -1;
+      if (rc >= sizeof(nep->tag.name)) {
+	errno = ENOMEM;
+	return -1;
+      }
+    }
     break;
     
   case GACL_TAG_TYPE_GROUP:
     gp = getgrgid(nep->tag.ugid);
-    if (gp)
-      strncpy(nep->tag.name, gp->gr_name, sizeof(nep->tag.name)-1);
-    else
-      snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+    if (gp) {
+      if (s_cpy(nep->tag.name, sizeof(nep->tag.name), gp->gr_name) < 0)
+	return -1;
+    } else {
+      int rc = snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+
+      if (rc < 0)
+	return -1;
+      if (rc >= sizeof(nep->tag.name)) {
+	errno = ENOMEM;
+	return -1;
+      }
+    }
     break;
   }
 
@@ -819,7 +852,7 @@ _gacl_set_fd_file(int fd,
 
 
 /* 
- * ---------- Solaris ----------------------------------------
+ * ---------- Solaris (Illumos, OmniOS & co) ----------------------------------------
  */
 #ifdef __sun__
 
@@ -959,19 +992,22 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
   case ACE_OWNER:
     ep->tag.type = GACL_TAG_TYPE_USER_OBJ;
     ep->tag.ugid = -1;
-    strncpy(ep->tag.name, "owner@", sizeof(ep->tag.name));
+    if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "owner@") < 0)
+      return -1;
     break;
 
   case ACE_GROUP:
     ep->tag.type = GACL_TAG_TYPE_GROUP_OBJ;
     ep->tag.ugid = -1;
-    strncpy(ep->tag.name, "group@", sizeof(ep->tag.name));
+    if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "group@") < 0)
+      return -1;
     break;
 
   case ACE_EVERYONE:
     ep->tag.type = GACL_TAG_TYPE_EVERYONE;
     ep->tag.ugid = -1;
-    strncpy(ep->tag.name, "everyone@", sizeof(ep->tag.name));
+    if (s_cpy(ep->tag.name, sizeof(ep->tag.name), "everyone@") < 0)
+      return -1;
     break;
 
   default:
@@ -979,18 +1015,36 @@ _gacl_entry_from_ace(GACL_ENTRY *ep,
       ep->tag.type = GACL_TAG_TYPE_GROUP;
       ep->tag.ugid = ap->a_who;
       gp = getgrgid(ap->a_who);
-      if (gp)
-	strncpy(ep->tag.name, gp->gr_name, sizeof(ep->tag.name));
-      else
-	snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
+      if (gp) {
+	if (s_cpy(ep->tag.name, sizeof(ep->tag.name), gp->gr_name) < 0)
+	  return -1;
+      } else {
+	int rc = snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
+
+	if (rc < 0)
+	  return -1;
+	if (rc >= sizeof(ep->tag.name)) {
+	  errno = ENOMEM;
+	  return -1;
+	}
+      }
     } else {
       ep->tag.type = GACL_TAG_TYPE_USER;
       ep->tag.ugid = ap->a_who;
       pp = getpwuid(ap->a_who);
-      if (pp)
-	strncpy(ep->tag.name, pp->pw_name, sizeof(ep->tag.name));
-      else
-	snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
+      if (pp) {
+	if (s_cpy(ep->tag.name, sizeof(ep->tag.name), pp->pw_name) < 0)
+	  return -1;
+      } else {
+	int rc = snprintf(ep->tag.name, sizeof(ep->tag.name), "%d", ap->a_who);
+
+	if (rc < 0)
+	  return -1;
+	if (rc >= sizeof(ep->tag.name)) {
+	  errno = ENOMEM;
+	  return -1;
+	}
+      }
     }
   }
 
@@ -1283,19 +1337,37 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
     case ID_TYPE_UID:
       nep->tag.type = GACL_TAG_TYPE_USER;
       pp = getpwuid(nep->tag.ugid);
-      if (pp)
-	strncpy(nep->tag.name, pp->pw_name, sizeof(nep->tag.name));
-      else
-	snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+      if (pp) {
+	if (s_cpy(nep->tag.name, sizeof(nep->tag.name), pp->pw_name) < 0)
+	  return -1;
+      } else {
+	int rc = snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+
+	if (rc < 0)
+	  return -1;
+	if (rc >= sizeof(nep->tag.name)) {
+	  errno = ENOMEM;
+	  return -1;
+	}
+      }
       break;
       
     case ID_TYPE_GID:
       nep->tag.type = GACL_TAG_TYPE_GROUP;
       gp = getgrgid(nep->tag.ugid);
-      if (gp)
-	strncpy(nep->tag.name, gp->gr_name, sizeof(nep->tag.name));
-      else
-	snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+      if (gp) {
+	if (s_cpy(nep->tag.name, sizeof(nep->tag.name), gp->gr_name) < 0)
+	  return -1;
+      } else {
+	int rc = snprintf(nep->tag.name, sizeof(nep->tag.name), "%d", nep->tag.ugid);
+
+	if (rc < 0)
+	  return -1;
+	if (rc >= sizeof(nep->tag.name)) {
+	  errno = ENOMEM;
+	  return -1;
+	}
+      }
       break;
 
     default:
