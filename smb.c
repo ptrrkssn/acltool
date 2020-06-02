@@ -626,7 +626,7 @@ smb_acl_get_file(const char *path) {
 
     ep->tag.type = e_type;
     ep->tag.ugid = e_ugid;
-    if (s_cpy(ep->tag.name, sizeof(ep->tag.name) e_name) < 0)
+    if (s_cpy(ep->tag.name, sizeof(ep->tag.name), e_name) < 0)
       goto Fail;
     
     switch (type) {
