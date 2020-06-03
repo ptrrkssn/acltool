@@ -360,15 +360,15 @@ xattr_handler(const char *name,
 
 
 
-static OPTION xattr_options[] =
+static OPTION attr_options[] =
   {
-   { "xattr-options", 'X', OPTS_TYPE_STR, xattr_handler, NULL, "Extended attribute options" },
-   { NULL,            0,   0,             NULL,          NULL, NULL },
+   { "attr-options", 'X', OPTS_TYPE_STR, xattr_handler, NULL, "Extended attribute options" },
+   { NULL,           0,   0,             NULL,          NULL, NULL },
   };
 
 
 int
-listxattr_cmd(int argc,
+list_attr_cmd(int argc,
 	      char **argv) {
   int i;
 
@@ -418,8 +418,8 @@ is_printable(char *buf,
 }
 
 int
-getxattr_cmd(int argc,
-	      char **argv) {
+get_attr_cmd(int argc,
+	     char **argv) {
   int i, j;
 
 
@@ -461,8 +461,8 @@ getxattr_cmd(int argc,
 }
 
 int
-setxattr_cmd(int argc,
-	      char **argv) {
+set_attr_cmd(int argc,
+	     char **argv) {
   int i;
 
 
@@ -490,7 +490,7 @@ setxattr_cmd(int argc,
 }
 
 int
-removexattr_cmd(int argc,
+remove_attr_cmd(int argc,
 		char **argv) {
   int i;
 
@@ -515,24 +515,24 @@ removexattr_cmd(int argc,
 
 
 COMMAND exit_command =
-  { "exit-command", 	exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
+  { "exit-command", 	    exit_cmd,	NULL, "[<code>]",	"Exit (with exit code)" };
 COMMAND echo_command =
-  { "echo-text", echo_cmd,		NULL, "[<str>]*",	"Print some text" };
+  { "echo-text",            echo_cmd,	NULL, "[<str>]*",	"Print some text" };
 COMMAND cd_command =
-  { "change-directory", cd_cmd,		NULL, "[<path>]*",	"Change work directory" };
+  { "change-directory",     cd_cmd,	NULL, "[<path>]*",	"Change work directory" };
 COMMAND dir_command =
-  { "directory-listing", dir_cmd,	NULL, "[<path>]*",	"List directory" };
+  { "directory-listing",    dir_cmd,	NULL, "[<path>]*",	"List directory" };
 COMMAND pwd_command =
   { "print-work-directory", pwd_cmd,	NULL, "",		"Print work directory" };
 
-COMMAND listxattr_command =
-  { "list-xattr", listxattr_cmd,	xattr_options, "[<path>]*",			"List extended attributes" };
-COMMAND getxattr_command =
-  { "get-xattr", getxattr_cmd,		xattr_options, "<path>+ [<attr>]*",		"Get extended attributes" };
-COMMAND setxattr_command =
-  { "set-xattr", setxattr_cmd,		xattr_options, "<path>+ [<attr>=<val>]*",	"Set extended attributes" };
-COMMAND removexattr_command =
-  { "remove-xattr", removexattr_cmd,	xattr_options, "<path> [<attr>]*",		"Remove extended attributes" };
+COMMAND list_attr_command =
+  { "list-attribute", 	list_attr_cmd,		attr_options, "[<path>]*",			"List extended attributes" };
+COMMAND get_attr_command =
+  { "get-attribute", 	get_attr_cmd,		attr_options, "<path>+ [<attr>]*",		"Get extended attributes" };
+COMMAND set_attr_command =
+  { "set-attribute", 	set_attr_cmd,		attr_options, "<path>+ [<attr>=<val>]*",	"Set extended attributes" };
+COMMAND remove_attr_command =
+  { "remove-attribute", remove_attr_cmd,	attr_options, "<path> [<attr>]*",		"Remove extended attributes" };
 
 
 COMMAND *basic_commands[] =
@@ -542,10 +542,10 @@ COMMAND *basic_commands[] =
    &cd_command,
    &pwd_command,
    &dir_command,
-   &listxattr_command,
-   &getxattr_command,
-   &setxattr_command,
-   &removexattr_command,
+   &list_attr_command,
+   &get_attr_command,
+   &set_attr_command,
+   &remove_attr_command,
    NULL,
   };
 

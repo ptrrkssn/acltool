@@ -2,15 +2,16 @@
 #
 # Simplified Makefile that (re)creates the real Makefile as needed
 
+MAKE=	     make
 SUBDIRS=     pkgs
 
 
 all:	distclean acltool
 
-acltool: Makefile
-	$(MAKE)
+acltool: Makefile config.h
+	 $(MAKE)
 
-Makefile: Makefile.in configure config.h.in
+Makefile config.h: Makefile.in configure
 	./configure
 
 

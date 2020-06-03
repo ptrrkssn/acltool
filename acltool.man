@@ -1,8 +1,10 @@
 .\" Manual page for acltool
 .\" Contact pen@lysator.lius.e to correct errors or typos.
 .TH acltool 1 "04 May 2020" "1.7" "acltool man page"
+
 .SH NAME
 acltool \- manipulate NFSv4 and ZFS ACLs
+
 .SH SYNOPSIS
 .B acltool
 .RI "[" "<option>*" "]"
@@ -23,11 +25,13 @@ acltool \- manipulate NFSv4 and ZFS ACLs
 .RI "[" "<option>*" "]"
 .RI "[" "<simple-change>" "]"
 .RI "<path>+"
+
 .SH DESCRIPTION
 .B acltool
 is a tool to manipulate NFSv4 & ZFS ACLs in various ways. POSIX.1e ACLs is
 .B not
 supported as of this time.
+
 .SH ABBREVIATIONS
 All
 .B actions
@@ -49,6 +53,7 @@ may (for example) be abbreviated to
 .B --no-up
 or
 .B --nu.
+
 .SH OPTIONS
 .TP
 .B "-h | --help"
@@ -98,6 +103,7 @@ Add a semicolon-separated list of <change-requests> to be applied to ACLs
 Read a semicolon or line-separated list of <change-requests> from a
 file to be applied to ACLs
 .I (only for edit-access)
+
 .SH ACTIONS
 .TP
 .B help
@@ -109,43 +115,19 @@ about a specific one.
 .br
 List ACLs
 .TP
+.B "set-access" (sac)
+.br
+Set ACLs
+.TP
 .B "edit-access" (edac)
 .br
 Modify ACLs
 .TP
-.B "copy-access"
+.B "touch-access" (tac)
 .br
-Copy ACLs
+Modify ACLs
 .TP
-.B "delete-access"
-.br
-Delete ACLs
-.TP
-.B "find-access"
-.br
-Search for matching ACLs
-.TP
-.B "inherit-access"
-.br
-Propagate ACL inheritance
-.TP
-.B "rename-access"
-.br
-Batch-rename ACL entries
-.TP
-.B "set-access"
-.br
-Set ACLs
-.TP
-.B "sort-access"
-.br
-Sort ACLS
-.TP
-.B "strip-access"
-.br
-Strip ACLs
-.TP
-.B "get-access"
+.B "get-access" (gac)
 .br
 Get ACLs into variables in brief text format.
 .TP
@@ -168,34 +150,46 @@ Print text
 .B "version"
 .br
 Print version and buiild information.
+
 .SH INTERACTIVE MODE
 .B Interactive Mode
 is entered if you do not specify an action on the command line.
 In this mode tab-completion works for commands and common long
 options (not action-specific options). Environment variables may be accessed
 using ${name}.
+
 .SH ALTERNATIVE PROGRAM NAMES
 You may make symbolic links to
 .B acltool
 in order to use actions directly. For example "ln -s acltool lac" makes it
 possible to use "lac" as a shortcut to "acltool lac" from a Shell.
+
 .SH SEE ALSO
 .TP
 .B BSD
 setfacl(1), getfacl(1), acl(3), acl(9)
 .TP
 .B SunOS
-chmod(1), ls(1), acl(2)
+acl(2), chmod(1), ls(1), acl(5)
 .TP
 .B Linux
-nfs4_getfacl(1), nfs4_setfacl(1), nfs4_acl(5)
+nfs4_getfacl(1), nfs4_setfacl(1), nfs4_acl(5), acl(5)
+.TP
+.B MacOS
+acl(3), ls(1), chmod(1)
 .TP
 .B RFC's
-RFC3530 (NFSv4.0), NFSv4.1 Minor Version Draft.
+RFC3530 (NFSv4.0)
+RFC5661 (NFSv4.1)
+RFC7862 (NFSv4.2)
+RFC8276 (File System Extended Attributes in NFSv4)
+
 .SH BUGS
 No known bugs
+
 .SH SOURCE
 https://github.com/ptrrkssn/acltool
+
 .SH AUTHOR
 Peter Eriksson <pen@lysator.liu.se>
 

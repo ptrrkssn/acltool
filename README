@@ -35,7 +35,7 @@ OPERATING SYSTEMS SUPPORTED
   - Linux (NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
   - MacOS (HFS+ & NFSv4, tested with MacOS 10.15)
 
-All the above also support Extended Attributes. 
+All the above also support extended attributes more or less.
 
 
 
@@ -216,8 +216,8 @@ EXAMPLES
     Replace all parst38-allow entries where rwx permissions is
     set with 'user:peter86:rwx:f:allow'
 
-  list-xattr some-file
-    List all extended (named) attributes (if any) for file "some-file"
+  list-attribute some-file
+    List all extended attributes (if any) for file "some-file"
     
 
 MORE ADVANCED USAGE
@@ -238,8 +238,7 @@ Filetypes are used to select which file types to operate on.
 
 Ranges are used to limit which entries of an ACL to operate on.
 
-Filters are used to further select which ACL entries to operate on. Regular expressions
-may be used if enabled via "-R | --regex".
+Filters are used to further select which ACL entries to operate on.
 
 Modifiers are used to modify the functionality of a command.
 

@@ -154,7 +154,7 @@ check-freebsd check-FreeBSD: check-all
 
 check-sunos check-solaris check-omnios check-illumos check-SunOS: check-all
 
-# Linux can only test ACLs & XATTRS on NFSv4 for now
+# Linux can only test ACLs & ATTRS on NFSv4 for now
 check-linux check-Linux:
 	-@if df -t nfs4 $(TESTDIR) 2>/dev/null; then \
 	  $(MAKE) -s check-all; \
@@ -169,7 +169,7 @@ CHECKLOG=/tmp/acltool-checks.log
 
 BASICCHECKS=version echo help pwd cd dir
 ACLCHECKS=lac gac sac tac edac
-XATTRCHECKS=sxa lxa rxa
+ATTRCHECKS=sat lat rat
 
 
 
@@ -182,7 +182,7 @@ check-acl: acltool
 	@for T in $(ACLCHECKS); do $(MAKE) -s check-$$T; done
 
 check-xattr: acltool
-	@for T in $(XATTRCHECKS); do $(MAKE) -s check-$$T; done
+	@for T in $(ATTRCHECKS); do $(MAKE) -s check-$$T; done
 
 
 check-version: acltool
@@ -252,17 +252,18 @@ check-edac: acltool
 	  $(CHECKCMD) edit-access -p -e "/user:$$USER:.*/a user:$$USER:rwx:fd" t && \
 	  $(CHECKCMD) edit-access -vp -e "/user:$$USER:.*/d" t) >$(CHECKLOG) && echo "acltool edit-access: OK"
 
-check-sxa: acltool
-	@($(CHECKCMD) sxa t acltooltestattr1=foo && \
-	  $(CHECKCMD) set-xattr t acltooltestattr2=foo) >$(CHECKLOG) && echo "acltool set-xattr: OK"
 
-check-lxa: acltool
-	@($(CHECKCMD) lxa t && \
-	  $(CHECKCMD) list-xattr -v t) >$(CHECKLOG) && echo "acltool list-xattr: OK"
+check-sat: acltool
+	@($(CHECKCMD) sat t acltooltestattr1=foo && \
+	  $(CHECKCMD) set-attr t acltooltestattr2=foo) >$(CHECKLOG) && echo "acltool set-xattr: OK"
 
-check-rxa: acltool
-	@($(CHECKCMD) rxa t acltooltestattr1 && \
-	  $(CHECKCMD) remove-xattr t acltooltestattr2) >$(CHECKLOG) && echo "acltool remove-xattr: OK"
+check-lat: acltool
+	@($(CHECKCMD) lat t && \
+	  $(CHECKCMD) list-attr -v t) >$(CHECKLOG) && echo "acltool list-xattr: OK"
+
+check-rat: acltool
+	@($(CHECKCMD) rat t acltooltestattr1 && \
+	  $(CHECKCMD) remove-attr t acltooltestattr2) >$(CHECKLOG) && echo "acltool remove-xattr: OK"
 
 
 check-valgrind: acltool
