@@ -1,6 +1,6 @@
 .\" Manual page for acltool
-.\" Contact pen@lysator.lius.e to correct errors or typos.
-.TH acltool 1 "04 May 2020" "1.7" "acltool man page"
+.\" Contact pen@lysator.liu.se to correct errors or typos.
+.TH acltool 1 "12 May 2020" "1.16.1" "acltool man page"
 
 .SH NAME
 acltool \- manipulate NFSv4 and ZFS ACLs

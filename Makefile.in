@@ -112,18 +112,16 @@ pull:
 
 
 # Install targets
-install-all: install install-man install-aliases
+install install-all: install-bin install-man
 
-install:  install-bin install-man
-
-install-bin: $(PROGRAMS)
-	$(INSTALL) -m 755 -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 755 acltool $(DESTDIR)$(BINDIR)
+install-bin install-strip: $(PROGRAMS)
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
+	$(INSTALL) -c -s $(PROGRAMS) "$(DESTDIR)$(BINDIR)"
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
 
 install-man:  acltool.man
-	$(INSTALL) -m 755 -d "$(DESTDIR)$(MAN1DIR)"
-	$(INSTALL) -m 644 acltool.man "$(DESTDIR)$(MAN1DIR)/acltool.1"
+	$(INSTALL) -d "$(DESTDIR)$(MAN1DIR)"
+	$(INSTALL) -c -m 644 acltool.man "$(DESTDIR)$(MAN1DIR)/acltool.1"
 	if test -f /usr/share/man/man1/cat.1.gz; then \
 		gzip -f "$(DESTDIR)$(MAN1DIR)/acltool.1" && \
 		for N in $(ACLTOOL_ALIASES); do \
