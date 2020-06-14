@@ -1,6 +1,4 @@
-# pkgs/port/Makefile
-#
-# Make stuff for FreeBSD Ports
+# port/Makefile
 
 PORTSDIR=/usr/ports/sysutils/acltool
 
@@ -38,4 +36,3 @@ push: 	distclean
 
 pull:
 	git pull
-

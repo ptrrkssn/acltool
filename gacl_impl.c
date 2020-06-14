@@ -624,9 +624,10 @@ _gacl_entry_from_acl_entry(GACL_ENTRY *nep,
   struct passwd *pp;
   struct group *gp;
 
-  
+
+  /* XXX TODO: Translate ae_tag - tag.type*/
   nep->tag.type = oep->ae_tag;
-  nep->tag.ugid = oep->ae_id;
+  nep->tag.ugid = oep->ae_id;  
 
   switch (nep->tag.type) {
   case GACL_TAG_TYPE_UNKNOWN:
