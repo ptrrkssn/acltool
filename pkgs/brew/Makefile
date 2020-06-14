@@ -2,7 +2,7 @@
 #
 # Make stuff for MacOS Homebrew package
 
-VERSION=1.15
+VERSION=1.16.3
 
 all:
 	@echo "Valid targets: 'distclean', 'clean', 'push' and 'pull'."
@@ -10,7 +10,7 @@ all:
 
 create:
 	brew create https://github.com/ptrrkssn/acltool/archive/v$(VERSION).tar.gz
-
+	brew edit acltool
 
 distclean: clean
 

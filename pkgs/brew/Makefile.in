@@ -5,7 +5,7 @@
 VERSION=@PACKAGE_VERSION@
 
 all:
-	@echo "Valid targets: 'distclean', 'clean', 'push' and 'pull'."
+	@echo "Valid targets: 'create', 'distclean', 'clean', 'push' and 'pull'."
 	@exit 1
 
 create:

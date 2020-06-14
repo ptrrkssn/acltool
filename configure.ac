@@ -6,7 +6,7 @@ AC_CONFIG_SRCDIR([common.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile pkgs/Makefile pkgs/brew/Makefile pkgs/rpm/acltool.spec pkgs/port/Makefile.port pkgs/svr/Makefile pkgs/svr/pkginfo pkgs/ips/build.sh])
 
-AC_CONFIG_AUX_DIR([aux])
+AC_CONFIG_AUX_DIR([build-aux])
 
 AC_PROG_CC
 AC_PROG_LN_S
