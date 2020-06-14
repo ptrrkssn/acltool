@@ -2,17 +2,31 @@
 #
 # Make stuff for MacOS Homebrew package
 
-VERSION=@PACKAGE_VERSION@
+VERSION =	@PACKAGE_VERSION@
+BREWDIR =	/usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula
+
+INSTALL =	@INSTALL@
 
 all:
-	@echo "Valid targets: 'create', 'distclean', 'clean', 'push' and 'pull'."
+	@echo "Valid targets: 'create', 'install', 'distclean', 'clean', 'push' and 'pull'."
 	@exit 1
 
 create:
 	brew create https://github.com/ptrrkssn/acltool/archive/v$(VERSION).tar.gz
 	brew edit acltool
 
+
+install: install-formulae
+	(cd ../.. && $(MAKE) dist && \
+	    cp acltool-$(VERSION).tar.gz `brew --cache`/acltool--$(VERSION).tar.gz) && \
+	  brew install acltool	
+
+install-formulae: acltool.rb
+	$(INSTALL) -m 0644 acltool.rb $(BREWDIR)
+
+
 distclean: clean
+	rm -f acltool.rb
 
 clean:
 	-rm -fr *~ \#* core

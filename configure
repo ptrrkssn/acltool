@@ -2238,7 +2238,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 ac_config_headers="$ac_config_headers config.h"
 
-ac_config_files="$ac_config_files Makefile pkgs/Makefile pkgs/brew/Makefile pkgs/rpm/acltool.spec pkgs/port/Makefile.port pkgs/svr/Makefile pkgs/svr/pkginfo pkgs/ips/build.sh"
+ac_config_files="$ac_config_files Makefile pkgs/Makefile pkgs/brew/Makefile pkgs/brew/acltool.rb pkgs/rpm/acltool.spec pkgs/port/Makefile.port pkgs/svr/Makefile pkgs/svr/pkginfo pkgs/ips/build.sh"
 
 
 ac_aux_dir=
@@ -5142,6 +5142,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "pkgs/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/Makefile" ;;
     "pkgs/brew/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/brew/Makefile" ;;
+    "pkgs/brew/acltool.rb") CONFIG_FILES="$CONFIG_FILES pkgs/brew/acltool.rb" ;;
     "pkgs/rpm/acltool.spec") CONFIG_FILES="$CONFIG_FILES pkgs/rpm/acltool.spec" ;;
     "pkgs/port/Makefile.port") CONFIG_FILES="$CONFIG_FILES pkgs/port/Makefile.port" ;;
     "pkgs/svr/Makefile") CONFIG_FILES="$CONFIG_FILES pkgs/svr/Makefile" ;;
