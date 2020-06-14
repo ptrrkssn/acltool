@@ -1,4 +1,15 @@
 Configuration files for Homebrew packages for MacOS (and possibly Linux)
 
-http://brew.sh
+After you have run "./configure" in the top directory you can use "make install"
+in this directory to force a local install of Acltool.
+
+If someone would like to submit an official Acltool formulae to HomeBrew then
+feel free to do it. You can use the generated "acltool.rb" file in this directory
+as a basis. You will need to add the correct sha256 hash value first (is printed
+when you install it), and possibly more stuff...
+
+For more information about HomeBrew, see:
+
+  http://brew.sh
+
 

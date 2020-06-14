@@ -16,11 +16,14 @@ create:
 	brew edit acltool
 
 
-# acltool.rb: ../../config.status
-# 	../../config.status
+install: install-formulae
+	(cd ../.. && $(MAKE) dist && \
+	    cp acltool-$(VERSION).tar.gz `brew --cache acltool`) && \
+	  brew install acltool	
 
-install: acltool.rb
+install-formulae: acltool.rb
 	$(INSTALL) -m 0644 acltool.rb $(BREWDIR)
+
 
 distclean: clean
 	rm -f acltool.rb
