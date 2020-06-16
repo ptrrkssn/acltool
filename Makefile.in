@@ -39,6 +39,7 @@ READLINE_CFLAGS = @READLINE_CFLAGS@
 READLINE_LIBS = @READLINE_LIBS@
 
 INSTALL=@INSTALL@
+TAR =		tar
 
 PACKAGE=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
@@ -50,6 +51,9 @@ LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
 VALGRIND=valgrind
 VALGRINDFLAGS=--leak-check=full --track-origins=yes --error-exitcode=1 # --show-leak-kinds=all 
+
+DISTCHECKDIR =	/tmp/distcheck-$(PACKAGE)-$(VERSION)
+DISTDIR =	/tmp/build-$(PACKAGE)-$(VERSION)
 
 
 TESTDIR=t
@@ -292,18 +296,15 @@ distcheck: acltool-$(VERSION).tar.gz
 	@chmod -R +w $(DISTCHECKDIR) && rm -fr $(DISTCHECKDIR);
 
 
-DISTDIR=/tmp/build-acltool-$(VERSION)
 
+dist:	$(PACKAGE)-$(VERSION).tar.gz
 
-dist:	acltool-$(VERSION).tar.gz
-
-acltool-$(VERSION).tar.gz: acltool
-	rm -fr $(DISTDIR) && \
-	  mkdir -p $(DISTDIR)/acltool-$(VERSION) && \
-	  cp -r * $(DISTDIR)/acltool-$(VERSION) && \
-	  (cd $(DISTDIR)/acltool-$(VERSION) && $(MAKE) -f Makefile.dist distclean) && \
-	  (cd $(DISTDIR) && tar -cv acltool-$(VERSION)) | gzip >acltool-$(VERSION).tar.gz
-	rm -fr $(DISTDIR)
+$(PACKAGE)-$(VERSION).tar.gz: acltool
+	rm -fr "$(DISTDIR)" && mkdir -p "$(DISTDIR)/$(PACKAGE)-$(VERSION)" && \
+	  cp -r * "$(DISTDIR)/$(PACKAGE)-$(VERSION)" && \
+	  (cd "$(DISTDIR)/$(PACKAGE)-$(VERSION)" && $(MAKE) distclean)
+	(cd "$(DISTDIR)" && $(TAR) cvf - "$(PACKAGE)-$(VERSION)") | gzip >"$(PACKAGE)-$(VERSION)".tar.gz
+	echo rm -fr "$(DISTDIR)"
 	@echo ""
-	@echo "*** acltool-$(VERSION).tar.gz created"
+	@echo "*** $(PACKAGE)-$(VERSION).tar.gz created"
 

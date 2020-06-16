@@ -47,7 +47,7 @@ AS_IF([test "x$with_readline" != xno], [
       AC_MSG_CHECKING(for READLINE in ${with_readline})
       if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
         AC_SUBST([READLINE_CFLAGS], ["-I${with_readline}/include"])
-        AC_SUBST([READLINE_LIBS], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"])
+        AC_SUBST([READLINE_LIBS], ["-L${with_readline}/lib -R${with_readline}/lib -lreadline"])
         AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
 	AC_MSG_RESULT(yes)
       else
@@ -56,12 +56,16 @@ AS_IF([test "x$with_readline" != xno], [
       ;;
     *)
       AC_CHECK_HEADERS([readline/readline.h])
-      AC_CHECK_LIB([readline], [readline], [ 
-        AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
-      ], [], -lncurses)
-      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
-	AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
-      else
+      AC_SEARCH_LIBS([readline], [readline])
+      if test "x$ac_cv_search_readline" = xno; then
+        AC_SEARCH_LIBS([rl_set_prompt], [readline], [ 
+          AC_SUBST([READLINE_LIBS], ["-lncurses"])
+	  ac_cv_search_readline=yes
+        ], [], [-lncurses])
+      fi
+      if test "x$ac_cv_search_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
+        AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
+      else      
         PKG_CHECK_MODULES([READLINE], [readline], [
 	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
           readline_incdir="`pkg-config --variable=includedir readline`"

@@ -665,7 +665,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -745,7 +744,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -998,15 +996,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1144,7 +1133,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1297,7 +1286,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -4096,7 +4084,7 @@ $as_echo_n "checking for READLINE in ${with_readline}... " >&6; }
       if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
         READLINE_CFLAGS="-I${with_readline}/include"
 
-        READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline -lncurses"
+        READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline"
 
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
@@ -4121,13 +4109,12 @@ fi
 
 done
 
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
-$as_echo_n "checking for readline in -lreadline... " >&6; }
-if ${ac_cv_lib_readline_readline+:} false; then :
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing readline" >&5
+$as_echo_n "checking for library containing readline... " >&6; }
+if ${ac_cv_search_readline+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lreadline -lncurses $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4146,25 +4133,101 @@ return readline ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_readline_readline=yes
-else
-  ac_cv_lib_readline_readline=no
+for ac_lib in '' readline; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_readline=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_readline+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_readline_readline" >&5
-$as_echo "$ac_cv_lib_readline_readline" >&6; }
-if test "x$ac_cv_lib_readline_readline" = xyes; then :
+done
+if ${ac_cv_search_readline+:} false; then :
 
-        READLINE_LIBS="-lreadline -lncurses"
-
+else
+  ac_cv_search_readline=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_readline" >&5
+$as_echo "$ac_cv_search_readline" >&6; }
+ac_res=$ac_cv_search_readline
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 fi
 
-      if test "x$ac_cv_lib_readline_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
+      if test "x$ac_cv_search_readline" = xno; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing rl_set_prompt" >&5
+$as_echo_n "checking for library containing rl_set_prompt... " >&6; }
+if ${ac_cv_search_rl_set_prompt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rl_set_prompt ();
+int
+main ()
+{
+return rl_set_prompt ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' readline; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib -lncurses $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_rl_set_prompt=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_rl_set_prompt+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_rl_set_prompt+:} false; then :
+
+else
+  ac_cv_search_rl_set_prompt=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_rl_set_prompt" >&5
+$as_echo "$ac_cv_search_rl_set_prompt" >&6; }
+ac_res=$ac_cv_search_rl_set_prompt
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+          READLINE_LIBS="-lncurses"
+
+	  ac_cv_search_readline=yes
+
+fi
+
+      fi
+      if test "x$ac_cv_search_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 

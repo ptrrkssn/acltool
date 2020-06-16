@@ -17,7 +17,7 @@
 
 PROG=@PACKAGE_TARNAME@
 VER=@PACKAGE_VERSION@
-PKG=ooce/file/@PACKAGE_TARNAME@
+PKG=ooce/file/acltool
 SUMMARY="acltool - display and update NFSv4/ZFS/SMB ACLs"
 DESC="acltool is a program to display and update NFSv4/ZFS/SMB ACLs  "
 DESC+="in a more sane way - and also works the same on OmniOS, Linux,"
@@ -29,9 +29,10 @@ set_mirror "$GITHUB/ptrrkssn/$PROG/archive"
 set_checksum "none"
 
 init
-download_source v$VER $PROG v$VER
+download_source v$VER $PROG $VER
 prep_build
 build
+strip_install
 make_package
 clean_up
 
