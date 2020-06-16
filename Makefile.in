@@ -131,6 +131,7 @@ install-bin-strip: $(PROGRAMS)
 	$(INSTALL) -s $(PROGRAMS) "$(DESTDIR)$(BINDIR)"
 
 install-aliases:
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
 
 install-man:  acltool.man
