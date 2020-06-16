@@ -9,7 +9,7 @@ all:
 maintainer-clean:	distclean
 
 distclean:		clean
-	rm -f Makefile Makefile.port *.pkg pkginfo *.rb *.rpm *.spec pkg-descr
+	rm -f Makefile Makefile.port *.pkg pkginfo *.rb *.rpm *.spec pkg-descr build.sh
 
 clean mostlyclean:
 	-rm -f *~ \#*
