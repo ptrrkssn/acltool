@@ -1,5 +1,0 @@
-set name=pkg.fmri value=filesystems/utility/acltool@1.15
-set name=pkg.description value="ACL Tool (acltool)"
-set name=pkg.summary value="A tool to manage (list/create/edit/search and more) NFSv4/ZFS-style ACLs"
-set name=variant.arch value=$(ARCH)
-set name=info.classification value="se.liu.lysator.category:Filesystems/Utility/ACL Tool"
