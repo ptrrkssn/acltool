@@ -93,6 +93,7 @@ gacl_impl.o:	gacl_impl.c gacl_impl.h gacl.h vfs.h nfs4.h Makefile config.h
 
 acltool: $(ACLTOOL_OBJS)
 	$(CC) $(LDFLAGS) -o acltool $(ACLTOOL_OBJS) $(LIBS)
+	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$$A"; done
 
 
 # Clean targets
