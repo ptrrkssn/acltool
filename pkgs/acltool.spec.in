@@ -30,7 +30,7 @@ make DESTDIR="$RPM_BUILD_ROOT" install
 
 %files
 %defattr(-,root,root)
-%doc README LICENSE TODO
+%doc README LICENSE
 %{_bindir}/acltool
 %{_bindir}/sac
 %{_bindir}/lac

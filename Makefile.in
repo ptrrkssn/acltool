@@ -113,11 +113,19 @@ pull:
 
 
 # Install targets
-install install-all: install-bin install-man
+install install-all: install-bin install-aliases install-man
 
-install-bin install-strip: $(PROGRAMS)
+install-strip: install-bin-strip install-aliases install-man
+
+install-bin: $(PROGRAMS)
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
+	$(INSTALL) $(PROGRAMS) "$(DESTDIR)$(BINDIR)"
+
+install-bin-strip: $(PROGRAMS)
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	$(INSTALL) -s $(PROGRAMS) "$(DESTDIR)$(BINDIR)"
+
+install-aliases:
 	for A in $(ACLTOOL_ALIASES); do ln -sf acltool "$(DESTDIR)$(BINDIR)/$$A"; done
 
 install-man:  acltool.man
