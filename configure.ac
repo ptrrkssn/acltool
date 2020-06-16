@@ -63,7 +63,7 @@ AS_IF([test "x$with_readline" != xno], [
 	  ac_cv_search_readline=yes
         ], [], [-lncurses])
       fi
-      if test "x$ac_cv_search_readline" = xyes -a "x$ac_cv_header_readline_readline_h" = xyes; then
+      if test "x$ac_cv_search_readline" != xno -a "x$ac_cv_header_readline_readline_h" = xyes; then
         AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
       else      
         PKG_CHECK_MODULES([READLINE], [readline], [
