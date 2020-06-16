@@ -22,9 +22,6 @@ SUMMARY="acltool - display and update NFSv4/ZFS/SMB ACLs"
 DESC="acltool is a program to display and update NFSv4/ZFS/SMB ACLs  "
 DESC+="in a more sane way - and also works the same on OmniOS, Linux,"
 DESC+="FreeBSD and MacOS."
-BUILD_DEPENDS_IPS+="
-  omnios/library/ncurses
-"
 
 set_arch 64
 
