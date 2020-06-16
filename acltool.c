@@ -592,14 +592,14 @@ main(int argc,
   cmd_register(&commands, acltool_commands);
   cmd_register(&commands, acl_commands);
 
+  rc = error_catch(saved_error_env);
+  if (rc)
+    exit(rc);
+    
   if (strcmp(aname, "acltool") != 0) {
     /* Shortcut to acl-cmd */
     argv[0] = s_dup(aname);
     argv0 = s_dup("acltool");
-    
-    rc = error_catch(saved_error_env);
-    if (rc)
-      exit(rc);
     
     rc = run_cmd(argc, argv);
     return rc;

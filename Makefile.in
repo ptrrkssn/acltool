@@ -97,6 +97,7 @@ maintainer-clean:
 
 distclean:
 	$(MAKE) -f Makefile.dist distclean
+	(cd pkgs && $(MAKE) -f Makefile.dist distclean)
 
 clean mostlyclean:
 	$(MAKE) -f Makefile.dist clean

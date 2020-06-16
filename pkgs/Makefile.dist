@@ -1,0 +1,15 @@
+# Makefile for pkgs
+
+all:
+	@echo "Valid targets: 'distclean', 'clean'."
+	@exit 1
+
+
+# Clean targets
+maintainer-clean:	distclean
+
+distclean:		clean
+	rm -f Makefile Makefile.port *.pkg pkginfo *.rb *.rpm *.spec pkg-descr
+
+clean mostlyclean:
+	-rm -f *~ \#*
