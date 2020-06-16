@@ -4,7 +4,6 @@ AC_INIT([ACL Tool], [1.16.3], [pen@lysator.liu.se], [acltool], [https://github.c
 
 AC_CONFIG_SRCDIR([common.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile pkgs/Makefile pkgs/brew/Makefile pkgs/brew/acltool.rb pkgs/rpm/acltool.spec pkgs/port/Makefile.port pkgs/svr/Makefile pkgs/svr/pkginfo pkgs/ips/build.sh])
 
 AC_CONFIG_AUX_DIR([build-aux])
 
@@ -120,4 +119,4 @@ AS_IF([test "x$with_libsmbclient" != xno], [
 ])
 
 
-AC_OUTPUT
+AC_OUTPUT([Makefile pkgs/Makefile pkgs/Makefile.port pkgs/acltool.rb pkgs/pkginfo pkgs/acltool.spec pkgs/pkg-descr pkgs/build.sh])

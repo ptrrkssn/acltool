@@ -1,0 +1,10 @@
+This is a port of acltool, an NFSv4/ZFS ACL utiltity.
+
+This is a tool to manage NFSv4/ZFS (also known as Extended on MacOS) ACLs.
+That is listing, creating, editing, searching, stripping, sorting and
+removing redundant entries and more.
+
+WWW: @PACKAGE_URL@
+
+- Peter Eriksson
+@PACKAGE_BUGREPORT@

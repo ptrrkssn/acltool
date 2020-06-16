@@ -1,28 +1,157 @@
-# Makefile for acltool packages
+# Makefile for pkgs
+
+PREFIX =	@prefix@
+PACKAGE =	@PACKAGE_TARNAME@
+VERSION =	@PACKAGE_VERSION@
+URL = 		@PACKAGE_URL@
+
+# FreeBSD Ports
+PORTSDIR =	/usr/ports
+PORTSNAME =	sysutils/$(PACKAGE)
+
+# HomeBrew (MacOS) package
+BREWDIR =	/usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula
+
+# SVR (SysV / Solaris classic packages)
+PKGPREFIX =     LYS
+PKGNAME =	$(PKGPREFIX)$(PACKAGE)
+TMPINSTDIR =	/var/tmp/pkg-build-$(PACKAGE)
+TMPDESTDIR =	$(TMPINSTDIR)/root
+TMPPKGDIR =	$(TMPINSTDIR)/pkg
+
+# RPM
+RPMBUILDDIR =	/root/rpmbuild
+RPMSPECSDIR =	$(RPMBUILDDIR)/SPECS
+RPMSRCDIR =	$(RPMBUILDDIR)/SOURCES
+RPMRPMSDIR =	$(RPMBUILDDIR)/RPMS
+RPMSRPMSDIR =	$(RPMBUILDDIR)/SRPMS
+
+# OmniOS Extra Repo
+OCEXDIR =	../../omnios-extra
+OCEXNAME =	ooce/network/$(PACKAGE)
+OCEXBUILDDIR =	/tmp/build_$(USER)
+
+
+
+INSTALL =	@INSTALL@
 
 @SET_MAKE@
 
-SUBDIRS=port svr brew rpm ips # apt
-
 
 all:
-	@echo "Valid targets: 'distclean', 'clean', 'push' or 'pull'"
-	@echo "(Go to the right sub directory for your Unix to build packages)"
-	@echo 1
+	@echo "Valid targets:"
+	@echo "  'port'   (FreeBSD)"
+	@echo "  'brew'   (MacOS Homebrew)"
+	@echo "  'rpm'    (CentOS/Redhat package)"
+	@echo "  'svr'    (Solaris old-style SysV package)"
+	@echo "  'omnios' (OmniOS-Extra IPS repo)"
+	@exit 1
+
+## FreeBSD Ports package:
+
+port: Makefile.port pkg-descr pkg-plist
+	mkdir -p "$(PORTSDIR)/$(PORTSNAME)"
+	cp Makefile.port "$(PORTSDIR)/$(PORTSNAME)/Makefile"
+	cp pkg-descr pkg-plist "$(PORTSDIR)/$(PORTSNAME)"
+	(cd "$(PORTSDIR)/$(PORTSNAME)" && make distclean && make makesum && portlint -AC && port test "$(PORTSDIR)/$(PORTSNAME)")
+
+port-install: port
+	(cd "$(PORTSDIR)/$(PORTSNAME)" && make install)
 
 
-distclean:
-	@for D in $(SUBDIRS); do if test -f $$D/Makefile; then (cd $$D && $(MAKE) distclean); fi; done
-	-rm -f Makefile
+## MacOS HomeBrew package:
 
-clean:
-	rm -f *~ \#* core
-	@for D in $(SUBDIRS); do if test -f $$D/Makefile; then (cd $$D && $(MAKE) clean); fi; done
+brew: brew-install-formulae brew-install-dist
+
+brew-install: brew
+	  (brew install $(PACKAGE) || brew upgrade $(PACKAGE) || brew reinstall $(PACKAGE))
+
+brew-install-formulae: $(PACKAGE).rb
+	$(INSTALL) -m 0644 $(PACKAGE).rb $(BREWDIR)
+
+# Alternative way to create the formulae
+brew-create-formulae:
+	brew create https://github.com/ptrrkssn/$(PACKAGE)/archive/v$(VERSION).tar.gz
+	brew edit $(PACKAGE)
+
+brew-install-dist:
+	(cd .. && $(MAKE) dist && cp "$(PACKAGE)-$(VERSION).tar.gz" "`brew --cache $(PACKAGE)`")
 
 
-push: 	distclean
-	git add -A && git commit -a && git push
+## SVR (Solaris) package:
 
-pull:
-	git pull
+svr solaris:
+	mkdir -p "$(TMPDESTDIR)" && (cd .. && make DESTDIR="$(TMPDESTDIR)" install)
+	(echo "i pkginfo"; (cd "$(TMPDESTDIR)$(PREFIX)" && find . -print | pkgproto | awk '{print $$1, $$2, $$3, $$4, "root", "root"}' )) >$(TMPINSTDIR)/prototype
+	mkdir -p $(TMPPKGDIR)
+	cp pkginfo $(TMPINSTDIR)
+	pkgmk -o -a "`uname -p`" -r $(TMPDESTDIR)$(PREFIX) -d $(TMPPKGDIR) -f $(TMPINSTDIR)/prototype
+	pkgtrans -s $(TMPPKGDIR) `pwd`/$(PKGNAME).pkg $(PKGNAME)
+	rm -fr "$(TMPINSTDIR)"
 
+svr-install: svr
+	pkgadd -d ./$(PKGNAME).pkg $(PKGNAME)
+
+
+## CentOS/RedHat RPM package:
+
+rpm centos redhat: rpm-build
+
+rpm-lint: $(PACKAGE).spec
+	rpmlint $(PACKAGE).spec
+
+rpm-install-specs: $(PACKAGE).spec
+	$(INSTALL) -d $(RPMSPECSDIR)
+	$(INSTALL) -m 0644 $(PACKAGE).spec $(RPMSPECSDIR)
+
+rpm-install-dist:
+	(cd .. && make dist && cp $(PACKAGE)-$(VERSION).tar.gz $(RPMSRCDIR))
+
+rpm-build: rpm-install-specs rpm-install-dist
+	(cd $(RPMSPECSDIR) && rpmbuild -ba $(PACKAGE).spec) && \
+	  cp $(RPMRPMSDIR)/`uname -m`/$(PACKAGE)-$(VERSION)*.rpm . && \
+	  cp $(RPMSRPMSDIR)/$(PACKAGE)-$(VERSION)*.src.rpm .
+
+rpm-install-deps:
+	yum install rpm-build rpmlint
+
+rpm-install: rpm
+	rpm -ivvh $(PACKAGE)-$(VERSION)-1.*.`uname -m`.rpm
+
+
+## OmniOS (omnios-extra) IPS package:
+
+omnios: omnios-build
+
+omnios-install-config:
+	(cd $(OCEXDIR) && git checkout "$(PACKAGE)")
+	$(INSTALL) -d "$(OCEXDIR)/build/$(PACKAGE)"
+	$(INSTALL) build.sh local.mog "$(OCEXDIR)/build/$(PACKAGE)"
+	(cd "$(OCEXDIR)/doc" && if ! fgrep "$(OCEXNAME)" baseline; then \
+	  (cat baseline ; echo "extra.omnios $(OCEXNAME)") | sort >baseline.new && mv baseline.new baseline; \
+	fi)
+	(cd "$(OCEXDIR)/doc" && if ! fgrep "$(OCEXNAME)" packages.md; then \
+	  (head -2 packages.md ; \
+	   (tail +2 packages.md ; echo "| $(OCEXNAME)		| $(VERSION)	| $(URL) | [ptrrkssn](https://github.com/ptrrkssn)") | \
+	    sort) >packages.md.new && mv packages.md.new packages.md; \
+	fi)
+
+omnios-install-dist:
+	(cd .. && make dist && $(INSTALL) "$(PACKAGE)-$(VERSION).tar.gz" "$(OCEXBUILDDIR)/$(PACKAGE)-$(VERSION)")
+
+omnios-build: omnios-install-config omnios-install-dist
+	(cd $(OCEXDIR)/build/$(PACKAGE) && ./build.sh)
+
+omnios-clean:
+	(cd $(OCEXDIR)/build/$(PACKAGE) && rm -f build.log* tmp *~)
+
+
+# Clean targets
+maintainer-clean:	distclean
+
+distclean:		clean
+	rm -f Makefile Makefile.port *.pkg pkginfo $(PACKAGE).rb *.rpm *.spec pkg-descr
+	rm -fr "$(TMPINSTDIR)"
+
+clean mostlyclean:
+	-rm -f *~ \#*

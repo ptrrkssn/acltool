@@ -19,7 +19,7 @@ create:
 install: install-formulae
 	(cd ../.. && $(MAKE) dist && \
 	    cp acltool-$(VERSION).tar.gz `brew --cache acltool`) && \
-	  brew install acltool	
+	  (brew install acltool || brew upgrade acltool || brew reinstall acltool)
 
 install-formulae: acltool.rb
 	$(INSTALL) -m 0644 acltool.rb $(BREWDIR)
