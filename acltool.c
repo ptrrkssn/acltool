@@ -47,7 +47,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBEDIT
+#include <histedit.h>
+#include <editline/readline.h>
+#endif
+#ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -504,7 +508,7 @@ opt_name_generator(const char *text,
 }
 
 
-#if !defined(HAVE_LIBREADLINE)
+#if !defined(HAVE_LIBREADLINE) && !defined(HAVE_LIBEDIT)
 char *
 readline(char *prompt) {
   static char buf[1024];
@@ -525,7 +529,7 @@ readline(char *prompt) {
 #endif
 
 
-#if defined(HAVE_LIBREADLINE)
+#if defined(HAVE_LIBREADLINE) || defined(HAVE_LIBEDIT)
 char **
 cmd_name_completion(const char *text,
 		    int start,
@@ -626,7 +630,7 @@ main(int argc,
       f_interactive = 1;
     }
 
-#if defined(HAVE_LIBREADLINE)
+#if defined(HAVE_LIBREADLINE) || defined(HAVE_LIBEDIT)
     rl_attempted_completion_function = cmd_name_completion;
 #endif
     
@@ -639,8 +643,8 @@ main(int argc,
       free(error_argv0);
     error_argv0 = s_dup(argv0);
     
-#if defined(HAVE_LIBREADLINE)
-      add_history(buf);
+#if defined(HAVE_LIBREADLINE) || defined(HAVE_LIBEDIT)
+    add_history(buf);
 #endif
 
       bp = buf;

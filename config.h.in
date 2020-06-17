@@ -12,8 +12,14 @@
 /* Define to 1 if you have the `getcwd' function. */
 #undef HAVE_GETCWD
 
+/* Define to 1 if you have the <histedit.h> header file. */
+#undef HAVE_HISTEDIT_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define if you have libedit */
+#undef HAVE_LIBEDIT
 
 /* Define if you have libreadline */
 #undef HAVE_LIBREADLINE

@@ -7,62 +7,59 @@
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
+PACKAGE =		@PACKAGE_TARNAME@
+VERSION =		@PACKAGE_VERSION@
 
-@SET_MAKE@
-
-srcdir = @srcdir@
-VPATH = @srcdir@
+srcdir =		@srcdir@
+VPATH =			@srcdir@
 
 DESTDIR =
-PREFIX = @prefix@
+PREFIX =		@prefix@
 
-prefix = ${PREFIX}
-exec_prefix = @exec_prefix@
-datarootdir = @datarootdir@
+prefix =		${PREFIX}
+exec_prefix =		@exec_prefix@
+datarootdir =		@datarootdir@
 
-BINDIR = @bindir@
-MANDIR = @mandir@
-MAN1DIR = ${MANDIR}/man1
+BINDIR =		@bindir@
+MANDIR =		@mandir@
+MAN1DIR =		${MANDIR}/man1
 
+PKG_CONFIG = 		@PKG_CONFIG@
+PKG_CONFIG_LIBDIR =	@PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH =	@PKG_CONFIG_PATH@
 
-CC = @CC@
-CPP = @CPP@
+LIBSMBCLIENT_CFLAGS =	@LIBSMBCLIENT_CFLAGS@
+LIBSMBCLIENT_LIBS =	@LIBSMBCLIENT_LIBS@
 
-PKG_CONFIG = @PKG_CONFIG@
-PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
-PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+READLINE_CFLAGS =	@READLINE_CFLAGS@
+READLINE_LIBS =		@READLINE_LIBS@
 
-LIBSMBCLIENT_CFLAGS = @LIBSMBCLIENT_CFLAGS@
-LIBSMBCLIENT_LIBS = @LIBSMBCLIENT_LIBS@
+LIBEDIT_CFLAGS =	@LIBEDIT_CFLAGS@
+LIBEDIT_LIBS =		@LIBEDIT_LIBS@
 
-READLINE_CFLAGS = @READLINE_CFLAGS@
-READLINE_LIBS = @READLINE_LIBS@
+CPPFLAGS =		@CPPFLAGS@ -I. -I$(srcdir) $(LIBEDIT_CFLAGS) $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
+CFLAGS =		@CFLAGS@ -Wall
+LDFLAGS =		@LDFLAGS@
+LIBS =			@LIBS@ $(LIBEDIT_LIBS) $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
 
-INSTALL=@INSTALL@
-TAR =		tar
+CC = 			@CC@
+INSTALL =		@INSTALL@
+TAR =			tar
+@SET_MAKE@
 
-PACKAGE=@PACKAGE_TARNAME@
-VERSION=@PACKAGE_VERSION@
+VALGRIND =		valgrind
+VALGRINDFLAGS =		--leak-check=full --track-origins=yes --error-exitcode=1 # --show-leak-kinds=all 
 
-CPPFLAGS = @CPPFLAGS@ -I. -I$(srcdir) $(READLINE_CFLAGS) $(LIBSMBCLIENT_CFLAGS)
-CFLAGS = @CFLAGS@ -Wall
-LDFLAGS = @LDFLAGS@
-LIBS = @LIBS@ $(READLINE_LIBS) $(LIBSMBCLIENT_LIBS)
+DISTCHECKDIR =		/tmp/distcheck-$(PACKAGE)-$(VERSION)
+DISTDIR =		/tmp/build-$(PACKAGE)-$(VERSION)
 
-VALGRIND=valgrind
-VALGRINDFLAGS=--leak-check=full --track-origins=yes --error-exitcode=1 # --show-leak-kinds=all 
+TESTDIR =		t
 
-DISTCHECKDIR =	/tmp/distcheck-$(PACKAGE)-$(VERSION)
-DISTDIR =	/tmp/build-$(PACKAGE)-$(VERSION)
+PROGRAMS =		acltool
 
+ACLTOOL_ALIASES =	lac sac edac
 
-TESTDIR=t
-
-PROGRAMS=acltool
-
-ACLTOOL_ALIASES=lac sac edac
-
-ACLTOOL_OBJS=gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
+ACLTOOL_OBJS =		gacl.o gacl_impl.o error.o acltool.o argv.o buffer.o aclcmds.o basic.o commands.o misc.o opts.o strings.o range.o common.o cmd_edit.o vfs.o smb.o
 
 
 

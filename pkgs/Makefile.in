@@ -29,7 +29,7 @@ RPMSRPMSDIR =	$(RPMBUILDDIR)/SRPMS
 
 # OmniOS Extra Repo
 OCEXDIR =	../../omnios-extra
-OCEXNAME =	ooce/network/$(PACKAGE)
+OCEXNAME =	ooce/file/$(PACKAGE)
 OCEXBUILDDIR =	/tmp/build_$(USER)
 
 
