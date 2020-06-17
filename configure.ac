@@ -74,9 +74,9 @@ AS_IF([test "x$with_readline" != xno], [
       AC_SEARCH_LIBS([readline], [readline])
       if test "x$ac_cv_search_readline" = xno; then
         AC_SEARCH_LIBS([rl_set_prompt], [readline], [ 
-          AC_SUBST([READLINE_LIBS], ["-lcurses"])
+          AC_SUBST([READLINE_LIBS], ["-ltermcap"])
 	  ac_cv_search_readline=yes
-        ], [], [-lcurses])
+        ], [], [-ltermcap])
       fi
       if test "x$ac_cv_search_readline" != xno -a "x$ac_cv_header_readline_readline_h" = xyes; then
         AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])

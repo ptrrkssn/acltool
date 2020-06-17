@@ -4225,7 +4225,7 @@ for ac_lib in '' readline; do
     ac_res="none required"
   else
     ac_res=-l$ac_lib
-    LIBS="-l$ac_lib -lcurses $ac_func_search_save_LIBS"
+    LIBS="-l$ac_lib -ltermcap $ac_func_search_save_LIBS"
   fi
   if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_search_rl_set_prompt=$ac_res
@@ -4250,7 +4250,7 @@ ac_res=$ac_cv_search_rl_set_prompt
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-          READLINE_LIBS="-lcurses"
+          READLINE_LIBS="-ltermcap"
 
 	  ac_cv_search_readline=yes
 
