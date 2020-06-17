@@ -625,13 +625,13 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBSMBCLIENT_LIBS
 LIBSMBCLIENT_CFLAGS
-READLINE_LIBS
-READLINE_CFLAGS
+LIBEDIT_LIBS
+LIBEDIT_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
-LIBEDIT_LIBS
-LIBEDIT_CFLAGS
+READLINE_LIBS
+READLINE_CFLAGS
 LIBOBJS
 EGREP
 GREP
@@ -689,8 +689,8 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_libedit
 with_readline
+with_libedit
 with_libsmbclient
 '
       ac_precious_vars='build_alias
@@ -705,10 +705,10 @@ CPP
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-LIBEDIT_CFLAGS
-LIBEDIT_LIBS
 READLINE_CFLAGS
 READLINE_LIBS
+LIBEDIT_CFLAGS
+LIBEDIT_LIBS
 LIBSMBCLIENT_CFLAGS
 LIBSMBCLIENT_LIBS'
 
@@ -1319,9 +1319,9 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-libedit          support fancy command line editing (valid arguments:
-                          'check', 'no', 'yes' or PATH) [default=check]
   --with-readline         support fancy command line editing (valid arguments:
+                          'check', 'no', 'yes' or PATH) [default=check]
+  --with-libedit          support fancy command line editing (valid arguments:
                           'check', 'no', 'yes' or PATH) [default=check]
   --with-libsmbclient     support SMB via Samba libsmbclient (valid arguments:
                           'check', 'no', 'yes' or PATH) [default=check]
@@ -1340,14 +1340,14 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  LIBEDIT_CFLAGS
-              C compiler flags for LIBEDIT, overriding pkg-config
-  LIBEDIT_LIBS
-              linker flags for LIBEDIT, overriding pkg-config
   READLINE_CFLAGS
               C compiler flags for READLINE, overriding pkg-config
   READLINE_LIBS
               linker flags for READLINE, overriding pkg-config
+  LIBEDIT_CFLAGS
+              C compiler flags for LIBEDIT, overriding pkg-config
+  LIBEDIT_LIBS
+              linker flags for LIBEDIT, overriding pkg-config
   LIBSMBCLIENT_CFLAGS
               C compiler flags for LIBSMBCLIENT, overriding pkg-config
   LIBSMBCLIENT_LIBS
@@ -3957,6 +3957,15 @@ done
 
 
 
+# Check whether --with-readline was given.
+if test "${with_readline+set}" = set; then :
+  withval=$with_readline;
+else
+  with_readline=check
+fi
+
+
+
 # Check whether --with-libedit was given.
 if test "${with_libedit+set}" = set; then :
   withval=$with_libedit;
@@ -3964,6 +3973,17 @@ else
   with_libedit=check
 fi
 
+
+echo "with:readline=$with_readline"
+echo "with_libedit=$with_libedit"
+
+if test "x$with_libedit" != xcheck -a "x$with_libedit" != xno; then
+   if test "x$with_readline" = xcheck -o "x$with_readline" = xno; then
+     with_readline=no
+   else
+     as_fn_error $? "Only one of '--with-readline' and '--with-libedit' may be used" "$LINENO" 5
+   fi
+fi
 
 
 
@@ -4085,19 +4105,19 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-if test "x$with_libedit" != xno; then :
+if test "x$with_readline" != xno; then :
 
-  case "x$with_libedit" in
+  case "x$with_readline" in
     /*)
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBEDIT in ${with_libedit}" >&5
-$as_echo_n "checking for LIBEDIT in ${with_libedit}... " >&6; }
-      if test -f "${with_libedit}/include/histedit.h" -a -e "${with_libedit}/lib/libedit.so"; then
-        LIBEDIT_CFLAGS="-I${with_libedit}/include"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE in ${with_readline}" >&5
+$as_echo_n "checking for READLINE in ${with_readline}... " >&6; }
+      if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
+        READLINE_CFLAGS="-I${with_readline}/include"
 
-        LIBEDIT_LIBS="-L${with_libedit}/lib -R${with_libedit}/lib -ledit"
+        READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline"
 
 
-$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
+$as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -4107,270 +4127,7 @@ $as_echo "no" >&6; }
       fi
       ;;
     *)
-      for ac_header in histedit.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "histedit.h" "ac_cv_header_histedit_h" "$ac_includes_default"
-if test "x$ac_cv_header_histedit_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_HISTEDIT_H 1
-_ACEOF
-
-fi
-
-done
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing el_gets" >&5
-$as_echo_n "checking for library containing el_gets... " >&6; }
-if ${ac_cv_search_el_gets+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char el_gets ();
-int
-main ()
-{
-return el_gets ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' edit; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_el_gets=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_el_gets+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_el_gets+:} false; then :
-
-else
-  ac_cv_search_el_gets=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_el_gets" >&5
-$as_echo "$ac_cv_search_el_gets" >&6; }
-ac_res=$ac_cv_search_el_gets
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-fi
-
-      if test "x$ac_cv_search_el_gets" = xno; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing el_getc" >&5
-$as_echo_n "checking for library containing el_getc... " >&6; }
-if ${ac_cv_search_el_getc+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char el_getc ();
-int
-main ()
-{
-return el_getc ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' edit; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib -lcurses $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_el_getc=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_el_getc+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_el_getc+:} false; then :
-
-else
-  ac_cv_search_el_getc=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_el_getc" >&5
-$as_echo "$ac_cv_search_el_getc" >&6; }
-ac_res=$ac_cv_search_el_getc
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-          LIBEDIT_LIBS="-lcurses"
-
-	  ac_cv_search_el_gets=yes
-
-fi
-
-      fi
-      if test "x$ac_cv_search_el_gets" != xno -a "x$ac_cv_header_histedit_h" = xyes; then
-
-$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
-
-      else
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBEDIT" >&5
-$as_echo_n "checking for LIBEDIT... " >&6; }
-
-if test -n "$LIBEDIT_CFLAGS"; then
-    pkg_cv_LIBEDIT_CFLAGS="$LIBEDIT_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libedit\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libedit") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBEDIT_CFLAGS=`$PKG_CONFIG --cflags "libedit" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBEDIT_LIBS"; then
-    pkg_cv_LIBEDIT_LIBS="$LIBEDIT_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libedit\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libedit") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBEDIT_LIBS=`$PKG_CONFIG --libs "libedit" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBEDIT_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libedit" 2>&1`
-        else
-	        LIBEDIT_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libedit" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBEDIT_PKG_ERRORS" >&5
-
-
-          if test "x$with_libedit" != xcheck; then
-            { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--with-libedit was given, but test for it failed
-See \`config.log' for more details" "$LINENO" 5; }
-          fi
-
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-          if test "x$with_libedit" != xcheck; then
-            { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--with-libedit was given, but test for it failed
-See \`config.log' for more details" "$LINENO" 5; }
-          fi
-
-else
-	LIBEDIT_CFLAGS=$pkg_cv_LIBEDIT_CFLAGS
-	LIBEDIT_LIBS=$pkg_cv_LIBEDIT_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-
-$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
-
-
-fi
-      fi
-      ;;
-  esac
-
-fi
-
-if test "x$with_libedit" = xno; then :
-
-
-# Check whether --with-readline was given.
-if test "${with_readline+set}" = set; then :
-  withval=$with_readline;
-else
-  with_readline=check
-fi
-
-
-  if test "x$with_readline" != xno; then :
-
-    case "x$with_readline" in
-      /*)
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE in ${with_readline}" >&5
-$as_echo_n "checking for READLINE in ${with_readline}... " >&6; }
-        if test -f "${with_readline}/include/readline/readline.h" -a -e "${with_readline}/lib/libreadline.so"; then
-          READLINE_CFLAGS="-I${with_readline}/include"
-
-          READLINE_LIBS="-L${with_readline}/lib -R${with_readline}/lib -lreadline"
-
-
-$as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
-
-  	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        else
-  	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        fi
-        ;;
-      *)
-        for ac_header in readline/readline.h
+      for ac_header in readline/readline.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "readline/readline.h" "ac_cv_header_readline_readline_h" "$ac_includes_default"
 if test "x$ac_cv_header_readline_readline_h" = xyes; then :
@@ -4382,7 +4139,7 @@ fi
 
 done
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing readline" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing readline" >&5
 $as_echo_n "checking for library containing readline... " >&6; }
 if ${ac_cv_search_readline+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4438,8 +4195,8 @@ if test "$ac_res" != no; then :
 
 fi
 
-        if test "x$ac_cv_search_readline" = xno; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing rl_set_prompt" >&5
+      if test "x$ac_cv_search_readline" = xno; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing rl_set_prompt" >&5
 $as_echo_n "checking for library containing rl_set_prompt... " >&6; }
 if ${ac_cv_search_rl_set_prompt+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4493,18 +4250,18 @@ ac_res=$ac_cv_search_rl_set_prompt
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-            READLINE_LIBS="-lcurses"
+          READLINE_LIBS="-lcurses"
 
-  	  ac_cv_search_readline=yes
+	  ac_cv_search_readline=yes
 
 fi
 
-        fi
-        if test "x$ac_cv_search_readline" != xno -a "x$ac_cv_header_readline_readline_h" = xyes; then
+      fi
+      if test "x$ac_cv_search_readline" != xno -a "x$ac_cv_header_readline_readline_h" = xyes; then
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
 
-        else
+      else
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for READLINE" >&5
@@ -4565,23 +4322,23 @@ fi
 	echo "$READLINE_PKG_ERRORS" >&5
 
 
-            if test "x$with_readline" != xcheck; then
-              { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+          if test "x$with_readline" != xcheck; then
+            { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-readline was given, but test for readline failed
 See \`config.log' for more details" "$LINENO" 5; }
-            fi
+          fi
 
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
-            if test "x$with_readline" != xcheck; then
-              { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+          if test "x$with_readline" != xcheck; then
+            { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "--with-readline was given, but test for readline failed
 See \`config.log' for more details" "$LINENO" 5; }
-            fi
+          fi
 
 else
 	READLINE_CFLAGS=$pkg_cv_READLINE_CFLAGS
@@ -4589,13 +4346,267 @@ else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
-  	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
-            readline_incdir="`pkg-config --variable=includedir readline`"
-            READLINE_CFLAGS="-I${readline_incdir}"
+	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
+          readline_incdir="`pkg-config --variable=includedir readline`"
+          READLINE_CFLAGS="-I${readline_incdir}"
 
 
 
 $as_echo "#define HAVE_LIBREADLINE 1" >>confdefs.h
+
+
+fi
+      fi
+      ;;
+  esac
+
+fi
+
+if test "x$with_readline" = xno; then :
+
+  if test "x$with_libedit" != xno; then :
+
+    case "x$with_libedit" in
+      /*)
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBEDIT in ${with_libedit}" >&5
+$as_echo_n "checking for LIBEDIT in ${with_libedit}... " >&6; }
+        if test -f "${with_libedit}/include/histedit.h" -a -e "${with_libedit}/lib/libedit.so"; then
+          LIBEDIT_CFLAGS="-I${with_libedit}/include"
+
+          LIBEDIT_LIBS="-L${with_libedit}/lib -R${with_libedit}/lib -ledit"
+
+
+$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
+
+  	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        else
+  	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+        ;;
+      *)
+        for ac_header in histedit.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "histedit.h" "ac_cv_header_histedit_h" "$ac_includes_default"
+if test "x$ac_cv_header_histedit_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_HISTEDIT_H 1
+_ACEOF
+
+fi
+
+done
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing el_gets" >&5
+$as_echo_n "checking for library containing el_gets... " >&6; }
+if ${ac_cv_search_el_gets+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char el_gets ();
+int
+main ()
+{
+return el_gets ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' edit; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_el_gets=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_el_gets+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_el_gets+:} false; then :
+
+else
+  ac_cv_search_el_gets=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_el_gets" >&5
+$as_echo "$ac_cv_search_el_gets" >&6; }
+ac_res=$ac_cv_search_el_gets
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+        if test "x$ac_cv_search_el_gets" = xno; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing el_getc" >&5
+$as_echo_n "checking for library containing el_getc... " >&6; }
+if ${ac_cv_search_el_getc+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char el_getc ();
+int
+main ()
+{
+return el_getc ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' edit; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib -lcurses $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_el_getc=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_el_getc+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_el_getc+:} false; then :
+
+else
+  ac_cv_search_el_getc=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_el_getc" >&5
+$as_echo "$ac_cv_search_el_getc" >&6; }
+ac_res=$ac_cv_search_el_getc
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+            LIBEDIT_LIBS="-lcurses"
+
+  	  ac_cv_search_el_gets=yes
+
+fi
+
+        fi
+        if test "x$ac_cv_search_el_gets" != xno -a "x$ac_cv_header_histedit_h" = xyes; then
+
+$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
+
+        else
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBEDIT" >&5
+$as_echo_n "checking for LIBEDIT... " >&6; }
+
+if test -n "$LIBEDIT_CFLAGS"; then
+    pkg_cv_LIBEDIT_CFLAGS="$LIBEDIT_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libedit\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libedit") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBEDIT_CFLAGS=`$PKG_CONFIG --cflags "libedit" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBEDIT_LIBS"; then
+    pkg_cv_LIBEDIT_LIBS="$LIBEDIT_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libedit\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libedit") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBEDIT_LIBS=`$PKG_CONFIG --libs "libedit" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBEDIT_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libedit" 2>&1`
+        else
+	        LIBEDIT_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libedit" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBEDIT_PKG_ERRORS" >&5
+
+
+            if test "x$with_libedit" != xcheck; then
+              { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "--with-libedit was given, but test for it failed
+See \`config.log' for more details" "$LINENO" 5; }
+            fi
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+            if test "x$with_libedit" != xcheck; then
+              { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "--with-libedit was given, but test for it failed
+See \`config.log' for more details" "$LINENO" 5; }
+            fi
+
+else
+	LIBEDIT_CFLAGS=$pkg_cv_LIBEDIT_CFLAGS
+	LIBEDIT_LIBS=$pkg_cv_LIBEDIT_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_LIBEDIT 1" >>confdefs.h
 
 
 fi
@@ -4606,6 +4617,7 @@ fi
 fi
 
 fi
+
 
 
 # Check whether --with-libsmbclient was given.
