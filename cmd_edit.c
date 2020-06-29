@@ -486,10 +486,10 @@ ace_match(gacl_entry_t oae,
     gacl_free(mip);
   if (oip)
     gacl_free(oip);
-  
+
   /* Check the ACE type set */
-    if (met != oet)
-      return 0;
+  if (met != oet)
+    return 0;
 
   if (gacl_get_permset(mae, &mps) < 0 ||
       gacl_get_flagset_np(mae, &mfs) < 0)
@@ -498,8 +498,6 @@ ace_match(gacl_entry_t oae,
   if (gacl_get_permset(oae, &ops) < 0 ||
       gacl_get_flagset_np(oae, &ofs) < 0)
     return -1;
-
-
 
 
   /* Check the flag set */
