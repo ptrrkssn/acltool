@@ -1,0 +1,31 @@
+env:
+  CIRRUS_CLONE_DEPTH: 1
+  ARCH: amd64
+
+task:
+  freebsd_instance:
+    matrix:
+      image_family: freebsd-13-0-snap
+      image_family: freebsd-12-1
+      image_family: freebsd-11-4
+      image: freebsd-11-3-stable-amd64-v20190801
+
+  install_script:
+    - sed -i.bak -e 's,quarterly,latest,' /etc/pkg/FreeBSD.conf
+    - env ASSUME_ALWAYS_YES=yes pkg bootstrap -f
+    - pkg upgrade -y
+    - pkg install -y autoconf automake libtool pkgconf
+
+  matrix:
+    - name: libedit
+      libedit_script:
+        - pkg install -y libedit
+        - autoreconf -f -i
+        - CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure --with-libedit --without-readline
+        - make
+    - name: readline
+      readline_script:
+        - pkg install -y readline
+        - autoreconf -f -i
+        - CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure --with-readline --without-libedit
+        - make
