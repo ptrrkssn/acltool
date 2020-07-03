@@ -49,6 +49,51 @@
 #include "common.h"
 
 
+#define GACL_CLEAN_BITS_INVALID   0x03
+#define GACL_CLEAN_FAIL_INVALID   0x00 /* Fail  invalid entries */
+#define GACL_CLEAN_SKIP_INVALID   0x01 /* Skip  invalid entries */
+#define GACL_CLEAN_FILTER_INVALID 0x02 /* Strip invalid flags */
+
+/* Remove flags only valid on directories */
+int
+clean_acl(GACL *ap,
+	  mode_t mode,
+	  int flags) {
+  int i, j;
+
+  if (S_ISDIR(mode))
+    return 0;
+  
+  for (i = 0; i < ap->ac; i++) {
+    while (i < ap->ac && (ap->av[i].flags & ~GACL_FLAG_INHERITED) != 0) {
+      switch (flags & GACL_CLEAN_BITS_INVALID) {
+      case GACL_CLEAN_FAIL_INVALID:
+	errno = ENOTDIR;
+	return -1;
+
+      case GACL_CLEAN_SKIP_INVALID:
+	/* Skip this entry - contains flags that can only be set on directories */
+	for (j = i; j < ap->ac-1; j++)
+	  ap->av[j] = ap->av[j+1];
+	ap->ac--;
+	break;
+
+      case GACL_CLEAN_FILTER_INVALID:
+	/* Only one flag allowed on non-directories */
+	ap->av[i].flags &= GACL_FLAG_INHERITED;
+	goto Next;
+
+      default:
+	errno = EINVAL;
+	return -1;
+      }
+    }
+  Next:;
+  }
+
+  return 0;
+}
+
 int
 get_acl(const char *path, 
 	const struct stat *sp,
@@ -111,6 +156,10 @@ set_acl(const char *path,
   gacl_t ap = nap;
 
   
+  rc = clean_acl(ap, sp->st_mode, GACL_CLEAN_FAIL_INVALID);
+  if (rc)
+    return error(1, errno, "%s: Cleaning ACL", path);
+  
   if (config.f_sort) {
     gacl_t sap = gacl_sort(ap);
 
@@ -137,7 +186,7 @@ set_acl(const char *path,
   }
 
   if (config.f_print > 1)
-    print_acl(stdout, ap, path, sp);
+    print_acl(stdout, ap, path, sp, 0);
   
   /* Skip set operation if old and new acl is the same (and force flag not in use) */
   if (oap && gacl_match(ap, oap) == 1 && !config.f_force) {
@@ -163,7 +212,7 @@ set_acl(const char *path,
   }
 
   if (config.f_print == 1)
-    print_acl(stdout, ap, path, sp);
+    print_acl(stdout, ap, path, sp, 0);
   
   if (config.f_verbose)
     printf("%s: ACL Updated%s\n", path, (config.f_noupdate ? " (NOT)" : ""));
@@ -287,7 +336,8 @@ int
 print_acl(FILE *fp,
 	  gacl_t a,
 	  const char *path,
-	  const struct stat *sp) {
+	  const struct stat *sp,
+	  int cnt) {
   gacl_entry_t ae;
   int i, is_trivial, len;
   uid_t *idp;
@@ -332,7 +382,10 @@ print_acl(FILE *fp,
       gs = s_dup(gp->gr_name);
   }
 
+#if 0
   if (!a) {
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "# file: %s\n", path);
     if (us) {
       if (config.f_verbose)
@@ -362,16 +415,20 @@ print_acl(FILE *fp,
     }
     goto End;
   }
-
+#endif
   
   switch (config.f_style) {
   case GACL_STYLE_DEFAULT:
-    as = gacl_to_text_np(a, NULL, (config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
+    as = gacl_to_text_np(a, NULL, (config.f_verbose ? (GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID|
+						       (config.f_verbose > 1 ? GACL_TEXT_VERBOSE_PERMS : 0)|
+						       (config.f_verbose > 2 ? GACL_TEXT_VERBOSE_FLAGS : 0)) : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
     }
     
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "# file: %s\n", path);
     
     if (us) {
@@ -390,8 +447,7 @@ print_acl(FILE *fp,
     
     if (config.f_verbose)
       fprintf(fp, "# type: %s\n", mode2typestr(sp->st_mode));
-    if (config.f_verbose > 1) {
-      fprintf(fp, "# size: %llu\n", (long long unsigned) sp->st_size);
+    if (config.f_verbose > 2) {
       fprintf(fp, "# modified: %s", ctime(&sp->st_mtime));
       fprintf(fp, "# changed:  %s", ctime(&sp->st_ctime));
       fprintf(fp, "# accessed: %s", ctime(&sp->st_atime));
@@ -399,6 +455,7 @@ print_acl(FILE *fp,
       if (sp->st_birthtime)
 	fprintf(fp, "# created:  %s", ctime(&sp->st_birthtime));
 #endif
+      fprintf(fp, "# size: %llu\n", (long long unsigned) sp->st_size);
     }
     
     fputs(as, fp);
@@ -406,12 +463,15 @@ print_acl(FILE *fp,
     break;
     
   case GACL_STYLE_STANDARD:
-    as = gacl_to_text_np(a, NULL, GACL_TEXT_STANDARD|(config.f_verbose ? GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID : 0));
+    as = gacl_to_text_np(a, NULL, GACL_TEXT_STANDARD|(config.f_verbose ? (GACL_TEXT_VERBOSE|GACL_TEXT_APPEND_ID |
+									  (config.f_verbose > 1 ? GACL_TEXT_VERBOSE_PERMS : 0)) : 0));
     if (!as) {
       fprintf(stderr, "%s: Error: %s: Unable to display ACL\n", argv0, path);
       return 1;
     }
     
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "# file: %s\n", path);
     fprintf(fp, "# owner: %s\n", us);
     fprintf(fp, "# group: %s\n", gs);
@@ -445,6 +505,8 @@ print_acl(FILE *fp,
     break;
 
   case GACL_STYLE_VERBOSE:
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "# file: %s\n", path);
     for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *cp;
@@ -510,7 +572,9 @@ print_acl(FILE *fp,
     is_trivial = 0;
     gacl_is_trivial_np(a, &is_trivial);
     
-    printf("%s%s %2lu %8s %8s %8llu %16s %s\n",
+    if (cnt > 1)
+      putc('\n', fp);
+    fprintf(fp, "%s%s %2lu %8s %8s %8llu %16s %s\n",
 	   mode2str(sp->st_mode), is_trivial ? " " : "+",
 	   (unsigned long) sp->st_nlink,
 	   us, gs,
@@ -528,7 +592,9 @@ print_acl(FILE *fp,
     break;
 
   case GACL_STYLE_PRIMOS:
-    printf("ACL protecting \"%s\":\n", path);
+    if (cnt > 1)
+      putc('\n', fp);
+    fprintf(fp, "ACL protecting \"%s\":\n", path);
     
     for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
       char *perms, *flags, *type;
@@ -598,6 +664,8 @@ print_acl(FILE *fp,
     break;
     
   case GACL_STYLE_SAMBA:
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "FILENAME:%s\n", path);
     fprintf(fp, "REVISION:1\n");
     fprintf(fp, "CONTROL:SR|DP\n");
@@ -628,6 +696,8 @@ print_acl(FILE *fp,
   case GACL_STYLE_ICACLS:
     len = strlen(path);
 
+    if (cnt > 1)
+      putc('\n', fp);
     fprintf(fp, "%s", path);
 
     for (i = 0; gacl_get_entry(a, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
@@ -640,7 +710,6 @@ print_acl(FILE *fp,
     return -1;
   }
 
- End:
   free(us);
   free(gs);
   return 0;
@@ -796,7 +865,7 @@ aclcmd_foreach(int argc,
     rc = ft_foreach(argv[i], handler, vp,
 		    config.f_recurse ? -1 : config.max_depth, config.f_filetype);
     if (rc) {
-#if 1
+#if 0
       error(1, errno, "%s: Accessing", argv[i]);
 #else
       if (rc < 0) {

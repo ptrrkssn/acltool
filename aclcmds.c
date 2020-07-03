@@ -271,7 +271,7 @@ walker_find(const char *path,
       if (rc > 0) {
 	/* Found a match */
 	if (config.f_verbose)
-	  print_acl(stdout, ap, path, sp);
+	  print_acl(stdout, ap, path, sp, 0);
 	else
 	  puts(path);
 	
@@ -302,10 +302,8 @@ walker_print(const char *path,
   if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
 
-  if (np && ++*np > 1)
-    putchar('\n');
-  
-  print_acl(fp, ap, path, sp);
+  ++*np;
+  print_acl(fp, ap, path, sp, np ? *np : 0);
 
   if (ap)
     gacl_free(ap);

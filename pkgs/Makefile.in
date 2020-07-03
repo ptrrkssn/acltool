@@ -64,6 +64,7 @@ port-test:
 	(cd "$(PORTSDIR)/$(PORTSNAME)" && port test "$(PORTSDIR)/$(PORTSNAME)")
 
 port-install-dist:
+	$(INSTALL) -d "$(PORTSRCDIR)"
 	(cd .. && make dist && \
 	  cp $(PACKAGE)-$(VERSION).tar.gz $(PORTSRCDIR)/ptrrkssn-$(PACKAGE)-v$(VERSION)_GH0.tar.gz)
 

@@ -426,11 +426,14 @@ gacl_set_entry_type_np(GACL_ENTRY *ep,
 
 
 
-#define GACL_TEXT_VERBOSE      0x0010
-#define GACL_TEXT_NUMERIC_IDS  0x0020
-#define GACL_TEXT_APPEND_ID    0x0040
-#define GACL_TEXT_COMPACT      0x1000
-#define GACL_TEXT_STANDARD     0x2000
+#define GACL_TEXT_VERBOSE        0x0010
+#define GACL_TEXT_NUMERIC_IDS    0x0020
+#define GACL_TEXT_APPEND_ID      0x0040
+#define GACL_TEXT_COMPACT        0x1000
+#define GACL_TEXT_STANDARD       0x2000
+#define GACL_TEXT_VERBOSE_PERMS  0x4000
+#define GACL_TEXT_VERBOSE_FLAGS  0x8000
+
 
 extern ssize_t
 gacl_entry_tag_to_text(GACL_ENTRY *ep,

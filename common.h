@@ -73,7 +73,8 @@ extern int
 print_acl(FILE *fp,
 	  gacl_t a,
 	  const char *path,
-	  const struct stat *sp);
+	  const struct stat *sp,
+	  int cnt);
 
 
 extern int

@@ -1648,6 +1648,98 @@ gacl_entry_type_to_text(GACL_ENTRY *ep,
 }
 
 
+static struct perms_to_verbose {
+  GACL_PERMSET p;
+  char *s;
+} p2vs[] =
+  {
+   { GACL_PERM_FULL_SET,          "full_set" },
+   { GACL_PERM_MODIFY_SET,        "modify_set" },
+   { GACL_PERM_READ_SET,          "read_set" },
+   { GACL_PERM_WRITE_SET,         "write_set" },
+   { GACL_PERM_EXECUTE,           "execute" },
+   { GACL_PERM_READ_DATA,         "read_data" },
+   { GACL_PERM_WRITE_DATA,        "write_data" },
+   { GACL_PERM_APPEND_DATA,       "append_data" },
+   { GACL_PERM_READ_NAMED_ATTRS,  "read_named_attrs" },
+   { GACL_PERM_WRITE_NAMED_ATTRS, "write_named_attrs" },
+   { GACL_PERM_DELETE_CHILD,      "deleted_child" },
+   { GACL_PERM_READ_ATTRIBUTES,   "read_attributes" },
+   { GACL_PERM_WRITE_ATTRIBUTES,  "write_attributes" },
+   { GACL_PERM_DELETE,            "delete" },
+   { GACL_PERM_READ_ACL,          "read_acl" },
+   { GACL_PERM_WRITE_ACL,         "write_acl" },
+   { GACL_PERM_WRITE_OWNER,       "write_owner" },
+   { GACL_PERM_SYNCHRONIZE,       "synchronize" },
+   { 0, NULL },
+  };
+
+static ssize_t
+_gacl_entry_perms_to_verbose_text(GACL_PERMSET perms,
+				  char *buf,
+				  size_t bufsize) {
+  int rc, i, first = 1;
+  ssize_t len = 0;
+  
+  buf[0] = '\0';
+  if (!perms)
+    return snprintf(buf, bufsize, "empty_set");
+  
+  for (i = 0; p2vs[i].s; i++) {
+    if ((perms & p2vs[i].p) == p2vs[i].p) {
+      rc = snprintf(buf, bufsize, "%s%s", first ? "" : "+", p2vs[i].s);
+      if (rc < 0)
+	return -1;
+      buf += rc;
+      bufsize -= rc;
+      first = 0;
+      perms &= ~p2vs[i].p;
+      len += rc;
+    } 
+  }
+  return len;
+}
+
+
+static struct flags_to_verbose {
+  GACL_FLAGSET f;
+  char *s;
+} f2vs[] =
+  {
+   { GACL_FLAG_FILE_INHERIT, "file_inherit" },
+   { GACL_FLAG_DIRECTORY_INHERIT, "dir_inherit" },
+   { GACL_FLAG_NO_PROPAGATE_INHERIT, "no_propagate" },
+   { GACL_FLAG_INHERIT_ONLY, "inherit_only" },
+   { GACL_FLAG_SUCCESSFUL_ACCESS, "successful_access" },
+   { GACL_FLAG_FAILED_ACCESS, "failed_access" },
+   { GACL_FLAG_INHERITED, "inherited" },
+   { 0, NULL },
+  };
+
+
+static ssize_t
+_gacl_entry_flags_to_verbose_text(GACL_FLAGSET flags,
+				  char *buf,
+				  size_t bufsize) {
+  int rc, i, first = 1;
+  ssize_t len = 0;
+
+  buf[0] = '\0';
+  for (i = 0; f2vs[i].s; i++) {
+    if ((flags & f2vs[i].f) == f2vs[i].f) {
+      rc = snprintf(buf, bufsize, "%s%s", first ? "" : "+", f2vs[i].s);
+      if (rc < 0)
+	return -1;
+      buf += rc;
+      bufsize -= rc;
+      first = 0;
+      flags &= ~f2vs[i].f;
+      len += rc;
+    } 
+  }
+  return len;
+}
+
 
 ssize_t
 gacl_entry_to_text(GACL_ENTRY *ep,
@@ -1657,6 +1749,7 @@ gacl_entry_to_text(GACL_ENTRY *ep,
   char *bp;
   ssize_t rc;
   GACL_FLAGSET *efsp;
+  int f_comment = 0;
   
   bp = buf;
   
@@ -1737,9 +1830,11 @@ gacl_entry_to_text(GACL_ENTRY *ep,
     switch (et) {
     case GACL_TAG_TYPE_USER:
       rc = snprintf(bp, bufsize, "\t# uid=%d", ep->tag.ugid);
+      f_comment++;
       break;
     case GACL_TAG_TYPE_GROUP:
       rc = snprintf(bp, bufsize, "\t# gid=%d", ep->tag.ugid);
+      f_comment++;
       break;
     default:
       break;
@@ -1749,7 +1844,59 @@ gacl_entry_to_text(GACL_ENTRY *ep,
     bp += rc;
     bufsize -= rc;
   }
-  
+
+  if (flags & GACL_TEXT_VERBOSE_PERMS) {
+    char vbuf[2048];
+
+    rc = _gacl_entry_perms_to_verbose_text(ep->perms, vbuf, sizeof(vbuf));
+    if (rc < 0)
+      return -1;
+    
+    if (!f_comment)
+      rc = snprintf(bp, bufsize, "\t#");
+    else 
+      rc = snprintf(bp, bufsize, ",");
+      
+    if (rc < 0)
+      return -1;
+    bp += rc;
+    bufsize -= rc;
+    f_comment = 1;
+
+    rc = snprintf(bp, bufsize, " perms=%s", vbuf);
+    if (rc < 0)
+      return -1;
+    bp += rc;
+    bufsize -= rc;
+  }
+
+  if (flags & GACL_TEXT_VERBOSE_FLAGS) {
+    char vbuf[2048];
+
+    rc = _gacl_entry_flags_to_verbose_text(ep->flags, vbuf, sizeof(vbuf));
+    if (rc < 0)
+      return -1;
+    
+    if (vbuf[0]) {
+      if (!f_comment)
+	rc = snprintf(bp, bufsize, "\t#");
+      else 
+	rc = snprintf(bp, bufsize, ",");
+      
+      if (rc < 0)
+	return -1;
+      bp += rc;
+      bufsize -= rc;
+      f_comment = 1;
+      
+      rc = snprintf(bp, bufsize, " flags=%s", vbuf);
+      if (rc < 0)
+	return -1;
+      bp += rc;
+      bufsize -= rc;
+    }
+  }
+
   return bp-buf;
 }
 

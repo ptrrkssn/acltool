@@ -1019,17 +1019,13 @@ walker_edit(const char *path,
     }
   }
 
-#if 0  
-  gacl_clean(nap);
-#endif
-
   rc = set_acl(path, sp, nap, oap);
   if (rc < 0)
     error(1, errno, "%s: Setting ACL", path);
 
   gacl_free(oap);
   gacl_free(nap);
-  return 0;
+  error_return(0, saved_error_env);
 }
 
 static int
