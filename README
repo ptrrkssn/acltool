@@ -196,6 +196,10 @@ EXAMPLES
   touch-access -sm dir
     Sort and merge the ACL entries for dir
 
+  rename-access -r employees=students,g:guests=owner@ /export/homes
+    Recursively replace all ACL entries for users/groups "students" with users/groups "employees"
+    and "owner@" with "group:guests".
+
   edit-access -r user:peter86:rwx:f:allow dir
     Recursively set the ACE permission "rwx" on all objects matching "user:peter86"
     with flags "f" and type "allow".
@@ -209,9 +213,6 @@ EXAMPLES
   edit-access -e '0-3/peter86:.*/s mikha02:rwx' path
     Scan ACE entries 0-3 for entries matching "peter86:.*" and replace them with "mikha02:rwx::allow"
  
-  rename-access -r employees:students,g:guests:noobs /export/homes
-    Recursively replace all ACL entries for groups "employees" with "students" and guests with noobs
-
   edit-access /parst38:rwx/user:peter86:rwx:f:allow/ dir  
     Replace all parst38-allow entries where rwx permissions is
     set with 'user:peter86:rwx:f:allow'
@@ -222,7 +223,7 @@ EXAMPLES
 
 MORE ADVANCED USAGE
 
-The "edit-access" subcommand takes two additions command line switches:
+The "edit-access" subcommand takes two additional command line switches:
 
   -e <change-list>       Add a semicolon-separated "extended program" to the change request list
   -E <filename>		 Add a "extended program" (semicolon or newline-separated) from a file

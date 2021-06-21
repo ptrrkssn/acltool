@@ -984,7 +984,7 @@ ft_foreach(const char *path,
 
   if (vfs_lstat(path, &stat) < 0)
     return -1;
-  
+
   return _ft_foreach(path, &stat, walker, vp, 0, maxlevel, filetypes);
 }
 

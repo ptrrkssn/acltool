@@ -228,6 +228,29 @@ extern int
 gacl_match(GACL *ap,
 	   GACL *mp);
 
+
+extern int
+_gacl_set_tag(GACL_ENTRY *ep,
+	      GACL_TAG *etp);
+
+extern int
+_gacl_tag_compare(GACL_TAG *a,
+		  GACL_TAG *b);
+
+extern int
+_gacl_entry_tag_compare(GACL_ENTRY *a,
+			GACL_ENTRY *b);
+
+extern int
+_gacl_tag_from_text(GACL_TAG *etp,
+		    char **bufp,
+		    int flags);
+
+extern int
+_gacl_entry_tag_from_text(GACL_ENTRY *etp,
+			  char **bufp,
+			  int flags);
+
 extern int
 _gacl_entry_match(GACL_ENTRY *aep,
 		  GACL_ENTRY *mep,

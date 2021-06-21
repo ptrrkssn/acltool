@@ -479,11 +479,11 @@ set_cmd(int argc,
 typedef struct {
   int c;
   struct {
-    int type;
-    gid_t old;
-    gid_t new;
+    GACL_TAG old;
+    GACL_TAG new;
   } v[MAXRENAMELIST];
 } RENAMELIST;
+
 
 static int
 walker_rename(const char *path,
@@ -493,11 +493,11 @@ walker_rename(const char *path,
 	      void *vp) {
   int rc, i, j;
   RENAMELIST *r = (RENAMELIST *) vp;
-  gacl_t ap;
-  gacl_entry_t ae;
+  gacl_t ap = NULL;
+  gacl_entry_t ae = NULL;
   int f_updated = 0;
 
-  
+
   rc = get_acl(path, sp, &ap);
   if (rc < 0)
     return error(1, errno, "%s: Getting ACL", path);
@@ -505,24 +505,14 @@ walker_rename(const char *path,
     return 0;
 
   for (i = 0; gacl_get_entry(ap, i == 0 ? GACL_FIRST_ENTRY : GACL_NEXT_ENTRY, &ae) == 1; i++) {
-    gacl_tag_t tt;
-    uid_t *oip = NULL;
-    
-    gacl_get_tag_type(ae, &tt);
-    if (tt == GACL_TAG_TYPE_USER || tt == GACL_TAG_TYPE_GROUP)
-      oip = gacl_get_qualifier(ae);
-    
     for (j = 0; j < r->c; j++) {
-      if (tt == r->v[j].type && oip && *oip == r->v[j].old) {
-	gacl_free(oip);
-	gacl_set_qualifier(ae, &r->v[j].new);
-	oip = gacl_get_qualifier(ae);
+      if (_gacl_tag_compare(&ae->tag, &r->v[j].old) == 0) {
+	rc = _gacl_set_tag(ae, &r->v[j].new);
+	if (rc < 0)
+	  return error(1, errno, "%s: Updating ACL", path);
 	f_updated = 1;
       }
     }
-    
-    if (oip)
-      gacl_free(oip);
   }
   
   if (f_updated) {
@@ -530,7 +520,8 @@ walker_rename(const char *path,
     if (rc < 0)
       return error(1, errno, "%s: Setting ACL", path);
   }
-  
+
+  gacl_free(ap);
   return 0;
 }
 
@@ -538,99 +529,43 @@ walker_rename(const char *path,
 int
 str2renamelist(char *str,
 	       RENAMELIST *r) {
-  char *s1, *s2;
-  struct passwd *p_old, *p_new;
-  struct group *g_old, *g_new;
+  int rc;
   
+
+  if (!str) {
+    errno = EINVAL;
+    return -1;
+  }
+     
   r->c = 0;
 
-  str = strtok(str, ",");
-  while (str) {
-    s1 = s2 = NULL;
-    
-    s1 = strchr(str, ':');
-    if (!s1)
+  while (*str) {
+    rc = _gacl_tag_from_text(&r->v[r->c].new, &str, GACL_TEXT_RELAXED);
+    if (rc < 0)
       return -1;
-    
-    *s1++ = '\0';
-    s2 = strchr(s1, ':');
-    if (s2) {
-      *s2++ = '\0';
-      if (strcmp(str, "g") == 0 ||
-	  strcmp(str, "group") == 0) {
-	
-	g_old = getgrnam(s1);
-	if (g_old)
-	  r->v[r->c].old = g_old->gr_gid;
-	else if (sscanf(s1, "%d", &r->v[r->c].old) != 1)
-	  return -1;
-	
-	g_new = getgrnam(s2);
-	if (g_new)
-	  r->v[r->c].new = g_new->gr_gid;
-	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
-	  return -1;
-	
-	r->v[r->c++].type = GACL_TAG_TYPE_GROUP;
-	
-      } else if (strcmp(str, "u") == 0 ||
-		 strcmp(str, "user") == 0) {
-	
-	p_old = getpwnam(s1);
-	if (p_old)
-	  r->v[r->c].old = p_old->pw_uid;
-	else if (sscanf(s1, "%d", &r->v[r->c].old) != 1)
-	  return -1;
-	
-        p_new = getpwnam(s2);
-	if (!p_new)
-	  r->v[r->c].new = p_new->pw_uid;
-	else if (sscanf(s1, "%d", &r->v[r->c].new) != 1)
-	  return -1;
-	
-	r->v[r->c++].type = GACL_TAG_TYPE_USER;
-      }
-    } else {
-      s2 = s1;
-      s1 = str;
-      uid_t id;
-      
-      p_old = getpwnam(s1);
-      g_old = getgrnam(s1);
-      if (p_old && g_old)
-	return -1;
-      if (!p_old && !g_old) {
-	if (sscanf(s1, "%d", &id) == 1)
-	  r->v[r->c].old = id;
-	else
-	  return -1;
-      } else
-	r->v[r->c].old = (p_old ? p_old->pw_uid : g_old->gr_gid);
-      
-      p_new = getpwnam(s2);
-      g_new = getgrnam(s2);
-      if (p_new && g_new)
-	return -1;
-      if (!p_new && !g_new) {
-	if ((p_old || g_old) && sscanf(s2, "%d", &id) == 1)
-	  r->v[r->c].new = id;
-	else
-	  return -1;
-      } else
-      
-      if ((p_old && g_new) || (g_old && p_new))
-	return -1;
-      
-      r->v[r->c].new = (p_new ? p_new->pw_uid : g_new->gr_gid);
-      
-      r->v[r->c++].type = p_old ? GACL_TAG_TYPE_USER : GACL_TAG_TYPE_GROUP;
+    if (*str == '=')
+      ++str;
+    else if (*str) {
+      errno = EINVAL;
+      return -1;
     }
     
-    str = strtok(NULL, ",");
+    rc = _gacl_tag_from_text(&r->v[r->c].old, &str, GACL_TEXT_RELAXED);
+    if (rc < 0)
+      return -1;
+    if (*str == ',')
+      ++str;
+    else if (*str) {
+      errno = EINVAL;
+      return -1;
+    }
+    
+    r->c++;
   }
 
   return 0;
 }
+
 
 int
 rename_cmd(int argc,
@@ -848,7 +783,7 @@ COMMAND find_command =
   { "find-access",      find_cmd,	NULL, "<acl> <path>+",		"Search ACL(s)" };
 
 COMMAND rename_command =
-  { "rename-access",    rename_cmd,     NULL, "<change> <path>+", 	"Rename ACL entries" };
+  { "rename-access",    rename_cmd,     NULL, "<new>=<old>[,...] <path>+", 	"Rename ACL entries" };
 
 COMMAND inherit_command =
   { "inherit-access",   inherit_cmd,	NULL, "<path>+",		"Propage ACL(s) inheritance" };

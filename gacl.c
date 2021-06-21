@@ -1074,6 +1074,32 @@ _gacl_set_tag(GACL_ENTRY *ep,
 }
 
 
+int
+_gacl_tag_compare(GACL_TAG *a,
+		  GACL_TAG *b) {
+  int d;
+  
+
+  d = a->type - b->type;
+  if (d)
+    return d;
+
+  d = a->ugid - b->ugid;
+  if (d)
+    return d;
+
+  d = strcmp(a->name, b->name);
+  return d;
+}
+
+
+int
+_gacl_entry_tag_compare(GACL_ENTRY *a,
+			GACL_ENTRY *b) {
+  return _gacl_tag_compare(&a->tag, &b->tag);
+}
+
+
 /* 
  * Get ACE tag (user:xxx, group:xxx, owner@, group@, everyone@ )
  *
@@ -1081,13 +1107,12 @@ _gacl_set_tag(GACL_ENTRY *ep,
  * [{user|group}:]<name>[:]
  */
 int
-_gacl_entry_tag_from_text(GACL_ENTRY *ep,
-			  char **bufp,
-			  int flags) {
+_gacl_tag_from_text(GACL_TAG *etp,
+		    char **bufp,
+		    int flags) {
   struct passwd *pp;
   struct group *gp;
   char *np, *cp = *bufp;
-  GACL_TAG *etp = &ep->tag;
   size_t len;
   
   
@@ -1096,20 +1121,19 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
 
     cp = strchr(cp, ':')+1;
     
-    /* Locate end of tag */
+    /* Locate end of tag (NUL, : or =) */
     np = cp;
-    while (*np && *np != ':')
+    while (*np && *np != ':' && *np != '=' && *np != ',')
       ++np;
     
     if (sscanf(cp, "%d", &etp->ugid) == 1) {
-      
       pp = getpwuid(etp->ugid);
       if (pp) {
 	if (s_cpy(etp->name, sizeof(etp->name), pp->pw_name) < 0)
 	  return -1;
       } else {
 	if (flags & GACL_TEXT_RELAXED) {
-	  int rc = snprintf(etp->name, sizeof(etp->name), "user:%d", etp->ugid);
+	  int rc = snprintf(etp->name, sizeof(etp->name), "%d", etp->ugid);
 
 	  if (rc < 0)
 	    return -1;
@@ -1142,7 +1166,7 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       
     } 
     
-    if (*np)
+    if (*np == ':')
       ++np;
     
     *bufp = np;
@@ -1156,18 +1180,17 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     
     /* Locate end of tag */
     np = cp;
-    while (*np && *np != ':')
+    while (*np && *np != ':' && *np != '=' && *np != ',')
       ++np;
     
     if (sscanf(cp, "%d", &etp->ugid) == 1) {
-      
       gp = getgrgid(etp->ugid);
       if (gp) {
 	if (s_cpy(etp->name, sizeof(etp->name), gp->gr_name) < 0)
 	  return -1;
       } else {
 	if (flags & GACL_TEXT_RELAXED) {
-	  int rc = snprintf(etp->name, sizeof(etp->name), "group:%d", etp->ugid);
+	  int rc = snprintf(etp->name, sizeof(etp->name), "%d", etp->ugid);
 
 	  if (rc < 0)
 	    return -1;
@@ -1200,27 +1223,27 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
       
     }
     
-    if (*np)
+    if (*np == ':')
       ++np;
     
     *bufp = np;
     return 0;
   }
 
-
   /* Locate end of tag */
-  np = strchr(cp, ':');
-  if (!np) {
-    errno = EINVAL;
-    return -1;
+  for (np = cp; *np && *np != ':' && *np != '=' && *np != ','; ++np)
+    ;
+  if (!*np) {
+    len = strlen(cp);
+    np = cp+len;
   }
+  else 
+    len = np-cp;
 
-  len = np-cp;
-		
   if (s_ncpy(etp->name, sizeof(etp->name), cp, len) < 0)
     return -1;
 
-  if (np)
+  if (*np == ':')
     ++np;
   
   if (strcmp(etp->name, "owner@") == 0) {
@@ -1259,7 +1282,8 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
     pp = getpwnam(etp->name);
     gp = getgrnam(etp->name);
   }
-  
+
+  /* Non-unique name */
   if (pp && gp) {
     errno = EINVAL;
     return -1;
@@ -1282,6 +1306,13 @@ _gacl_entry_tag_from_text(GACL_ENTRY *ep,
 
   *bufp = np;
   return 0;
+}
+
+int
+_gacl_entry_tag_from_text(GACL_ENTRY *ep,
+			  char **bufp,
+			  int flags) {
+  return _gacl_tag_from_text(&ep->tag, bufp, flags);
 }
 
 
@@ -1755,14 +1786,12 @@ gacl_entry_to_text(GACL_ENTRY *ep,
   
   rc = gacl_entry_tag_to_text(ep, bp, bufsize, flags);
   if (rc < 0) {
-    puts("A");
     return -1;
   }
   bp += rc;
   bufsize -= rc;
 
   if (bufsize <= 1) {
-    puts("B");
     return -1;
   }
   
@@ -1772,7 +1801,6 @@ gacl_entry_to_text(GACL_ENTRY *ep,
 
   rc = gacl_entry_permset_to_text(ep, bp, bufsize, flags);
   if (rc < 0) {
-    puts("C");
     return -1;
   }
   bp += rc;
@@ -1782,7 +1810,6 @@ gacl_entry_to_text(GACL_ENTRY *ep,
       !(flags & GACL_TEXT_COMPACT) ||
       (gacl_get_flagset_np(ep, &efsp) == 0 && !gacl_empty_flagset(efsp))) {
     if (bufsize <= 1) {
-      puts("D");
       return -1;
     }
     
@@ -1792,7 +1819,6 @@ gacl_entry_to_text(GACL_ENTRY *ep,
     
     rc = gacl_entry_flagset_to_text(ep, bp, bufsize, flags);
     if (rc < 0) {
-      puts("E");
       return -1;
     }
     
@@ -1810,7 +1836,6 @@ gacl_entry_to_text(GACL_ENTRY *ep,
       if (ep->type != GACL_ENTRY_TYPE_ALLOW || !(flags & GACL_TEXT_COMPACT)) {
 	rc = gacl_entry_type_to_text(ep, bp, bufsize, flags);
 	if (rc < 0) {
-	  puts("F");
 	  return -1;
 	}
 	
@@ -1953,7 +1978,7 @@ gacl_to_text_np(GACL *ap,
   GACL_ENTRY *ep;
   int tagwidth = ((flags & GACL_TEXT_STANDARD) ? 18 : _gacl_max_tagwidth(ap)+8);
 
-  
+
   bp = buf = _gacl_alloc(GACL_MAGIC_TEXT, bufsize);
   if (!buf)
     return NULL;
@@ -2197,7 +2222,7 @@ _gacl_entry_from_text(char *cp,
   if (_gacl_entry_tag_from_text(ep, &cp, flags) < 0)
     return -1;
 
-  if (!cp)
+  if (!cp || !*cp)
     return -1;
   
   /* 2. Get permset */
