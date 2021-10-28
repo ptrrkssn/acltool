@@ -319,7 +319,7 @@ OPTION global_options[] =
    { "debug",     	'D', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_debug,     NULL, "Debug level" },
    { "verbose",   	'v', OPTS_TYPE_NONE,               set_verbose,   NULL, "Verbosity level" },
    { "force",     	'f', OPTS_TYPE_NONE,               set_force,     NULL, "Force updates" },
-   { "ignore",     	'i', OPTS_TYPE_NONE,               set_ignore,    NULL, "Ignore errors" },
+   { "ignore-errors",  	'i', OPTS_TYPE_NONE,               set_ignore,    NULL, "Ignore errors" },
    { "print",     	'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
    { "sort",      	's', OPTS_TYPE_NONE,               set_sort,      NULL, "Sort ACLs" },
    { "merge",     	'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redundant ACL entries" },
