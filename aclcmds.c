@@ -233,8 +233,12 @@ walker_set(const char *path,
   else
     rc = set_acl(path, sp, a->fa, NULL);
   
-  if (rc < 0)
+  if (rc < 0) {
+    if (config.f_ignore)
+      return 0;
+    
     return 1;
+  }
 
   return 0;
 }

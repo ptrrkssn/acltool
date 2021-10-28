@@ -56,6 +56,7 @@ typedef struct config {
   int f_debug;
   int f_verbose;
   int f_force;
+  int f_ignore;
   int f_print;
   int f_sort;
   int f_merge;
