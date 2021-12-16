@@ -70,6 +70,11 @@ Enable
 .B "Sort ACL"
 mode.
 .TP
+.B "-b | --basic"
+Enable
+.B "Strip non-basic ACL entries"
+mode.
+.TP
 .B "-m | --merge"
 Enable
 .B "Merge ACL"
