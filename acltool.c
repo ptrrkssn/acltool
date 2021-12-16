@@ -165,6 +165,18 @@ set_sort(const char *name,
 }
 
 int
+set_basic(const char *name,
+	  const char *value,
+	  unsigned int type,
+	  const void *svp,
+	  void *dvp,
+	  const char *a0) {
+  config.f_basic++;
+  
+  return 0;
+}
+
+int
 set_merge(const char *name,
 	  const char *value,
 	  unsigned int type,
@@ -307,6 +319,7 @@ OPTION global_options[] =
    { "force",     	'f', OPTS_TYPE_NONE,               set_force,     NULL, "Force updates" },
    { "print",     	'p', OPTS_TYPE_UINT|OPTS_TYPE_OPT, set_print,     NULL, "Print updated ACLs" },
    { "sort",      	's', OPTS_TYPE_NONE,               set_sort,      NULL, "Sort ACLs" },
+   { "basic",      	'b', OPTS_TYPE_NONE,               set_basic,     NULL, "Remove non-basic ACL entries" },
    { "merge",     	'm', OPTS_TYPE_NONE,               set_merge,     NULL, "Merge redundant ACL entries" },
    { "relaxed",      	'R', OPTS_TYPE_NONE,               set_relaxed,   NULL, "Relaxed mode" },
    { "recurse",   	'r', OPTS_TYPE_INT|OPTS_TYPE_OPT,  set_recurse,   NULL, "Enable recursion" },
@@ -373,6 +386,7 @@ config_cmd(int argc,
     printf("  Verbosity Level:    %d\n", config.f_verbose);
     printf("  Force Mode:         %s\n", config.f_force ? "Yes" : "No");
     printf("  Sort Mode:          %s\n", config.f_sort ? "Yes" : "No");
+    printf("  Basic Mode:         %s\n", config.f_basic ? "Yes" : "No");
     printf("  Merge Mode:         %s\n", config.f_merge ? "Yes" : "No");
     printf("  Relaxed Mode:       %s\n", config.f_relaxed ? "Yes" : "No");
     printf("  Recurse Mode:       %s\n", config.f_recurse ? "Yes" : "No");

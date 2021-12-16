@@ -58,6 +58,7 @@ typedef struct config {
   int f_force;
   int f_print;
   int f_sort;
+  int f_basic;
   int f_merge;
   int f_recurse;
   int f_relaxed;

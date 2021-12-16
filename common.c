@@ -160,11 +160,29 @@ set_acl(const char *path,
   if (rc)
     return error(1, errno, "%s: Cleaning ACL", path);
   
+  if (config.f_basic) {
+    gacl_t bap = gacl_strip_np(ap, 0);
+    
+    s_errno = errno;
+    if (ap != nap)
+      gacl_free(ap);
+    
+    if (!bap) {
+      error(1, s_errno, "%s: Stripping ACL", path);
+      return -1;
+    }
+    ap = bap;
+  }
+
   if (config.f_sort) {
     gacl_t sap = gacl_sort(ap);
-
+    
+    s_errno = errno;
+    if (ap != nap)
+      gacl_free(ap);
+    
     if (!sap) {
-      error(1, errno, "%s: Sorting ACL", path);
+      error(1, s_errno, "%s: Sorting ACL", path);
       return -1;
     }
     ap = sap;
@@ -173,15 +191,14 @@ set_acl(const char *path,
   if (config.f_merge) {
     gacl_t map = gacl_merge(ap);
     
+    s_errno = errno;
+    if (ap != nap)
+      gacl_free(ap);
+    
     if (!map) {
-      s_errno = errno;
-      if (ap != nap)
-	gacl_free(ap);
       error(1, s_errno, "%s: Merging ACL", path);
       return -1;
     }
-    if (ap != nap)
-      gacl_free(ap);
     ap = map;
   }
 
