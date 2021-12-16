@@ -38,6 +38,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include "acltool.h"
 #include "error.h"
 
 char *error_argv0 = NULL;
@@ -62,11 +63,13 @@ error(int rc,
   vfprintf(stderr, msg, ap);
   if (ec)
     fprintf(stderr, ": %s", strerror(ec));
+  if (config.f_ignore)
+    fputs(" [ignored]", stderr);
   putc('\n', stderr);
 
   va_end(ap);
   
-  if (rc)
+  if (rc && !config.f_ignore)
     longjmp(error_env, rc);
 
   return rc;
