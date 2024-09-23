@@ -1,7 +1,7 @@
 /*
  * acltool.c
  *
- * Copyright (c) 2019-2020, Peter Eriksson <pen@lysator.liu.se>
+ * Copyright (c) 2019-2024, Peter Eriksson <pen@lysator.liu.se>
  *
  * All rights reserved.
  * 
@@ -370,7 +370,7 @@ cfg_parse(CONFIG *cfgp,
 
 void
 print_version(void) {
-  printf("[ACLTOOL, v%s - Copyright (c) 2020 Peter Eriksson <pen@lysator.liu.se>]\n", version);
+  printf("[ACLTOOL, v%s - Copyright (c) 2020-2024 Peter Eriksson <pen@lysator.liu.se>]\n", version);
 }
 
 
