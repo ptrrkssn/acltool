@@ -190,7 +190,6 @@ opts_parse_argv(int argc,
 	optlist = va_arg(ap, OPTION *);
       }
       va_end(ap);
-      free(name);
 
       if (nm < 1 || !op)
 	return error(1, 0, "%s: Invalid option", argv[i]);
@@ -199,6 +198,8 @@ opts_parse_argv(int argc,
 	return error(-1, 0, "%s: Multiple options matches", argv[i]);
 
       rc = opts_set_value(op, value, argv[0]);
+      free(name);
+
       if (rc != 0)
 	return rc;
 	
