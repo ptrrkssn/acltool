@@ -6,7 +6,7 @@ ACLTOOL
 
   It currently does not support old POSIX.1e or other kinds of ACLs and due to
   missing support on Linux only works over NFSv4.
-  
+
   Bits and pieces of command names (lac/edac/sac) and how abbreviations
   of command names and command name switches work is inspired by the now
   long defunct Prime/PRIMOS operating system.
@@ -25,14 +25,14 @@ AUTHOR
 PRIMARY DOWNLOAD SITE
 
   https://github.com/ptrrkssn/acltool
-  
+
 
 
 OPERATING SYSTEMS SUPPORTED
 
-  - FreeBSD (ZFS & NFSv4, tested on 11.3 & 12.1)
+  - FreeBSD (ZFS & NFSv4, tested on 11.3-15.0)
   - Solaris (ZFS & NFSv4, tested on OmniOS)
-  - Linux (NFSv4 only, tested on Ubuntu 18 & 20, CentOS 7 & Debian 9)
+  - Linux (NFSv4 only, tested on Ubuntu 18-24, CentOS 7 & Debian 9)
   - MacOS (HFS+ & NFSv4, tested with MacOS 10.15)
 
 All the above also support extended attributes more or less.
@@ -57,7 +57,7 @@ OPTIONAL DEPENDENCIES
   CentOS (yum install)
     readline-devel
     libsmbclient-devel
-    
+
   FreeBSD (pkg install)
     readline
     samba
@@ -71,7 +71,7 @@ OPTIONAL DEPENDENCIES
 BUILD INSTRUCTIONS
 
   1. Install the optional dependencies mentioned above
-  
+
   2. If you want to build with SMB support via Samba you may want to
      apply the patch in 'patches' for Samba first. Atleast if you care
      about the order of entries in ACLs that are written.
@@ -88,7 +88,7 @@ BUILD INSTRUCTIONS
 
      The path's should point to directories containing "lib" and
      "include" subdirectories.
-     
+
      Then type 'make' in the source directory and it will automatically
      build the tool.
 
@@ -109,7 +109,7 @@ USAGE
 
   You can access environmental variables using ${NAME} (or $N if
   one-character names).
-  
+
   All commands and long option names can be abbreviated using the
   parts of the names. Some examples of valid abbreviations:
 
@@ -119,7 +119,7 @@ USAGE
 
   Tab-completion in CLI mode also works for command names,
   (global) long options and files.
-  
+
   Command names may also be used in links to the "acltool"
   binary like "ln -s acltool lac" and then be used as shortcuts
   to the commands.
@@ -180,19 +180,19 @@ EXAMPLES
 
   cd smb://user@server/share
     Access a SMB share
-    
+
   dir -v
     List the content of the current directory (verbosely)
-  
+
   list-access -r -t sf .
     Recursively display Access list for sockets and normal files
 
   lac ${HOME}/some-dir
     List the ACL for ~/some-dir
-    
+
   set-access -r peter86:rwx:f:allow dir
     Recursively set permissions "rwx" (and "f" flags to directories).
-    
+
   touch-access -sm dir
     Sort and merge the ACL entries for dir
 
@@ -212,14 +212,14 @@ EXAMPLES
 
   edit-access -e '0-3/peter86:.*/s mikha02:rwx' path
     Scan ACE entries 0-3 for entries matching "peter86:.*" and replace them with "mikha02:rwx::allow"
- 
-  edit-access /parst38:rwx/user:peter86:rwx:f:allow/ dir  
+
+  edit-access /parst38:rwx/user:peter86:rwx:f:allow/ dir
     Replace all parst38-allow entries where rwx permissions is
     set with 'user:peter86:rwx:f:allow'
 
   list-attribute some-file
     List all extended attributes (if any) for file "some-file"
-    
+
 
 MORE ADVANCED USAGE
 
@@ -246,7 +246,7 @@ Modifiers are used to modify the functionality of a command.
 For example:
 
   {fd}0-3/peter86/p;0i peter86:rwx
-  
+
 The following commands are available:
 
   p         Print entries

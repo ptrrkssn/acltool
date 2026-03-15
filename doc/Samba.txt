@@ -1,4 +1,11 @@
- * @param name      The name of an attribute to be changed.  Names are of
+Here is some information about NFSv4-ACLs from a Samba perspective:
+
+   https://wiki.samba.org/index.php/NFS4_ACL_overview
+
+
+Some more details:
+
+* @param name      The name of an attribute to be changed.  Names are of
  *                  one of the following forms:
  *
  *                     system.nt_sec_desc.<attribute name>

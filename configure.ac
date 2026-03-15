@@ -1,5 +1,4 @@
-
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 AC_INIT([ACL Tool], [1.17.1], [pen@lysator.liu.se], [acltool], [https://github.com/ptrrkssn/acltool])
 
 AC_CONFIG_SRCDIR([common.c])
@@ -55,7 +54,7 @@ if test "x$with_libedit" != xcheck -a "x$with_libedit" != xno; then
      AC_MSG_ERROR([Only one of '--with-readline' and '--with-libedit' may be used])
    fi
 fi
-   
+
 AS_IF([test "x$with_readline" != xno], [
   case "x$with_readline" in
     /*)
@@ -73,21 +72,21 @@ AS_IF([test "x$with_readline" != xno], [
       AC_CHECK_HEADERS([readline/readline.h])
       AC_SEARCH_LIBS([readline], [readline])
       if test "x$ac_cv_search_readline" = xno; then
-        AC_SEARCH_LIBS([rl_set_prompt], [readline], [ 
+        AC_SEARCH_LIBS([rl_set_prompt], [readline], [
           AC_SUBST([READLINE_LIBS], ["-ltermcap"])
 	  ac_cv_search_readline=yes
         ], [], [-ltermcap])
       fi
       if test "x$ac_cv_search_readline" != xno -a "x$ac_cv_header_readline_readline_h" = xyes; then
         AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
-      else      
+      else
         PKG_CHECK_MODULES([READLINE], [readline], [
 	  # Hack to fix incorrect path in FreeBSD "pkg-config --cflags" (sigh)
           readline_incdir="`pkg-config --variable=includedir readline`"
           AC_SUBST([READLINE_CFLAGS], ["-I${readline_incdir}"])
-	  
+
           AC_DEFINE([HAVE_LIBREADLINE], [1], [Define if you have libreadline])
-        ], [			       
+        ], [
           if test "x$with_readline" != xcheck; then
             AC_MSG_FAILURE([--with-readline was given, but test for readline failed])
           fi
@@ -115,17 +114,17 @@ AS_IF([test "x$with_readline" = xno], [
         AC_CHECK_HEADERS([histedit.h])
         AC_SEARCH_LIBS([el_gets], [edit])
         if test "x$ac_cv_search_el_gets" = xno; then
-          AC_SEARCH_LIBS([el_getc], [edit], [ 
+          AC_SEARCH_LIBS([el_getc], [edit], [
             AC_SUBST([LIBEDIT_LIBS], ["-lcurses"])
   	  ac_cv_search_el_gets=yes
           ], [], [-lcurses])
         fi
         if test "x$ac_cv_search_el_gets" != xno -a "x$ac_cv_header_histedit_h" = xyes; then
           AC_DEFINE([HAVE_LIBEDIT], [1], [Define if you have libedit])
-        else      
+        else
           PKG_CHECK_MODULES([LIBEDIT], [libedit], [
             AC_DEFINE([HAVE_LIBEDIT], [1], [Define if you have libedit])
-          ], [			       
+          ], [
             if test "x$with_libedit" != xcheck; then
               AC_MSG_FAILURE([--with-libedit was given, but test for it failed])
             fi
@@ -142,7 +141,7 @@ AC_ARG_WITH([libsmbclient],
     [support SMB via Samba libsmbclient (valid arguments: 'check', 'no', 'yes' or PATH) @<:@default=check@:>@])],
   [],
   [with_libsmbclient=check])
-          
+
 AS_IF([test "x$with_libsmbclient" != xno], [
   case "$with_libsmbclient" in
     /*)
@@ -161,7 +160,7 @@ AS_IF([test "x$with_libsmbclient" != xno], [
       AC_CHECK_LIB([smbclient], [smbc_init], [
         AC_SUBST([LIBSMBCLIENT_LIBS], ["-lsmbclient"])
       ], [])
-      if test "x$ac_cv_lib_libsmbclient_smbc_init" = xyes -a "x$ac_cv_header_libsmbclient.h" = xyes; then 
+      if test "x$ac_cv_lib_libsmbclient_smbc_init" = xyes -a "x$ac_cv_header_libsmbclient.h" = xyes; then
         AC_DEFINE([HAVE_LIBSMBCLIENT], [1], [Define if you have libsmbclient])
       else
         PKG_CHECK_MODULES([LIBSMBCLIENT], [smbclient], [
@@ -177,4 +176,5 @@ AS_IF([test "x$with_libsmbclient" != xno], [
 ])
 
 
-AC_OUTPUT([Makefile pkgs/Makefile pkgs/Makefile.port pkgs/acltool.rb pkgs/pkginfo pkgs/acltool.spec pkgs/pkg-descr pkgs/build.sh])
+AC_CONFIG_FILES([Makefile pkgs/Makefile pkgs/Makefile.port pkgs/acltool.rb pkgs/pkginfo pkgs/acltool.spec pkgs/pkg-descr pkgs/build.sh])
+AC_OUTPUT

@@ -169,6 +169,40 @@ You may make symbolic links to
 in order to use actions directly. For example "ln -s acltool lac" makes it
 possible to use "lac" as a shortcut to "acltool lac" from a Shell.
 
+.SH PERMISSION FLAGS
+.TP
+.B r
+.br
+read_data
+.TP
+.B w
+.br
+write_data
+.B x
+execute
+.B p
+append_data
+.B D
+delete_child (subdirectory)
+.B d
+delete (non-directories)
+.B a
+read_attributes (file sizes, owner etc)
+.B A
+write_attributes (file sizes, owner etc)
+.B R
+read_xattr
+.B W
+write_xattr
+.B c
+read_acl
+.B C
+write_acl
+.B o
+write_owner
+.B s
+synchronize (not used)
+
 .SH SEE ALSO
 .TP
 .B BSD
